@@ -1,0 +1,4 @@
+[
+  { "shot_id": 1, "shot_code": "S001", "status": "Ready", "version_id": "v1" },
+  { "shot_id": 2, "shot_code": "S002", "status": "WIP",   "version_id": "v3" }
+]

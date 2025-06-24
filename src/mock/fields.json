@@ -1,0 +1,6 @@
+[
+  { "field_id": "shot_id",   "field_name": "Shot ID", "type": "text",   "editable": false, "required": true },
+  { "field_id": "shot_code", "field_name": "Code",    "type": "text",   "editable": false, "required": true },
+  { "field_id": "status",    "field_name": "Status",  "type": "select", "editable": true,  "required": true,  "options": ["Ready","WIP","Done"] },
+  { "field_id": "version_id","field_name": "Version", "type": "text",   "editable": true,  "required": false }
+]
