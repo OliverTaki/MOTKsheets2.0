@@ -1,33 +1,21 @@
-import { useGoogleLogin, googleLogout } from '@react-oauth/google';
-import { useState } from 'react';
+import { useAuth } from '../AuthContext.jsx';
 
 export default function LoginButton() {
-  const [user, setUser] = useState(null);
+  const { token, login, logout } = useAuth();
 
-  const login = useGoogleLogin({
-    onSuccess: (tokenResponse) => setUser(tokenResponse),
-    onError: () => alert('Login failed'),
-  });
-
-  return user ? (
-    <div className="flex items-center gap-2">
-      <span className="text-sm">{user?.access_token?.slice(0, 12)}…</span>
-      <button
-        className="px-3 py-1 text-sm bg-red-500 text-white rounded"
-        onClick={() => {
-          googleLogout();
-          setUser(null);
-        }}
-      >
-        Sign out
-      </button>
-    </div>
+  return token ? (
+    <button
+      className="border px-3 py-1 text-sm rounded"
+      onClick={logout}
+    >
+      Sign out
+    </button>
   ) : (
     <button
-      className="px-3 py-1 text-sm bg-blue-600 text-white rounded"
+      className="border px-3 py-1 text-sm rounded"
       onClick={() => login()}
     >
-      Sign in with Google
+      Sign in
     </button>
   );
 }
