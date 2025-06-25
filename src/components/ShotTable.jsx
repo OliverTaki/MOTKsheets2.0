@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext.jsx';
 import { updateCell } from '../api/updateCell.js';
@@ -6,66 +6,12 @@ import { updateCell } from '../api/updateCell.js';
 const sheetId = import.meta.env.VITE_SHEETS_ID;
 const tabName = import.meta.env.VITE_TAB_NAME || 'SHOTS';
 
-const EditableCell = ({ shot, field, onSave }) => {
-  const { auth } = useAuth();
-  const [isEditing, setIsEditing] = useState(false);
-  const [currentValue, setCurrentValue] = useState(shot[field.field_id] || '');
-  const inputRef = useRef(null);
-
-  useEffect(() => {
-    setCurrentValue(shot[field.field_id] || '');
-  }, [shot, field.field_id]);
-  
-  useEffect(() => {
-    if (isEditing) inputRef.current?.focus();
-  }, [isEditing]);
-  
-  const canEdit = field.editable && auth.isAuthenticated;
-
-  const handleEditClick = () => { if (canEdit) setIsEditing(true); };
-  const handleSave = () => {
-    if (isEditing) {
-      setIsEditing(false);
-      if (currentValue !== (shot[field.field_id] || '')) {
-        onSave(shot.shot_id, field.field_id, currentValue);
-      }
-    }
-  };
-  const handleCancel = () => {
-    setCurrentValue(shot[field.field_id] || '');
-    setIsEditing(false);
-  };
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') handleSave();
-    if (e.key === 'Escape') handleCancel();
-  };
-  
-  if (isEditing) {
-    const commonProps = {
-      ref: inputRef,
-      value: currentValue,
-      onChange: (e) => setCurrentValue(e.target.value),
-      onBlur: handleSave,
-      onKeyDown: handleKeyDown,
-      className: "w-full bg-gemini-header border border-blue-500 rounded shadow-inner px-2 py-1 text-sm text-gemini-text outline-none",
-    };
-    if (field.type === 'select') return <select {...commonProps}>{field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}</select>;
-    return <input {...commonProps} />;
-  }
-
-  const displayValue = shot[field.field_id] || <span className="text-gemini-text-secondary">-</span>;
-  
-  return (
-    <div className={`relative group flex items-center justify-between min-h-[24px] w-full ${canEdit ? 'cursor-pointer rounded -m-2 p-2' : ''}`} onClick={handleEditClick}>
-      {field.type === 'image' && shot[field.field_id] ? <img src={shot[field.field_id]} alt={shot.shot_code} className="h-10 w-auto rounded" /> : <span>{displayValue}</span>}
-      {field.editable && !auth.isAuthenticated && <span className="text-gemini-text-secondary cursor-not-allowed" title="Sign in to edit">🔒</span>}
-      {canEdit && <button className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-white" title="Edit">✏️</button>}
-    </div>
-  );
-};
-
 export default function ShotTable({ shots, shotsHeader, fields, sortKey, ascending, onSort, onCellSave }) {
   const { auth } = useAuth();
+  // ★★★★★ 編集状態をテーブル全体で管理 ★★★★★
+  // { rowId: '...', fieldId: '...' } という形式で、どのセルを編集中かを持つ
+  const [editingCell, setEditingCell] = useState(null);
+
   async function save(shotId, fieldId, value) {
     onCellSave(shotId, fieldId, value);
     const targetShot = shots.find(s => s.shot_id === shotId);
@@ -82,6 +28,14 @@ export default function ShotTable({ shots, shotsHeader, fields, sortKey, ascendi
     }
   }
 
+  const handleSave = (e, row, field) => {
+    setEditingCell(null);
+    const newValue = e.target.value;
+    if (newValue !== (row[field.field_id] || '')) {
+      save(row.shot_id, field.field_id, newValue);
+    }
+  };
+
   return (
     <div className="overflow-x-auto bg-gemini-card rounded-lg shadow-lg border border-gemini-border">
       <table className="min-w-full">
@@ -91,15 +45,58 @@ export default function ShotTable({ shots, shotsHeader, fields, sortKey, ascendi
         <tbody className="text-sm text-gemini-text">
           {shots.map((row, index) => (
             <tr key={row.shot_id} className={index % 2 === 0 ? 'bg-gemini-card' : 'bg-gemini-card-alt'}>
-              {fields.map((f) => (
-                <td key={f.field_id} className="px-4 py-2 border-t border-gemini-border">
-                  {f.field_id === 'shot_code' ? (
-                    <Link to={`/shot/${row.shot_id}`} className="text-gemini-link hover:text-gemini-link-hover hover:underline">{row[f.field_id]}</Link>
-                  ) : (
-                    <EditableCell shot={row} field={f} onSave={save} />
-                  )}
-                </td>
-              ))}
+              {fields.map((field) => {
+                const isEditing = editingCell?.rowId === row.shot_id && editingCell?.fieldId === field.field_id;
+                const canEdit = field.editable && auth.isAuthenticated;
+
+                // ★★★★★ 編集ロジックをここに集約 ★★★★★
+                if (isEditing) {
+                  if (field.type === 'select') {
+                    return (
+                      <td key={field.field_id} className="px-4 py-2 border-t border-gemini-border">
+                        <select
+                          defaultValue={row[field.field_id] || ''}
+                          onBlur={(e) => handleSave(e, row, field)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                          autoFocus
+                          className="w-full bg-gemini-header border border-blue-500 rounded px-2 py-1 text-gemini-text outline-none"
+                        >
+                          {field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
+                      </td>
+                    );
+                  }
+                  return (
+                    <td key={field.field_id} className="px-4 py-2 border-t border-gemini-border">
+                      <input
+                        type="text"
+                        defaultValue={row[field.field_id] || ''}
+                        onBlur={(e) => handleSave(e, row, field)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                        autoFocus
+                        className="w-full bg-gemini-header border border-blue-500 rounded px-2 py-1 text-gemini-text outline-none"
+                      />
+                    </td>
+                  );
+                }
+
+                // ★★★★★ 通常表示のセル ★★★★★
+                return (
+                  <td key={field.field_id} className="px-4 py-2 border-t border-gemini-border">
+                    <div 
+                      className={`relative group flex items-center min-h-[24px] ${canEdit ? 'cursor-pointer' : ''}`}
+                      onClick={() => canEdit && setEditingCell({ rowId: row.shot_id, fieldId: field.field_id })}
+                    >
+                      {field.field_id === 'shot_code' ? (
+                        <Link to={`/shot/${row.shot_id}`} className="text-gemini-link hover:text-gemini-link-hover hover:underline">{row[field.field_id]}</Link>
+                      ) : (
+                        <span>{row[field.field_id] || '-'}</span>
+                      )}
+                      {canEdit && <button className="absolute right-0 opacity-0 group-hover:opacity-100 text-gray-400">✏️</button>}
+                    </div>
+                  </td>
+                );
+              })}
             </tr>
           ))}
         </tbody>

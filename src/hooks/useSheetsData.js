@@ -1,98 +1,80 @@
 import { useEffect, useState } from 'react';
+import { toBool }              from '../utils/parse.js';
 
+/**
+ * useSheetsData
+ *  - Google Sheets API から SHOTS / FIELDS を並列取得
+ *  - fields…  FIELDS シートの定義
+ *  - shots …  SHOTS  シートのデータ
+ *  - loading / error も返却
+ */
 export default function useSheetsData() {
-  const [shots, setShots] = useState([]);
-  const [shotsHeader, setShotsHeader] = useState([]);
+  /* ---------- React state ---------- */
   const [fields, setFields] = useState([]);
+  const [shots,  setShots]  = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error,   setError]   = useState('');
 
-  const apiKey = import.meta.env.VITE_SHEETS_API_KEY;
+  /* ---------- .env ---------- */
+  const apiKey  = import.meta.env.VITE_SHEETS_API_KEY;
   const sheetId = import.meta.env.VITE_SHEETS_ID;
+  const shotsTab   = import.meta.env.VITE_TAB_NAME || 'SHOTS';
+  const fieldsTab  = 'FIELDS';
 
-  const SHOTS_TAB_NAME = import.meta.env.VITE_TAB_NAME || 'SHOTS';
-  const FIELDS_TAB_NAME = 'FIELDS';
-
+  /* ---------- fetch once ---------- */
   useEffect(() => {
     if (!apiKey || !sheetId) {
-      setError('VITE_SHEETS_API_KEY or VITE_SHEETS_ID is not configured in .env file.');
+      setError('Missing VITE_SHEETS_API_KEY or VITE_SHEETS_ID.');
       setLoading(false);
       return;
     }
 
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
+    const shotsURL  = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(shotsTab)}!A1:Z?key=${apiKey}`;
+    const fieldsURL = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(fieldsTab)}!A1:Z?key=${apiKey}`;
 
-      const shotsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${SHOTS_TAB_NAME}?key=${apiKey}`;
-      const fieldsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${FIELDS_TAB_NAME}?key=${apiKey}`;
+    setLoading(true);
+    Promise.all([
+      fetch(shotsURL).then((r) => r.json()),
+      fetch(fieldsURL).then((r) => r.json()),
+    ])
+      .then(([shotsJson, fieldsJson]) => {
+        /* ---------- FIELDS ---------- */
+        if (!fieldsJson.values) throw new Error('FIELDS sheet not found');
+        const [fHeader, ...fRows] = fieldsJson.values;
+        const idx = (key) => fHeader.indexOf(key);
 
-      try {
-        const [shotsResponse, fieldsResponse] = await Promise.all([
-          fetch(shotsUrl),
-          fetch(fieldsUrl),
-        ]);
+        setFields(
+          fRows.map((row) => ({
+            field_id : row[idx('field_id')],
+            field_name: row[idx('field_name')],
+            type     : row[idx('type')],
+            editable : toBool(row[idx('editable')]),
+            required : toBool(row[idx('required')]),
+            options  : (row[idx('options')] || '')
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean),
+          })),
+        );
 
-        if (!shotsResponse.ok) {
-          const errorBody = await shotsResponse.text();
-          console.error("Error fetching SHOTS data from API:", errorBody);
-          throw new Error(`Failed to fetch SHOTS data (${shotsResponse.status})`);
-        }
-        if (!fieldsResponse.ok) {
-          const errorBody = await fieldsResponse.text();
-          console.error("Error fetching FIELDS data from API:", errorBody);
-          throw new Error(`Failed to fetch FIELDS data (${fieldsResponse.status})`);
-        }
+        /* ---------- SHOTS ---------- */
+        if (!shotsJson.values) throw new Error('SHOTS sheet not found');
+        const [sHeader, ...sRows] = shotsJson.values;
 
-        const shotsData = await shotsResponse.json();
-        const fieldsData = await fieldsResponse.json();
+        setShots(
+          sRows.map((row, i) =>
+            sHeader.reduce(
+              (obj, key, col) => ({ ...obj, [key]: row[col] ?? '' }),
+              { __rowNum: i + 2 },
+            ),
+          ),
+        );
 
-        if (fieldsData.values) {
-          const [header, ...rows] = fieldsData.values;
-          const newFields = rows.map(row => {
-            const field = header.reduce((obj, key, index) => {
-              obj[key] = row[index] || '';
-              return obj;
-            }, {});
-            field.editable = field.editable === 'true';
-            field.required = field.required === 'true';
-            field.options = field.options ? field.options.split(',').map(s => s.trim()) : [];
-            return field;
-          });
-          setFields(newFields);
-        } else {
-           setFields([]);
-        }
+        setError('');
+      })
+      .catch((e) => setError(`Failed to fetch Sheets data: ${e.message}`))
+      .finally(() => setLoading(false));
+  }, [apiKey, sheetId, shotsTab]);
 
-        if (shotsData.values) {
-          const [header, ...rows] = shotsData.values;
-          setShotsHeader(header); // SHOTSシートのヘッダーを保存
-          const newShots = rows.map((row, i) =>
-            header.reduce(
-              (obj, key, colIndex) => {
-                obj[key] = row[colIndex];
-                obj.__rowNum = i + 2; 
-                return obj;
-              },
-              {}
-            )
-          );
-          setShots(newShots);
-        } else {
-          setShots([]);
-        }
-
-      } catch (err) {
-        console.error("Error details:", err);
-        console.error("Attempted to fetch from:", { shotsUrl, fieldsUrl });
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [apiKey, sheetId, SHOTS_TAB_NAME]);
-
-  return { shots, shotsHeader, fields, loading, error };
+  return { shots, fields, loading, error };
 }
