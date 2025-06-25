@@ -1,3 +1,24 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ★★★★★ CSS変数でテーマカラーを定義 ★★★★★ */
+:root {
+  --color-bg: #1e1f20;
+  --color-card: #242527;
+  --color-card-alt: #2c2d2f;
+  --color-header: #393a3d;
+  --color-border: #45474a;
+  --color-text-primary: #e1e3e6;
+  --color-text-secondary: #9aa0a6;
+  --color-link: #e1e3e6;
+  --color-link-hover: #ffffff;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-family: sans-serif;
+}

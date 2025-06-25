@@ -1,74 +1,102 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { AuthProvider } from './AuthContext.jsx';
-import useSheetsData   from './hooks/useSheetsData';
-import ShotTable       from './components/ShotTable.jsx';
-import LoginButton     from './components/LoginButton.jsx';
+import useSheetsData from './hooks/useSheetsData.js';
+import usePagesData from './hooks/usePagesData.js';
+import ShotTable from './components/ShotTable.jsx';
+import LoginButton from './components/LoginButton.jsx';
+import Toolbar from './components/Toolbar.jsx';
 
-/* 保存済みプリセット用キー（今回は未使用だが維持） */
-const LS_KEY = 'motk-shot-presets';
-
-export default function App() {
-  /* ---- Sheets 読込 ---- */
-  const { shots: initial, fields } = useSheetsData();
-
-  /* 初回読み込みが終わったら setShots。以後は触らない */
+function MainApp() {
+  const { page_id } = useParams();
+  const navigate = useNavigate();
+  const { shots: initialShots, shotsHeader, fields, loading, error } = useSheetsData();
+  const pages = usePagesData();
   const [shots, setShots] = useState([]);
-  const [loaded, setLoaded] = useState(false);
+  const [sort, setSort] = useState({ key: 'shot_code', asc: true });
+  const [filterRules, setFilterRules] = useState([]);
+
   useEffect(() => {
-    if (!loaded && initial.length) {
-      setShots(initial);
-      setLoaded(true);
+    if (initialShots.length > 0) setShots(initialShots);
+  }, [initialShots]);
+
+  useEffect(() => {
+    if (pages.length > 0) {
+      const currentPage = pages.find(p => p.page_id === page_id);
+      if (currentPage) {
+        setFilterRules(currentPage.settings.filters || []);
+        setSort(currentPage.settings.sort || { key: 'shot_code', asc: true });
+      } else if (!page_id) {
+        setFilterRules([]);
+        setSort({ key: 'shot_code', asc: true });
+      }
     }
-  }, [initial, loaded]);
+  }, [page_id, pages]);
 
-  /* ---------- ソート ---------- */
-  const [sortKey, setSortKey] = useState('shot_id');
-  const [asc,     setAsc]     = useState(true);
-  const handleSort = (fid) =>
-    fid === sortKey ? setAsc(!asc) : (setSortKey(fid), setAsc(true));
+  const handleSort = (fieldId) => {
+    setSort(prev => ({ key: fieldId, asc: prev.key === fieldId ? !prev.asc : true }));
+    navigate('/');
+  };
 
-  /* ---------- フィルタ（列=値 の単純一致） ---------- */
-  const [filters, setFilters] = useState({});
-  const updateFilter = (fid, v) =>
-    setFilters((f) => ({ ...f, [fid]: v }));
+  const handleFilter = (newRules) => {
+    setFilterRules(newRules);
+    navigate('/');
+  };
 
-  /* ---------- 表示行 ---------- */
   const view = useMemo(() => {
-    let rows = shots;
-    Object.entries(filters).forEach(([fid, v]) => {
-      if (v && v !== 'all') rows = rows.filter((r) => r[fid] === v);
+    let filteredRows = [...shots];
+    filterRules.forEach(rule => {
+      if (!rule.field_id || !rule.value) return;
+      filteredRows = filteredRows.filter(row => {
+        const rowValue = String(row[rule.field_id] || '').toLowerCase();
+        const filterValue = String(rule.value).toLowerCase();
+        switch (rule.operator) {
+          case 'is': return rowValue === filterValue;
+          case 'is not': return rowValue !== filterValue;
+          case 'contains': return rowValue.includes(filterValue);
+          case 'does not contain': return !rowValue.includes(filterValue);
+          default: return true;
+        }
+      });
     });
-    return [...rows].sort((a, b) => {
-      const A = a[sortKey] ?? '', B = b[sortKey] ?? '';
-      return asc
-        ? String(A).localeCompare(String(B))
-        : String(B).localeCompare(String(A));
+    return filteredRows.sort((a, b) => {
+      const valA = a[sort.key] ?? '';
+      const valB = b[sort.key] ?? '';
+      const comparison = String(valA).localeCompare(String(valB), undefined, { numeric: true });
+      return sort.asc ? comparison : -comparison;
     });
-  }, [shots, filters, sortKey, asc]);
+  }, [shots, sort, filterRules]);
+
+  if (loading) return <div className="p-8 text-center text-gemini-text-secondary">Loading...</div>;
+  if (error) return <div className="p-8 text-center text-red-400"><h2 className="text-xl font-bold mb-4">Error</h2><p>{error}</p><p className="mt-2 text-sm text-gray-500">Please check .env, Sheet names, & permissions.</p></div>;
 
   return (
-    <AuthProvider>
-      <div className="p-4 space-y-4">
+    // ★★★★★ UI修正：左寄せレイアウトに変更 ★★★★★
+    <div className="min-h-screen p-4 font-sans">
+      <div className="w-full space-y-4">
         <div className="flex justify-between items-center">
-          <h1 className="text-xl font-bold">MOTKsheets2.0 – Shots</h1>
+          <h1 className="text-xl font-bold">MOTKsheets 2.0</h1>
           <LoginButton />
         </div>
-
-        {/* ここにフィルタ UI を後で追加しても OK */}
-
+        <Toolbar fields={fields} onApplyFilters={handleFilter} currentFilters={filterRules} currentSort={sort} />
         <ShotTable
           shots={view}
-          fields={fields}
-          sortKey={sortKey}
-          ascending={asc}
+          shotsHeader={shotsHeader}
+          fields={fields.filter(f => f.type !== 'uuid')}
+          sortKey={sort.key}
+          ascending={sort.asc}
           onSort={handleSort}
-          /* ---- ★ 楽観的更新 ---- */
-          onCellSave={(id, field, val) =>
-            setShots((rows) =>
-              rows.map((r) =>
-                r.shot_id === id ? { ...r, [field]: val } : r))}
+          onCellSave={(shotId, field, value) => {
+            setShots(currentShots =>
+              currentShots.map(shot => shot.shot_id === shotId ? { ...shot, [field]: value } : shot)
+            );
+          }}
         />
       </div>
-    </AuthProvider>
+    </div>
   );
+}
+
+export default function App() {
+  return (<AuthProvider><MainApp /></AuthProvider>);
 }

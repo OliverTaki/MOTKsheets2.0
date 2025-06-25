@@ -1,66 +1,81 @@
-import {
-  createContext, useContext, useState, useEffect,
-} from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
 
-const Ctx = createContext(null);
-export const useAuth = () => useContext(Ctx);
+// Contextの作成
+const AuthContext = createContext(null);
 
-const SS_KEY = 'gis-token';
+// Contextを簡単に利用するためのカスタムフック
+export const useAuth = () => useContext(AuthContext);
 
+const SESSION_KEY = 'motk-google-auth-token';
+
+/**
+ * アプリケーション全体に認証情報を提供するプロバイダー (バグ修正版)
+ */
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(null);   // {access_token, expires_at}
+  // ★★★★★ 認証状態をより明確に管理 (isLoadingを追加) ★★★★★
+  const [auth, setAuth] = useState({
+    token: null,
+    isAuthenticated: false,
+    isLoading: true, // 初回ロード時にセッションを確認するまでローディング状態
+  });
 
-  /* -------- 初回: sessionStorage から復元 -------- */
-  useEffect(() => {
-    const raw = sessionStorage.getItem(SS_KEY);
-    if (!raw) return;
-    const t = JSON.parse(raw);
-    if (t.expires_at > Date.now()) setToken(t);
+  // ログアウト処理
+  const logout = useCallback(() => {
+    sessionStorage.removeItem(SESSION_KEY);
+    setAuth({ token: null, isAuthenticated: false, isLoading: false });
+  }, []);
+  
+  // ログイン成功時の処理
+  const handleLoginSuccess = useCallback((tokenResponse) => {
+    const expires_at = Date.now() + (tokenResponse.expires_in || 3600) * 1000;
+    const tokenData = {
+      access_token: tokenResponse.access_token,
+      expires_at: expires_at,
+    };
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(tokenData));
+    setAuth({ token: tokenData, isAuthenticated: true, isLoading: false });
   }, []);
 
-  /* -------- ポップアップ Login -------- */
-  const loginPopup = useGoogleLogin({
+  // useGoogleLoginフックでログイン関数を生成
+  const login = useGoogleLogin({
+    onSuccess: handleLoginSuccess,
+    onError: (error) => console.error('Login Failed:', error),
     scope: 'https://www.googleapis.com/auth/spreadsheets',
-    onSuccess: ({ access_token, expires_in }) => {
-      const t = {
-        access_token,
-        expires_at: Date.now() + expires_in * 1000,
-      };
-      sessionStorage.setItem(SS_KEY, JSON.stringify(t));
-      setToken(t);
-    },
   });
 
-  /* -------- Silent refresh (prompt:none) -------- */
-  const silent = useGoogleLogin({
-    scope: 'https://www.googleapis.com/auth/spreadsheets',
-    prompt: 'none',
-    onSuccess: ({ access_token, expires_in }) => {
-      const t = {
-        access_token,
-        expires_at: Date.now() + expires_in * 1000,
-      };
-      sessionStorage.setItem(SS_KEY, JSON.stringify(t));
-      setToken(t);
-    },
-  });
-
+  // 初回マウント時にセッションストレージからトークンを復元
   useEffect(() => {
-    if (!token) return;
-    const ms = token.expires_at - Date.now() - 5 * 60_000; // 5分前
-    const id = setTimeout(() => silent(), Math.max(ms, 0));
-    return () => clearTimeout(id);
-  }, [token, silent]);
+    try {
+      const storedToken = sessionStorage.getItem(SESSION_KEY);
+      if (storedToken) {
+        const tokenData = JSON.parse(storedToken);
+        // トークンの有効期限をチェック
+        if (tokenData.expires_at > Date.now()) {
+          setAuth({ token: tokenData, isAuthenticated: true, isLoading: false });
+        } else {
+          logout(); // 期限切れの場合はログアウト
+        }
+      } else {
+        setAuth(prev => ({ ...prev, isLoading: false }));
+      }
+    } catch (error) {
+      console.error("Could not parse stored token", error);
+      setAuth(prev => ({ ...prev, isLoading: false }));
+    }
+  }, [logout]);
+  
+  const value = { auth, login, logout };
 
-  const logout = () => {
-    sessionStorage.removeItem(SS_KEY);
-    setToken(null);
-  };
+  // ★★★★★ 認証状態が確定するまで子コンポーネントを描画しない ★★★★★
+  // これが編集機能が動かなかった根本原因の対策
+  if (auth.isLoading) {
+    return <div className="p-8 text-center text-gray-400">Authenticating...</div>;
+  }
 
   return (
-    <Ctx.Provider value={{ token, login: loginPopup, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
-    </Ctx.Provider>
+    </AuthContext.Provider>
   );
 }
