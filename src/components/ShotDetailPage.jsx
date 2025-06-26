@@ -1,55 +1,86 @@
-import React from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import useSheetsData from '../hooks/useSheetsData';
-import { useAuth } from '../AuthContext';
+import ShotDetailRow from './ShotDetailRow';
+import { AuthContext } from '../AuthContext';
+import { updateCell } from '../api/updateCell';
 
-export default function ShotDetailPage() {
-  const { id } = useParams();
-  const { auth } = useAuth();
-  const { shots, fields, loading, error } = useSheetsData();
+const spreadsheetId = import.meta.env.VITE_GOOGLE_SHEET_ID;
+const sheetName = 'Shots';
 
-  if (loading || auth.isLoading) {
-    return <div className="p-8 text-center text-gemini-text-secondary">Loading shot details...</div>;
-  }
-  if (error) {
-    return <div className="p-8 text-center text-red-400">Error: {error}</div>;
-  }
-  const shot = shots.find((s) => s.shot_id === id);
-  if (!shot) {
-    return (
-      <div className="p-8 text-center text-gemini-text-secondary">
-        <h2 className="text-xl">Shot not found.</h2>
-        <Link to="/" className="text-blue-400 hover:underline mt-4 inline-block">&larr; Back to list</Link>
-      </div>
-    );
-  }
-  const displayableFields = fields.filter(f => f.type !== 'uuid');
+const ShotDetailPage = ({ shots, fields }) => {
+    const { shotId } = useParams();
+    const [shot, setShot] = useState(null);
+    const { token } = useContext(AuthContext);
 
-  return (
-    <div className="min-h-screen p-4 sm:p-8 font-sans">
-      <div className="max-w-4xl mx-auto">
-        <Link to="/" className="text-blue-400 hover:underline text-sm mb-6 inline-block">&larr; Back to Shot List</Link>
-        <h1 className="text-3xl font-bold mb-2">
-          Shot: <span className="text-gray-300">{shot.shot_code || `ID ${shot.shot_id}`}</span>
-        </h1>
-        <hr className="border-gemini-border my-6" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-          {displayableFields.map((field) => (
-            <div key={field.field_id} className="py-2">
-              <h3 className="text-sm font-semibold text-gemini-text-secondary uppercase tracking-wider mb-1">
-                {field.field_name}
-              </h3>
-              {field.type === 'image' && shot[field.field_id] ? (
-                <img src={shot[field.field_id]} alt={`Thumbnail for ${shot.shot_code}`} className="mt-2 rounded-lg max-w-xs shadow-lg" />
-              ) : (
-                <p className="text-base text-gray-200 whitespace-pre-wrap break-words">
-                  {shot[field.field_id] || <span className="text-gray-500">N/A</span>}
-                </p>
-              )}
+    useEffect(() => {
+        const currentShot = shots.find(s => String(s.id) === String(shotId));
+        setShot(currentShot);
+    }, [shotId, shots]);
+
+    const handleSave = async (fieldId, value) => {
+        if (!shot || !token) {
+            alert('Cannot save. No shot data or user is not authenticated.');
+            return;
+        }
+
+        // スプレッドシート上の行インデックスを見つける (データ行は2行目からなので+2)
+        const dataRowIndex = shots.findIndex(s => s.id === shot.id);
+        if (dataRowIndex === -1) {
+            console.error("Could not find row index for shot");
+            alert("Error: Could not find the shot's row index.");
+            return;
+        }
+        const sheetRowIndex = dataRowIndex + 2; // +1 for 1-based index, +1 for header row
+
+        // スプレッドシート上の列インデックスを見つける
+        const sheetColumnIndex = fields.findIndex(f => f.id === fieldId);
+        if (sheetColumnIndex === -1) {
+            console.error(`Could not find column index for field: ${fieldId}`);
+            alert(`Error: Could not find the column index for ${fieldId}.`);
+            return;
+        }
+
+        try {
+            await updateCell(spreadsheetId, sheetName, sheetRowIndex, sheetColumnIndex, value, token);
+            // ローカルのstateを更新して即時反映
+            const updatedShot = { ...shot, [fieldId]: value };
+            setShot(updatedShot);
+            
+            // TODO: この変更をAppコンポーネントの全体stateに反映させる必要があります。
+            // 現状では、このページ内でのみ変更が反映されます。
+            console.log('Update successful locally. State management for global updates is needed.');
+
+        } catch (error) {
+            console.error('Failed to update cell:', error);
+            alert(`Error updating sheet: ${error.message}`);
+        }
+    };
+
+    if (!shot) {
+        return (
+             <div className="text-center p-8">
+                <p>Loading shot details or shot not found...</p>
+                <Link to="/" className="text-blue-500 hover:underline mt-4 inline-block">Back to list</Link>
             </div>
-          ))}
+        );
+    }
+
+    return (
+        <div className="p-4 max-w-4xl mx-auto">
+            <Link to="/" className="text-blue-500 hover:underline mb-4 inline-block">&larr; Back to Shot List</Link>
+            <h1 className="text-3xl font-bold mb-4">Shot Detail: {shot.id}</h1>
+            <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4">
+                {fields.map(field => (
+                    <ShotDetailRow
+                        key={field.id}
+                        field={field}
+                        value={shot[field.id] || ''}
+                        onSave={handleSave}
+                    />
+                ))}
+            </div>
         </div>
-      </div>
-    </div>
-  );
-}
+    );
+};
+
+export default ShotDetailPage;

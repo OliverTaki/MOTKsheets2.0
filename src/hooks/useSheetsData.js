@@ -1,81 +1,108 @@
-// src/hooks/useSheetsData.js  (V8 – auto‑retry after 401)
+import { useState, useEffect, useContext, useCallback } from 'react';
+import { AuthContext } from '../AuthContext';
+import { parseShots, parseFields } from '../utils/parse';
+import { missingIdHandler } from '../utils/missingIdHandler';
+import mockShots from '../mock/shots.json';
+import mockFields from '../mock/fields.json';
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '../AuthContext';
+const useSheetsData = (spreadsheetId, useMock = false) => {
+    const { token, isInitialized } = useContext(AuthContext);
+    const [sheets, setSheets] = useState([]);
+    const [fields, setFields] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [missingIds, setMissingIds] = useState([]);
 
-/**
- * fetchRangeWithRetry – Sheets GET with one automatic retry after silent
- * token refresh (handles expired / invalid tokens).
- */
-async function fetchRangeWithRetry({ sheetId, range, token, refreshToken }) {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(
-    range
-  )}`;
+    const fetchSheetsData = useCallback(async (currentToken) => {
+        console.log(`fetchSheetsData called. Token available: ${!!currentToken}`);
+        
+        if (!currentToken) {
+            console.log("No token provided to fetchSheetsData, aborting.");
+            setLoading(false);
+            return;
+        }
 
-  const doRequest = async (bearer) =>
-    fetch(url, {
-      headers: { Authorization: `Bearer ${bearer}` },
-    });
+        setLoading(true);
+        setError(null);
 
-  // 1st try
-  let res = await doRequest(token);
-  if (res.status === 401 && refreshToken) {
-    const ok = await refreshToken();
-    if (ok) {
-      // second try with new token
-      res = await doRequest(sessionStorage.getItem('motk_access_token'));
-    }
-  }
+        const rangeShots = 'Shots!A:AZ';
+        const rangeFields = 'FIELDS!A:C';
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(`Sheets 401: ${body.error?.message || 'Unauthorized'}`);
-  }
-  const json = await res.json();
-  return json.values || [];
-}
+        try {
+            // Google Sheets APIの仕様に合わせて、rangesパラメータを個別に設定します
+            const params = new URLSearchParams({
+                valueRenderOption: 'FORMATTED_VALUE',
+                dateTimeRenderOption: 'SERIAL_NUMBER',
+            });
+            params.append('ranges', rangeShots);
+            params.append('ranges', rangeFields);
 
-export default function useSheetsData() {
-  const { token, refreshToken } = useAuth();
-  const sheetId = import.meta.env.VITE_SHEETS_ID;
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?${params.toString()}`;
+            
+            console.log("Fetching URL:", url);
 
-  const [shots, setShots] = useState([]);
-  const [fields, setFields] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+            const response = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${currentToken}` },
+            });
 
-  const load = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const [s, f] = await Promise.all([
-        fetchRangeWithRetry({
-          sheetId,
-          range: 'SHOTS!A1:Z',
-          token,
-          refreshToken,
-        }),
-        fetchRangeWithRetry({
-          sheetId,
-          range: 'FIELDS!A1:Z',
-          token,
-          refreshToken,
-        }),
-      ]);
-      setShots(s);
-      setFields(f);
-    } catch (e) {
-      setError(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+            if (!response.ok) {
+                const errorData = await response.json();
+                const err = new Error(errorData.error.message || 'Failed to fetch data');
+                err.status = response.status;
+                throw err;
+            }
+            
+            const data = await response.json();
+            const shotsData = data.valueRanges?.[0]?.values;
+            const fieldsData = data.valueRanges?.[1]?.values;
 
-  useEffect(() => {
-    if (!token) return; // wait for sign‑in
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+            if (!shotsData || !fieldsData) {
+              throw new Error("Data not found in spreadsheet. Check sheet names ('Shots', 'FIELDS') and ranges.");
+            }
 
-  return { shots, fields, loading, error, mutate: load };
-}
+            const parsedFields = parseFields(fieldsData);
+            const parsedShots = parseShots(shotsData, parsedFields);
+            const { shotsWithIds, missingIdsFound } = missingIdHandler(parsedShots);
+
+            setFields(parsedFields);
+            setSheets(shotsWithIds);
+            if (missingIdsFound.length > 0) setMissingIds(missingIdsFound);
+            console.log('Successfully fetched and parsed data.');
+        } catch (err) {
+            console.error('Error during fetchSheetsData:', err);
+            setError(err);
+        } finally {
+            setLoading(false);
+        }
+    }, [spreadsheetId]);
+
+    useEffect(() => {
+        if (!spreadsheetId) {
+            setError(new Error("Configuration Error: VITE_SHEETS_ID is not set in your .env file. Please ensure the file exists and you have restarted the development server."));
+            setLoading(false);
+            return; 
+        }
+
+        if (useMock) {
+            return;
+        }
+        
+        if (isInitialized) {
+            if (token) {
+                setError(null); 
+                fetchSheetsData(token);
+            } else {
+                console.log("Auth is initialized, but user is not signed in. Waiting for login.");
+                setSheets([]);
+                setFields([]);
+                setLoading(false);
+            }
+        } else {
+             console.log(`Waiting for auth initialization...`);
+        }
+    }, [spreadsheetId, token, useMock, isInitialized, fetchSheetsData]);
+
+    return { sheets, fields, loading, error, missingIds, setSheets, setMissingIds };
+};
+
+export default useSheetsData;

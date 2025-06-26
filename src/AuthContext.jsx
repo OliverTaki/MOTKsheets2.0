@@ -1,111 +1,100 @@
-// src/AuthContext.jsx  (token refresh enabled)
+import React, { createContext, useState, useEffect, useCallback } from 'react';
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-  useRef,
-} from 'react';
+export const AuthContext = createContext(null);
+const TOKEN_STORAGE_KEY = 'google_auth_token';
 
-/**
- * AuthContext – Google OAuth + Sheets Token 自動更新
- * ----------------------------------------------------
- * - GIS tokenClient を保持し、401/invalid_token を検出したら再発行
- * - scope に drive.readonly 追加 (共有ドライブ対応)
- * - token は sessionStorage に保存
- */
+export const AuthProvider = ({ children }) => {
+    const [token, setToken] = useState(() => localStorage.getItem(TOKEN_STORAGE_KEY)); // 初期値としてlocalStorageから読み込む
+    const [isInitialized, setIsInitialized] = useState(false);
+    const [error, setError] = useState(null);
+    const [tokenClient, setTokenClient] = useState(null);
 
-const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-const SCOPES = [
-  'https://www.googleapis.com/auth/spreadsheets',
-  'https://www.googleapis.com/auth/drive.readonly',
-].join(' ');
-const TOKEN_KEY = 'motk_access_token';
+    const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 
-const AuthContext = createContext(null);
+    useEffect(() => {
+        const initializeGis = () => {
+            try {
+                if (!window.google || !window.google.accounts) {
+                    throw new Error("Google Identity Services library not loaded.");
+                }
+                const client = window.google.accounts.oauth2.initTokenClient({
+                    client_id: CLIENT_ID,
+                    scope: SCOPES,
+                    callback: (tokenResponse) => {
+                        if (tokenResponse && tokenResponse.access_token) {
+                            const accessToken = tokenResponse.access_token;
+                            setToken(accessToken);
+                            localStorage.setItem(TOKEN_STORAGE_KEY, accessToken); // トークンをlocalStorageに保存
+                            setError(null);
+                            console.log("Token obtained successfully.");
+                        } else {
+                            console.error("Token response error", tokenResponse);
+                            setError({ message: 'Failed to get access token from Google.' });
+                        }
+                    },
+                    error_callback: (err) => {
+                        console.error("GIS Error Callback:", err);
+                        setError({ message: err.type || 'An unknown authentication error occurred.' });
+                    }
+                });
+                setTokenClient(client);
+                setIsInitialized(true);
+                console.log("Google Identity Services client initialized.");
+            } catch (e) {
+                console.error("Error initializing GIS client:", e);
+                setError(e);
+                setIsInitialized(true);
+            }
+        };
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const tokenClientRef = useRef(null);
+        if (window.google && window.google.accounts) {
+            initializeGis();
+        } else {
+            const script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+            if (script) {
+                script.addEventListener('load', initializeGis);
+                return () => script.removeEventListener('load', initializeGis);
+            } else {
+                setError({ message: "GSI script tag not found." });
+                setIsInitialized(true);
+            }
+        }
+    }, [CLIENT_ID, SCOPES]);
 
-  /* ------------------ GIS loader ------------------ */
-  const loadGis = () =>
-    new Promise((res, rej) => {
-      if (window.google?.accounts?.oauth2) return res(window.google.accounts.oauth2);
-      const s = document.createElement('script');
-      s.src = 'https://accounts.google.com/gsi/client';
-      s.async = true;
-      s.onload = () => res(window.google.accounts.oauth2);
-      s.onerror = rej;
-      document.head.appendChild(s);
-    });
+    const signIn = useCallback(() => {
+        if (tokenClient) {
+            if (token) {
+                // すでにトークンがある場合は、不要なポップアップを避ける
+                tokenClient.requestAccessToken({ prompt: '' });
+            } else {
+                // トークンがない場合のみ同意画面を要求
+                tokenClient.requestAccessToken({ prompt: 'consent' });
+            }
+        } else {
+            console.error("Token client is not initialized.");
+            setError({ message: 'Authentication service is not ready. Please try again in a moment.' });
+        }
+    }, [tokenClient, token]);
 
-  /* ---------------- token refresh ---------------- */
-  const refreshToken = useCallback(async () => {
-    if (!tokenClientRef.current) return false;
-    return new Promise((res) => {
-      tokenClientRef.current.callback = (resp) => {
-        if (resp.error || !resp.access_token) return res(false);
-        sessionStorage.setItem(TOKEN_KEY, resp.access_token);
-        setToken(resp.access_token);
-        res(true);
-      };
-      tokenClientRef.current.requestAccessToken({ prompt: '' }); // silent
-    });
-  }, []);
+    const signOut = useCallback(() => {
+        const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+        if (storedToken) {
+            window.google.accounts.oauth2.revoke(storedToken, () => {
+                setToken(null);
+                localStorage.removeItem(TOKEN_STORAGE_KEY); // localStorageからトークンを削除
+                console.log('Token revoked and user signed out.');
+            });
+        } else {
+            setToken(null);
+        }
+    }, []);
 
-  /* ------------------- signIn -------------------- */
-  const signIn = useCallback(async () => {
-    setLoading(true);
-    const gis = await loadGis();
+    const value = { token, signIn, signOut, isInitialized, error };
 
-    tokenClientRef.current = gis.initTokenClient({
-      client_id: CLIENT_ID,
-      scope: SCOPES,
-      callback: (resp) => {
-        if (resp.error || !resp.access_token) return setLoading(false);
-        sessionStorage.setItem(TOKEN_KEY, resp.access_token);
-        setToken(resp.access_token);
-        setUser({ uid: 'google', displayName: 'Google User' });
-        setLoading(false);
-      },
-    });
-
-    tokenClientRef.current.requestAccessToken({ prompt: 'consent' });
-  }, []);
-
-  /* ------------------- signOut ------------------- */
-  const signOut = () => {
-    sessionStorage.removeItem(TOKEN_KEY);
-    setToken(null);
-    setUser(null);
-  };
-
-  /* ----------- init from sessionStorage ---------- */
-  useEffect(() => {
-    const stored = sessionStorage.getItem(TOKEN_KEY);
-    if (stored) {
-      setToken(stored);
-      setUser({ uid: 'google', displayName: 'Google User' });
-    }
-    setLoading(false);
-  }, []);
-
-  return (
-    <AuthContext.Provider value={{ user, token, loading, signIn, signOut, refreshToken }}>
-      {children}
-    </AuthContext.Provider>
-  );
-}
-
-export const useAuth = () => useContext(AuthContext);
-
-export const useRequireAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('AuthContext not found');
-  return ctx;
+    return (
+        <AuthContext.Provider value={value}>
+            {children}
+        </AuthContext.Provider>
+    );
 };

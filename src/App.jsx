@@ -1,122 +1,149 @@
-// src/App.jsx  (V8 – stable token‑aware + ID patch)
-
-import { useState, useEffect, useMemo } from 'react';
-import { useRequireAuth } from './AuthContext';
+import React, { useState, useEffect, useContext } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import useSheetsData from './hooks/useSheetsData';
-import ShotTable from './components/ShotTable.jsx';
-import LoginButton from './components/LoginButton.jsx';
-import { updateCell } from './api/updateCell.js';
-import { detectAndPatchIds } from './utils/missingIdHandler.js';
+import { updateSheetWithNewIds } from './utils/sheetSync';
+import ShotTable from './components/ShotTable';
+import Toolbar from './components/Toolbar';
+import LoginButton from './components/LoginButton';
+import { AuthContext } from './AuthContext';
+import MissingIdDialog from './components/MissingIdDialog';
+import ShotDetailPage from './components/ShotDetailPage';
 
-const LS_KEY = 'motk-shot-presets';
+// 環境変数名を .env ファイルに合わせて修正
+const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 
-export default function App() {
-  /* ---------------- Auth ---------------- */
-  const { user, loading: authLoading, signIn, token } = useRequireAuth();
+// メインのテーブルビューをコンポーネントとして分離
+const MainView = ({ sheets, fields, onSort, onCellSave, sortKey, ascending, onFilterChange, allShots }) => {
+  return (
+    <>
+      <Toolbar onFilterChange={onFilterChange} allShots={allShots} fields={fields} />
+      <ShotTable
+        shots={sheets}
+        fields={fields}
+        sortKey={sortKey}
+        ascending={ascending}
+        onSort={onSort}
+        onCellSave={onCellSave}
+      />
+    </>
+  );
+};
 
-  /* ---------------- Sheets ---------------- */
-  const {
-    shots: initial,
-    fields,
-    loading: sheetLoading,
-    error,
-    mutate: refreshSheets,
-  } = useSheetsData();
+// 「新しいショットを追加」ページ用のプレースホルダー
+const NewShotPage = () => {
+    return (
+      <div className="text-center p-8 bg-white dark:bg-gray-700 rounded-lg shadow">
+        <h2 className="text-2xl font-bold">Add New Shot</h2>
+        <p className="mt-2">この機能は現在開発中です。</p>
+      </div>
+    );
+}
 
-  const [shots, setShots] = useState([]);
-  const [loaded, setLoaded] = useState(false);
+function App() {
+  const [sortKey, setSortKey] = useState('id');
+  const [ascending, setAscending] = useState(true);
+  const { token, isInitialized } = useContext(AuthContext);
+  // useSheetsDataフックに正しいspreadsheetIdを渡す
+  const { sheets, fields, loading, error, missingIds, setSheets, setMissingIds } = useSheetsData(spreadsheetId);
+  const [filteredShots, setFilteredShots] = useState([]);
 
   useEffect(() => {
-    if (!loaded && initial.length) {
-      setShots(initial);
-      setLoaded(true);
-    }
-  }, [initial, loaded]);
+    setFilteredShots(sheets);
+  }, [sheets]);
 
-  /* ➊ ID 欠落行を検出し即パッチ ------------------------------ */
-  const sheetId = import.meta.env.VITE_SHEETS_ID;
-  const tabName = import.meta.env.VITE_TAB_NAME || 'SHOTS';
-  const apiKey = import.meta.env.VITE_SHEETS_API_KEY;
+  if (!isInitialized) {
+      return (
+          <div className="flex justify-center items-center h-screen bg-gray-100 dark:bg-gray-900">
+              <div className="text-center">
+                <h1 className="text-2xl font-bold mb-4">MOTK Sheets 2.0</h1>
+                <p className="text-xl">Initializing Authentication...</p>
+              </div>
+          </div>
+      );
+  }
 
-  useEffect(() => {
-    if (!token || !loaded) return;
-    (async () => {
-      const patched = await detectAndPatchIds(shots, sheetId, tabName, token);
-      if (patched) refreshSheets();
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, loaded]);
-
-  /* ---------------- Sort ---------------- */
-  const [sortKey, setSortKey] = useState('shot_id');
-  const [asc, setAsc] = useState(true);
-  const handleSort = (fid) =>
-    fid === sortKey ? setAsc(!asc) : (setSortKey(fid), setAsc(true));
-
-  /* ---------------- Filter ---------------- */
-  const [filters, setFilters] = useState({});
-  const updateFilter = (fid, v) => setFilters((f) => ({ ...f, [fid]: v }));
-
-  /* ---------------- View ---------------- */
-  const view = useMemo(() => {
-    let rows = shots;
-    Object.entries(filters).forEach(([fid, v]) => {
-      if (v && v !== 'all') rows = rows.filter((r) => r[fid] === v);
-    });
-    return [...rows].sort((a, b) => {
-      const A = a[sortKey] ?? '';
-      const B = b[sortKey] ?? '';
-      return asc
-        ? String(A).localeCompare(String(B))
-        : String(B).localeCompare(String(A));
-    });
-  }, [shots, filters, sortKey, asc]);
-
-  /* ---------------- Save Cell ---------------- */
-  const handleSave = async (shotId, fid, val) => {
-    setShots((rows) => rows.map((r) => (r.shot_id === shotId ? { ...r, [fid]: val } : r)));
-    try {
-      const row = shots.find((r) => r.shot_id === shotId);
-      if (!row) throw new Error('row not found');
-      const rowNum = row.__rowNum;
-      const colNum = fields.findIndex((f) => f.field_id === fid) + 1; // 1‑based
-      await updateCell({ sheetId, tabName, row: rowNum, col: colNum, value: val, token, apiKey });
-    } catch (e) {
-      console.error(e);
-      // TODO: revert on failure or show toast
+  const handleSort = (key) => {
+    if (sortKey === key) {
+      setAscending(!ascending);
+    } else {
+      setSortKey(key);
+      setAscending(true);
     }
   };
 
-  /* ---------------- Gate ---------------- */
-  if (authLoading || sheetLoading) return <div className="p-8 text-center">Loading…</div>;
-  if (!user)
-    return (
-      <div className="p-8 text-center">
-        <button
-          onClick={signIn}
-          className="px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700"
-        >
-          Sign in
-        </button>
-      </div>
-    );
-  if (error) return <div className="p-8 text-red-500">{error}</div>;
+  const handleCellSave = async (rowIndex, fieldId, value) => {
+    console.log(`Saving row ${rowIndex}, field ${fieldId} with value: ${value}`);
+    // セル更新APIの呼び出しをここに実装
+  };
+
+  const handleConfirmPatch = async () => {
+    if (!token) {
+        alert("認証が必要です。サインインしてください。");
+        return;
+    }
+    if (missingIds.length > 0) {
+        try {
+            await updateSheetWithNewIds(spreadsheetId, 'Shots', token, missingIds, fields);
+            alert('シートが新しいIDで正常に更新されました。');
+            setMissingIds([]);
+        } catch (err) {
+            console.error('シートの更新に失敗しました:', err);
+            alert(`エラー: ${err.message}`);
+        }
+    }
+  };
+
+  const handleCancelPatch = () => {
+    setMissingIds([]);
+    alert('更新はキャンセルされました。');
+  };
+
+  const sortedShots = [...filteredShots].sort((a, b) => {
+    const valA = a[sortKey];
+    const valB = b[sortKey];
+    if (valA < valB) return ascending ? -1 : 1;
+    if (valA > valB) return ascending ? 1 : -1;
+    return 0;
+  });
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-xl font-bold">MOTKsheets2.0 – Shots</h1>
+    <div className="App bg-gray-100 dark:bg-gray-900 min-h-screen text-gray-800 dark:text-gray-200">
+      <header className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 shadow sticky top-0 z-10">
+        <h1 className="text-2xl font-bold">MOTK Sheets 2.0</h1>
         <LoginButton />
-      </div>
-      <ShotTable
-        shots={view}
-        fields={fields}
-        sortKey={sortKey}
-        ascending={asc}
-        onSort={handleSort}
-        onCellSave={handleSave}
-        updateFilter={updateFilter}
+      </header>
+
+      <main className="p-4">
+        {loading && <p className="text-center">Loading sheet data...</p>}
+        {error && <p className="text-red-500 text-center">Error: {error.message}</p>}
+        {!loading && !error && (
+          <Routes>
+            <Route path="/" element={
+              <MainView
+                sheets={sortedShots}
+                fields={fields}
+                onSort={handleSort}
+                onCellSave={handleCellSave}
+                sortKey={sortKey}
+                ascending={ascending}
+                onFilterChange={setFilteredShots}
+                allShots={sheets}
+              />
+            } />
+            <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={fields} />} />
+            <Route path="/shots/new" element={<NewShotPage />} />
+          </Routes>
+        )}
+      </main>
+      
+      <MissingIdDialog
+        isOpen={missingIds.length > 0}
+        onConfirm={handleConfirmPatch}
+        onCancel={handleCancelPatch}
+        missingCount={missingIds.length}
       />
     </div>
   );
 }
+
+export default App;

@@ -1,34 +1,39 @@
-// src/api/updateCell.js – v2 (auth header & USER_ENTERED)
-//--------------------------------------------------
 /**
- * Update a single cell in Google Sheets.
- *
- * @param {Object} params
- *  - sheetId  : Spreadsheet ID
- *  - tabName  : シート名 ("SHOTS")
- *  - row      : 1‑based 行番号
- *  - col      : 1‑based 列番号 (A=1)
- *  - value    : 書き込む値
- *  - token    : OAuth access_token (推奨)
- *  - apiKey   : fallback API key (token 無い場合)
+ * Googleスプレッドシートの単一セルを更新します。
+ * @param {string} spreadsheetId 
+ * @param {string} sheetName 
+ * @param {number} row - 更新する行 (1-based index)
+ * @param {number} column - 更新する列 (0-based index)
+ * @param {string} value - 設定する新しい値
+ * @param {string} token - 認証トークン
  */
-export async function updateCell({ sheetId, tabName, row, col, value, token, apiKey }) {
-  const colLetter = String.fromCharCode("A".charCodeAt(0) + col - 1);
-  const range = `${tabName}!${colLetter}${row}`;
-  const qs = new URLSearchParams({ valueInputOption: "USER_ENTERED" });
-  if (!token) qs.append("key", apiKey);
+export const updateCell = async (spreadsheetId, sheetName, row, column, value, token) => {
+    // 列のインデックス（0=A, 1=B ...）をアルファベットに変換
+    const columnLetter = String.fromCharCode('A'.charCodeAt(0) + column);
+    const range = `${sheetName}!${columnLetter}${row}`;
 
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}?${qs}`;
-  const body = {
-    range,
-    majorDimension: "ROWS",
-    values: [[value]],
-  };
+    const params = new URLSearchParams({
+        valueInputOption: 'USER_ENTERED'
+    });
+    
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?${params}`;
 
-  const headers = { "Content-Type": "application/json" };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
+    const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            values: [[value]]
+        })
+    });
 
-  const res = await fetch(url, { method: "PUT", headers, body: JSON.stringify(body) });
-  if (!res.ok) throw new Error(`Sheets update failed: ${res.status}`);
-  return res.json();
-}
+    if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Google Sheets API Error:', errorData);
+        throw new Error(errorData.error.message || 'Failed to update cell.');
+    }
+
+    return response.json();
+};

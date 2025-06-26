@@ -1,51 +1,57 @@
-// src/utils/sheetSync.js
-
-import { generateId } from './idGenerator.js';
-
 /**
- * scanRows – detect rows lacking a primary key (shot_id) and suggest IDs.
- * @param {Object[]} rows – array of row objects as returned by useSheetsData()
- * @param {string} idField – usually 'shot_id'
- * @returns {{ missing: { index:number, suggestedId:string }[], patched:Object[] }}
+ * 新しく割り当てられたIDをGoogleスプレッドシートに書き込みます。
+ * @param {string} spreadsheetId - スプレッドシートのID
+ * @param {string} sheetName - 対象のシート名 (例: 'Shots')
+ * @param {string} token - 認証トークン
+ * @param {Array<{index: number, newId: string}>} updates - 更新する行の情報配列
+ * @param {Array<{id: string}>} fields - フィールド定義
+ * @returns {Promise<Object>} - batchUpdate APIからのレスポンス
  */
-export function scanRows(rows, idField = 'shot_id') {
-  const missing = [];
-  const patched = rows.map((r, idx) => {
-    if (!r[idField]) {
-      const sug = generateId('shot');
-      missing.push({ index: idx, suggestedId: sug });
-      return { ...r, [idField]: sug };
+export async function updateSheetWithNewIds(spreadsheetId, sheetName, token, updates, fields) {
+    // 'id'フィールドが何番目の列かを探す
+    const idColumnIndex = fields.findIndex(f => f.id === 'id');
+    if (idColumnIndex === -1) {
+        throw new Error("Could not find 'id' column in fields definition.");
     }
-    return r;
-  });
-  return { missing, patched };
-}
+    
+    // Google Sheets APIはA=0, B=1...と列を数えるので、インデックスがそのまま使える
+    const idColumnLetter = String.fromCharCode('A'.charCodeAt(0) + idColumnIndex);
 
-/**
- * applyIds – write back suggested IDs to Google Sheets in bulk.
- * Caller decides whether to commit or discard.
- * @param {Object[]} missing – result of scanRows().missing
- * @param {string} sheetId
- * @param {string} tabName
- * @param {string} token – OAuth access_token
- * @param {string} apiKey
- */
-export async function applyIds({ missing, sheetId, tabName, token, apiKey }) {
-  if (!missing.length) return;
-  const requests = missing.map(({ index, suggestedId }) => ({
-    range: `${tabName}!A${index + 2}`, // assuming ID is column A and header row is 1
-    values: [[suggestedId]],
-  }));
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values:batchUpdate?key=${apiKey}`;
-  await fetch(url, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      valueInputOption: 'RAW',
-      data: requests,
-    }),
-  });
+    // batchUpdate APIに送るリクエストの本体を作成する
+    const requests = updates.map(update => {
+        // シートの行番号は1から始まり、ヘッダー行があるので+2する
+        // update.indexは0ベースのデータ配列のインデックス
+        const rowIndex = update.index + 2; 
+        const range = `${sheetName}!${idColumnLetter}${rowIndex}`;
+        
+        return {
+            range: range,
+            values: [[update.newId]]
+        };
+    });
+
+    const body = {
+        valueInputOption: 'USER_ENTERED',
+        data: requests
+    };
+
+    const response = await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchUpdate`,
+        {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Google Sheets API Error:', errorData);
+        throw new Error(errorData.error.message || 'Failed to update sheet.');
+    }
+
+    return response.json();
 }

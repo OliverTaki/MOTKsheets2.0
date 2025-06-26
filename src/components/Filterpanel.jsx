@@ -1,47 +1,65 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
-/**
- * 動的なフィルタリングパネル
- * @param {object[]} fields - 表示・フィルタリング対象のフィールド定義
- * @param {object} filters - 現在のフィルター状態 { field_id: value }
- * @param {function} onFilterChange - フィルターが変更されたときに呼び出される関数
- */
-export default function FilterPanel({ fields, filters, onFilterChange }) {
-  // フィルター可能なフィールドのみを抽出 (例: text, select)
-  const filterableFields = fields.filter(f => ['text', 'select'].includes(f.type));
+const FilterPanel = ({ fields, allShots, onFilterChange }) => {
+    const [activeFilters, setActiveFilters] = useState({});
 
-  const handleInputChange = (fieldId, value) => {
-    onFilterChange(fieldId, value);
-  };
+    useEffect(() => {
+        if (Object.keys(activeFilters).length === 0) {
+            onFilterChange(allShots);
+            return;
+        }
 
-  return (
-    <div className="p-4 bg-gray-100 rounded-lg flex flex-wrap items-center gap-4">
-      <span className="font-semibold text-sm mr-2">Filters:</span>
-      {filterableFields.map(field => (
-        <div key={field.field_id} className="flex flex-col">
-          <label className="text-xs text-gray-600 mb-1">{field.field_name}</label>
-          {field.type === 'select' ? (
-            <select
-              value={filters[field.field_id] || ''}
-              onChange={(e) => handleInputChange(field.field_id, e.target.value)}
-              className="border px-2 py-1 text-sm rounded-md w-40"
-            >
-              <option value="">All</option>
-              {field.options.map(opt => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
-            </select>
-          ) : (
-            <input
-              type="text"
-              placeholder={`Filter by ${field.field_name}...`}
-              value={filters[field.field_id] || ''}
-              onChange={(e) => handleInputChange(field.field_id, e.target.value)}
-              className="border px-2 py-1 text-sm rounded-md w-40"
-            />
-          )}
+        const filtered = allShots.filter(shot => {
+            return Object.entries(activeFilters).every(([fieldId, value]) => {
+                if (!value) return true;
+                return String(shot[fieldId]) === String(value);
+            });
+        });
+        onFilterChange(filtered);
+    }, [activeFilters, allShots, onFilterChange]);
+
+
+    const handleFilterChange = (fieldId, value) => {
+        setActiveFilters(prev => ({ ...prev, [fieldId]: value }));
+    };
+
+    // 特定のフィールドのユニークな値を取得する（statusなどに使用）
+    const getUniqueValues = (fieldId) => {
+        if (!allShots) return [];
+        const values = allShots.map(shot => shot && shot[fieldId]).filter(Boolean);
+        return [...new Set(values)];
+    };
+
+
+    return (
+        <div className="flex flex-wrap items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <span className="font-semibold text-gray-700 dark:text-gray-300">Filters:</span>
+            {fields
+                // options列に何か書かれているか、typeが'select'のフィールドのみをフィルター対象とする
+                .filter(field => (field.options && typeof field.options === 'string' && field.options.trim() !== '') || field.type === 'select')
+                .map(field => {
+                    // statusのように動的に選択肢を生成するか、options列の固定値を使うかを決定
+                    const options = field.type === 'select' ? getUniqueValues(field.id) : (field.options || '').split(',').map(s => s.trim());
+                    
+                    return (
+                        <div key={field.id} className="flex items-center">
+                            <label htmlFor={field.id} className="mr-2 text-sm text-gray-600 dark:text-gray-400">{field.label}:</label>
+                            <select
+                                id={field.id}
+                                value={activeFilters[field.id] || ''}
+                                onChange={e => handleFilterChange(field.id, e.target.value)}
+                                className="p-2 border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="">All</option>
+                                {options.map(optionValue => (
+                                    <option key={optionValue} value={optionValue}>{optionValue}</option>
+                                ))}
+                            </select>
+                        </div>
+                    );
+                })}
         </div>
-      ))}
-    </div>
-  );
-}
+    );
+};
+
+export default FilterPanel;

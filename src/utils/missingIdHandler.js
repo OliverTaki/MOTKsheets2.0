@@ -1,26 +1,26 @@
-// src/utils/missingIdHandler.js  (V2 – safe sheetId)
+import { generateId } from './idGenerator';
 
-import { scanRows } from './sheetSync.js';
-import { batchUpdate } from '../api/batchUpdate.js';
+/**
+ * ショットのリストをチェックし、IDが欠落しているものに新しいIDを割り当てます。
+ * @param {Array<Object>} shots - ショットオブジェクトの配列
+ * @returns {{shotsWithIds: Array<Object>, missingIdsFound: Array<{index: number, newId: string}>, updated: boolean}}
+ */
+export function missingIdHandler(shots) {
+    // 元の配列を直接変更しないようにコピーを作成
+    const shotsWithIds = shots.map(shot => ({...shot}));
+    const missingIdsFound = [];
+    let updated = false;
 
-export async function detectAndPatchIds(rows, sheetId, tabName, token) {
-  if (!sheetId || !token) return false; // 安全ガード
+    shotsWithIds.forEach((shot, index) => {
+        // shot.idが存在しない、または空文字列の場合
+        if (!shot.id || String(shot.id).trim() === '') {
+            const newId = generateId(shot, index);
+            shot.id = newId;
+            // どの行に新しいIDが振られたかを記録
+            missingIdsFound.push({ index: index, newId: newId });
+            updated = true;
+        }
+    });
 
-  const { missing, patched } = scanRows(rows, 'shot_id');
-  if (!missing.length) return false;
-
-  const data = patched.map((r) => [r.shot_id]);
-  const range = `${tabName}!A${missing[0].index}:${missing[missing.length - 1].index}`;
-
-  await batchUpdate({
-    sheetId,
-    token,
-    requests: [
-      {
-        range,
-        values: data,
-      },
-    ],
-  });
-  return true;
+    return { shotsWithIds, missingIdsFound, updated };
 }
