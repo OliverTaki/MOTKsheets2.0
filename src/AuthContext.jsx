@@ -1,152 +1,111 @@
-// src/AuthContext.jsx – v7 (enable write scope, jwt-decode, offline access)
-//----------------------------------------------------------------
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { jwtDecode } from "jwt-decode";
+// src/AuthContext.jsx  (token refresh enabled)
 
-const AuthContext = createContext();
-export const useAuth = () => useContext(AuthContext);
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+} from 'react';
 
-const CLIENT_ID     = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-const CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET || ""; // optional
+/**
+ * AuthContext – Google OAuth + Sheets Token 自動更新
+ * ----------------------------------------------------
+ * - GIS tokenClient を保持し、401/invalid_token を検出したら再発行
+ * - scope に drive.readonly 追加 (共有ドライブ対応)
+ * - token は sessionStorage に保存
+ */
 
-// === Request **read‑write** scope for Google Sheets ===
+const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const SCOPES = [
-  "openid",
-  "email",
-  "profile",
-  "https://www.googleapis.com/auth/spreadsheets", // ← read‑write
-].join(" ");
+  'https://www.googleapis.com/auth/spreadsheets',
+  'https://www.googleapis.com/auth/drive.readonly',
+].join(' ');
+const TOKEN_KEY = 'motk_access_token';
 
-const genRandom = (len = 64) => {
-  const u8 = crypto.getRandomValues(new Uint8Array(len));
-  return btoa(String.fromCharCode(...u8))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "")
-    .slice(0, len);
-};
+const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const tokenClientRef = useRef(null);
 
-  /* ---------- accessToken → userinfo ---------- */
-  const loadUser = async (accessToken, idToken) => {
-    // try ID‑token first (no extra fetch)
-    if (idToken) {
-      try {
-        const d = jwtDecode(idToken);
-        setUser({ name: d.name, email: d.email, picture: d.picture });
-        return;
-      } catch {}
-    }
+  /* ------------------ GIS loader ------------------ */
+  const loadGis = () =>
+    new Promise((res, rej) => {
+      if (window.google?.accounts?.oauth2) return res(window.google.accounts.oauth2);
+      const s = document.createElement('script');
+      s.src = 'https://accounts.google.com/gsi/client';
+      s.async = true;
+      s.onload = () => res(window.google.accounts.oauth2);
+      s.onerror = rej;
+      document.head.appendChild(s);
+    });
 
-    try {
-      const r = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      if (!r.ok) throw new Error();
-      const i = await r.json();
-      setUser({ name: i.name, email: i.email, picture: i.picture });
-    } catch {
-      sessionStorage.clear();
-      setUser(null);
-    }
-  };
-
-  /* ---------- bootstrap ---------- */
-  useEffect(() => {
-    const at  = sessionStorage.getItem("motk_access_token");
-    const idt = sessionStorage.getItem("motk_id_token");
-    if (at) loadUser(at, idt);
+  /* ---------------- token refresh ---------------- */
+  const refreshToken = useCallback(async () => {
+    if (!tokenClientRef.current) return false;
+    return new Promise((res) => {
+      tokenClientRef.current.callback = (resp) => {
+        if (resp.error || !resp.access_token) return res(false);
+        sessionStorage.setItem(TOKEN_KEY, resp.access_token);
+        setToken(resp.access_token);
+        res(true);
+      };
+      tokenClientRef.current.requestAccessToken({ prompt: '' }); // silent
+    });
   }, []);
 
-  /* ---------- Google Sign‑In (PKCE) ---------- */
-  const signIn = async () => {
-    const redirectUri = `${window.location.origin}/oauth.html`;
+  /* ------------------- signIn -------------------- */
+  const signIn = useCallback(async () => {
+    setLoading(true);
+    const gis = await loadGis();
 
-    // PKCE: verifier → challenge
-    const verifier  = genRandom(64);
-    const hash      = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
-    const challenge = btoa(String.fromCharCode(...new Uint8Array(hash)))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
-
-    const authUrl =
-      "https://accounts.google.com/o/oauth2/v2/auth?" +
-      new URLSearchParams({
-        client_id: CLIENT_ID,
-        redirect_uri: redirectUri,
-        response_type: "code",
-        scope: SCOPES,
-        code_challenge: challenge,
-        code_challenge_method: "S256",
-        access_type: "offline",           // ← refresh_token 取得
-        prompt: "consent select_account", // ← 毎回 consent で確実に scope 付与
-      });
-
-    const popup = window.open(authUrl, "oauth", "width=500,height=600");
-    const code  = await new Promise((resolve, reject) => {
-      const t = setInterval(() => {
-        try {
-          if (popup.closed) { clearInterval(t); reject(new Error("closed")); }
-          else if (popup.location.href.startsWith(redirectUri)) {
-            const c = new URL(popup.location.href).searchParams.get("code");
-            if (c) { clearInterval(t); popup.close(); resolve(c); }
-          }
-        } catch {}
-      }, 500);
-    });
-
-    const body = new URLSearchParams({
+    tokenClientRef.current = gis.initTokenClient({
       client_id: CLIENT_ID,
-      grant_type: "authorization_code",
-      code,
-      redirect_uri: redirectUri,
-      code_verifier: verifier,
+      scope: SCOPES,
+      callback: (resp) => {
+        if (resp.error || !resp.access_token) return setLoading(false);
+        sessionStorage.setItem(TOKEN_KEY, resp.access_token);
+        setToken(resp.access_token);
+        setUser({ uid: 'google', displayName: 'Google User' });
+        setLoading(false);
+      },
     });
-    if (CLIENT_SECRET) body.append("client_secret", CLIENT_SECRET);
 
-    const tk = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body,
-    }).then((r) => r.json());
+    tokenClientRef.current.requestAccessToken({ prompt: 'consent' });
+  }, []);
 
-    if (tk.access_token) {
-      sessionStorage.setItem("motk_access_token", tk.access_token);
-      if (tk.id_token) sessionStorage.setItem("motk_id_token", tk.id_token);
-      await loadUser(tk.access_token, tk.id_token);
-    } else {
-      console.error("Token exchange failed", tk);
-      alert("Google sign‑in failed – see console for details.");
-    }
-  };
-
+  /* ------------------- signOut ------------------- */
   const signOut = () => {
-    sessionStorage.clear();
+    sessionStorage.removeItem(TOKEN_KEY);
+    setToken(null);
     setUser(null);
   };
 
+  /* ----------- init from sessionStorage ---------- */
+  useEffect(() => {
+    const stored = sessionStorage.getItem(TOKEN_KEY);
+    if (stored) {
+      setToken(stored);
+      setUser({ uid: 'google', displayName: 'Google User' });
+    }
+    setLoading(false);
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, token, loading, signIn, signOut, refreshToken }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-/* ---------- require auth guard ---------- */
+export const useAuth = () => useContext(AuthContext);
+
 export const useRequireAuth = () => {
-  const { user, signIn } = useAuth();
-  if (!user) {
-    return (
-      <div className="h-screen flex flex-col items-center justify-center gap-4">
-        <h2 className="text-xl font-medium">Sign‑in required</h2>
-        <button onClick={signIn} className="px-4 py-2 rounded bg-amber-500 text-white">
-          Sign in with Google
-        </button>
-      </div>
-    );
-  }
-  return null;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('AuthContext not found');
+  return ctx;
 };

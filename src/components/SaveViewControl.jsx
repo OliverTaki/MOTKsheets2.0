@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '../AuthContext.jsx';
+import { useAuth } from '../AuthContext';
 import { appendRow } from '../api/appendRow.js';
 import { v4 as uuidv4 } from 'uuid';
 

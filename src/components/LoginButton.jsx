@@ -1,5 +1,5 @@
 import React from "react";
-import { useAuth } from "../AuthContext.jsx";
+import { useAuth } from '../AuthContext';
 
 export default function LoginButton() {
   const { user, signOut, signIn } = useAuth();
