@@ -1,80 +1,67 @@
-import { useEffect, useState } from 'react';
-import { toBool }              from '../utils/parse.js';
+// src/hooks/useSheetsData.js – v4 (Bearer→fallback API‑key)
+//-----------------------------------------------------------------
+import { useState, useEffect } from "react";
 
-/**
- * useSheetsData
- *  - Google Sheets API から SHOTS / FIELDS を並列取得
- *  - fields…  FIELDS シートの定義
- *  - shots …  SHOTS  シートのデータ
- *  - loading / error も返却
- */
 export default function useSheetsData() {
-  /* ---------- React state ---------- */
   const [fields, setFields] = useState([]);
-  const [shots,  setShots]  = useState([]);
+  const [shots, setShots] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState('');
+  const [error, setError] = useState(null);
 
-  /* ---------- .env ---------- */
-  const apiKey  = import.meta.env.VITE_SHEETS_API_KEY;
   const sheetId = import.meta.env.VITE_SHEETS_ID;
-  const shotsTab   = import.meta.env.VITE_TAB_NAME || 'SHOTS';
-  const fieldsTab  = 'FIELDS';
+  const tabName = import.meta.env.VITE_TAB_NAME || "SHOTS";
+  const token   = sessionStorage.getItem("motk_access_token");
+  const apiKey  = import.meta.env.VITE_SHEETS_API_KEY;
 
-  /* ---------- fetch once ---------- */
-  useEffect(() => {
-    if (!apiKey || !sheetId) {
-      setError('Missing VITE_SHEETS_API_KEY or VITE_SHEETS_ID.');
-      setLoading(false);
-      return;
+  /* fetch helper – tries Bearer first, falls back to API‑key if 401/403 */
+  const fetchRange = async (range) => {
+    const base = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}`;
+    /* 1) Bearer */
+    if (token) {
+      const r = await fetch(base, { headers: { Authorization: `Bearer ${token}` } });
+      if (r.ok) return r.json();
+      if (r.status !== 401 && r.status !== 403) throw new Error(r.status);
     }
+    /* 2) API key */
+    const r2 = await fetch(base + `?key=${apiKey}`);
+    if (!r2.ok) throw new Error(r2.status);
+    return r2.json();
+  };
 
-    const shotsURL  = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(shotsTab)}!A1:Z?key=${apiKey}`;
-    const fieldsURL = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(fieldsTab)}!A1:Z?key=${apiKey}`;
-
+  useEffect(() => {
+    if (!sheetId) return;
     setLoading(true);
+
     Promise.all([
-      fetch(shotsURL).then((r) => r.json()),
-      fetch(fieldsURL).then((r) => r.json()),
+      fetchRange("FIELDS!A1:Z"),
+      fetchRange(`${tabName}!A1:Z`),
     ])
-      .then(([shotsJson, fieldsJson]) => {
-        /* ---------- FIELDS ---------- */
-        if (!fieldsJson.values) throw new Error('FIELDS sheet not found');
-        const [fHeader, ...fRows] = fieldsJson.values;
-        const idx = (key) => fHeader.indexOf(key);
-
+      .then(([fjson, sjson]) => {
+        if (!fjson.values) throw new Error("FIELDS empty");
+        const [fh, ...frows] = fjson.values;
+        const idx = (k) => fh.indexOf(k);
         setFields(
-          fRows.map((row) => ({
-            field_id : row[idx('field_id')],
-            field_name: row[idx('field_name')],
-            type     : row[idx('type')],
-            editable : toBool(row[idx('editable')]),
-            required : toBool(row[idx('required')]),
-            options  : (row[idx('options')] || '')
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean),
-          })),
+          frows.map((r) => ({
+            field_id: r[idx("field_id")],
+            field_name: r[idx("field_name")],
+            type: r[idx("type")] || "text",
+            editable: String(r[idx("editable")]).toLowerCase() === "true",
+            options: (r[idx("options")] || "").split(/,/).filter(Boolean),
+          }))
         );
 
-        /* ---------- SHOTS ---------- */
-        if (!shotsJson.values) throw new Error('SHOTS sheet not found');
-        const [sHeader, ...sRows] = shotsJson.values;
-
+        if (!sjson.values) throw new Error("SHOTS empty");
+        const [sh, ...srows] = sjson.values;
         setShots(
-          sRows.map((row, i) =>
-            sHeader.reduce(
-              (obj, key, col) => ({ ...obj, [key]: row[col] ?? '' }),
-              { __rowNum: i + 2 },
-            ),
-          ),
+          srows.map((row, i) =>
+            sh.reduce((o, key, col) => ({ ...o, [key]: row[col], __rowNum: i + 2 }), {})
+          )
         );
-
-        setError('');
+        setError(null);
       })
       .catch((e) => setError(`Failed to fetch Sheets data: ${e.message}`))
       .finally(() => setLoading(false));
-  }, [apiKey, sheetId, shotsTab]);
+  }, [sheetId, tabName, token]);
 
-  return { shots, fields, loading, error };
+  return { fields, shots, loading, error };
 }
