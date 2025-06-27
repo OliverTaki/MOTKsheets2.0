@@ -1,35 +1,30 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import useSheetsData from './hooks/useSheetsData';
-import { updateSheetWithNewIds } from './utils/sheetSync';
 import ShotTable from './components/ShotTable';
 import Toolbar from './components/Toolbar';
 import LoginButton from './components/LoginButton';
 import { AuthContext } from './AuthContext';
-import MissingIdDialog from './components/MissingIdDialog';
 import ShotDetailPage from './components/ShotDetailPage';
 
-// 環境変数名を .env ファイルに合わせて修正
 const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 
-// メインのテーブルビューをコンポーネントとして分離
-const MainView = ({ sheets, fields, onSort, onCellSave, sortKey, ascending, onFilterChange, allShots }) => {
+const MainView = ({ sheets, fields, onFilterChange, allShots, columnWidths, onColumnResize }) => {
   return (
-    <>
+    <div className="flex flex-col h-full gap-4">
       <Toolbar onFilterChange={onFilterChange} allShots={allShots} fields={fields} />
-      <ShotTable
-        shots={sheets}
-        fields={fields}
-        sortKey={sortKey}
-        ascending={ascending}
-        onSort={onSort}
-        onCellSave={onCellSave}
-      />
-    </>
+      <div className="flex-1 overflow-auto shadow-md sm:rounded-lg border border-gray-200 dark:border-gray-700">
+          <ShotTable
+            shots={sheets}
+            fields={fields}
+            columnWidths={columnWidths}
+            onColumnResize={onColumnResize}
+          />
+      </div>
+    </div>
   );
 };
 
-// 「新しいショットを追加」ページ用のプレースホルダー
 const NewShotPage = () => {
     return (
       <div className="text-center p-8 bg-white dark:bg-gray-700 rounded-lg shadow">
@@ -40,16 +35,37 @@ const NewShotPage = () => {
 }
 
 function App() {
-  const [sortKey, setSortKey] = useState('id');
-  const [ascending, setAscending] = useState(true);
   const { token, isInitialized } = useContext(AuthContext);
-  // useSheetsDataフックに正しいspreadsheetIdを渡す
-  const { sheets, fields, loading, error, missingIds, setSheets, setMissingIds } = useSheetsData(spreadsheetId);
+  const { sheets, fields, loading, error } = useSheetsData(spreadsheetId);
   const [filteredShots, setFilteredShots] = useState([]);
+  const [columnWidths, setColumnWidths] = useState({});
 
   useEffect(() => {
     setFilteredShots(sheets);
   }, [sheets]);
+
+  useEffect(() => {
+    if (fields.length > 0) {
+        const initialWidths = {};
+        fields.forEach(field => {
+            if (field.id === 'shot_id')      initialWidths[field.id] = 200;
+            else if (field.id === 'shot_code')   initialWidths[field.id] = 120;
+            else if (field.id === 'status')      initialWidths[field.id] = 100;
+            else if (field.id === 'version')     initialWidths[field.id] = 80;
+            else if (field.id === 'thumbnail')   initialWidths[field.id] = 160;
+            else if (field.id === 'memo')        initialWidths[field.id] = 400;
+            else                                 initialWidths[field.id] = 150;
+        });
+        setColumnWidths(initialWidths);
+    }
+  }, [fields]);
+
+  const handleColumnResize = useCallback((fieldId, newWidth) => {
+    setColumnWidths(prevWidths => ({
+        ...prevWidths,
+        [fieldId]: newWidth < 60 ? 60 : newWidth
+    }));
+  }, []);
 
   if (!isInitialized) {
       return (
@@ -62,72 +78,26 @@ function App() {
       );
   }
 
-  const handleSort = (key) => {
-    if (sortKey === key) {
-      setAscending(!ascending);
-    } else {
-      setSortKey(key);
-      setAscending(true);
-    }
-  };
-
-  const handleCellSave = async (rowIndex, fieldId, value) => {
-    console.log(`Saving row ${rowIndex}, field ${fieldId} with value: ${value}`);
-    // セル更新APIの呼び出しをここに実装
-  };
-
-  const handleConfirmPatch = async () => {
-    if (!token) {
-        alert("認証が必要です。サインインしてください。");
-        return;
-    }
-    if (missingIds.length > 0) {
-        try {
-            await updateSheetWithNewIds(spreadsheetId, 'Shots', token, missingIds, fields);
-            alert('シートが新しいIDで正常に更新されました。');
-            setMissingIds([]);
-        } catch (err) {
-            console.error('シートの更新に失敗しました:', err);
-            alert(`エラー: ${err.message}`);
-        }
-    }
-  };
-
-  const handleCancelPatch = () => {
-    setMissingIds([]);
-    alert('更新はキャンセルされました。');
-  };
-
-  const sortedShots = [...filteredShots].sort((a, b) => {
-    const valA = a[sortKey];
-    const valB = b[sortKey];
-    if (valA < valB) return ascending ? -1 : 1;
-    if (valA > valB) return ascending ? 1 : -1;
-    return 0;
-  });
-
   return (
-    <div className="App bg-gray-100 dark:bg-gray-900 min-h-screen text-gray-800 dark:text-gray-200">
-      <header className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 shadow sticky top-0 z-10">
+    <div className="App bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 h-screen flex flex-col">
+      <header className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 shadow z-10">
         <h1 className="text-2xl font-bold">MOTK Sheets 2.0</h1>
         <LoginButton />
       </header>
 
-      <main className="p-4">
+      <main className="p-4 flex-1 overflow-hidden">
         {loading && <p className="text-center">Loading sheet data...</p>}
         {error && <p className="text-red-500 text-center">Error: {error.message}</p>}
         {!loading && !error && (
           <Routes>
             <Route path="/" element={
               <MainView
-                sheets={sortedShots}
+                sheets={filteredShots} // ソートされていないリストを渡します
                 fields={fields}
-                onSort={handleSort}
-                onCellSave={handleCellSave}
-                sortKey={sortKey}
-                ascending={ascending}
                 onFilterChange={setFilteredShots}
                 allShots={sheets}
+                columnWidths={columnWidths}
+                onColumnResize={handleColumnResize}
               />
             } />
             <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={fields} />} />
@@ -135,13 +105,6 @@ function App() {
           </Routes>
         )}
       </main>
-      
-      <MissingIdDialog
-        isOpen={missingIds.length > 0}
-        onConfirm={handleConfirmPatch}
-        onCancel={handleCancelPatch}
-        missingCount={missingIds.length}
-      />
     </div>
   );
 }

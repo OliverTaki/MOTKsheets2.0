@@ -11,13 +11,12 @@ const useSheetsData = (spreadsheetId, useMock = false) => {
     const [fields, setFields] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [missingIds, setMissingIds] = useState([]);
+    // missingIdsのstateを削除
 
     const fetchSheetsData = useCallback(async (currentToken) => {
         console.log(`fetchSheetsData called. Token available: ${!!currentToken}`);
         
         if (!currentToken) {
-            console.log("No token provided to fetchSheetsData, aborting.");
             setLoading(false);
             return;
         }
@@ -29,7 +28,6 @@ const useSheetsData = (spreadsheetId, useMock = false) => {
         const rangeFields = 'FIELDS!A:C';
 
         try {
-            // Google Sheets APIの仕様に合わせて、rangesパラメータを個別に設定します
             const params = new URLSearchParams({
                 valueRenderOption: 'FORMATTED_VALUE',
                 dateTimeRenderOption: 'SERIAL_NUMBER',
@@ -39,17 +37,13 @@ const useSheetsData = (spreadsheetId, useMock = false) => {
 
             const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?${params.toString()}`;
             
-            console.log("Fetching URL:", url);
-
             const response = await fetch(url, {
                 headers: { 'Authorization': `Bearer ${currentToken}` },
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
-                const err = new Error(errorData.error.message || 'Failed to fetch data');
-                err.status = response.status;
-                throw err;
+                throw new Error(errorData.error.message || 'Failed to fetch data');
             }
             
             const data = await response.json();
@@ -61,12 +55,12 @@ const useSheetsData = (spreadsheetId, useMock = false) => {
             }
 
             const parsedFields = parseFields(fieldsData);
+            // この行が欠落していました
             const parsedShots = parseShots(shotsData, parsedFields);
-            const { shotsWithIds, missingIdsFound } = missingIdHandler(parsedShots);
+            const { shotsWithIds } = missingIdHandler(parsedShots);
 
             setFields(parsedFields);
             setSheets(shotsWithIds);
-            if (missingIdsFound.length > 0) setMissingIds(missingIdsFound);
             console.log('Successfully fetched and parsed data.');
         } catch (err) {
             console.error('Error during fetchSheetsData:', err);
@@ -78,13 +72,9 @@ const useSheetsData = (spreadsheetId, useMock = false) => {
 
     useEffect(() => {
         if (!spreadsheetId) {
-            setError(new Error("Configuration Error: VITE_SHEETS_ID is not set in your .env file. Please ensure the file exists and you have restarted the development server."));
+            setError(new Error("Configuration Error: VITE_SHEETS_ID is not set in your .env file..."));
             setLoading(false);
             return; 
-        }
-
-        if (useMock) {
-            return;
         }
         
         if (isInitialized) {
@@ -92,17 +82,15 @@ const useSheetsData = (spreadsheetId, useMock = false) => {
                 setError(null); 
                 fetchSheetsData(token);
             } else {
-                console.log("Auth is initialized, but user is not signed in. Waiting for login.");
                 setSheets([]);
                 setFields([]);
                 setLoading(false);
             }
-        } else {
-             console.log(`Waiting for auth initialization...`);
         }
-    }, [spreadsheetId, token, useMock, isInitialized, fetchSheetsData]);
+    }, [spreadsheetId, token, isInitialized, fetchSheetsData]);
 
-    return { sheets, fields, loading, error, missingIds, setSheets, setMissingIds };
+    // 返り値からmissingIdsとsetMissingIdsを削除
+    return { sheets, fields, loading, error };
 };
 
 export default useSheetsData;
