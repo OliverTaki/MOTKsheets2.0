@@ -9,14 +9,23 @@ import ShotDetailPage from './components/ShotDetailPage';
 
 const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 
-const MainView = ({ sheets, fields, onFilterChange, allShots, columnWidths, onColumnResize }) => {
+const MainView = ({ sheets, fields, onFilterChange, allShots, columnWidths, onColumnResize, sortKey, onSort, ascending }) => {
   return (
     <div className="flex flex-col h-full gap-4">
-      <Toolbar onFilterChange={onFilterChange} allShots={allShots} fields={fields} />
+      {/* ツールバーにソート関連のpropsを渡します */}
+      <Toolbar 
+        onFilterChange={onFilterChange} 
+        allShots={allShots} 
+        fields={fields} 
+        onSort={onSort} 
+        sortKey={sortKey} 
+        ascending={ascending}
+      />
       <div className="flex-1 overflow-auto shadow-md sm:rounded-lg border border-gray-200 dark:border-gray-700">
           <ShotTable
             shots={sheets}
             fields={fields}
+            sortKey={sortKey} // ソート状態の表示のみに使用
             columnWidths={columnWidths}
             onColumnResize={onColumnResize}
           />
@@ -39,6 +48,9 @@ function App() {
   const { sheets, fields, loading, error } = useSheetsData(spreadsheetId);
   const [filteredShots, setFilteredShots] = useState([]);
   const [columnWidths, setColumnWidths] = useState({});
+  // ソートの状態管理はAppコンポーネントで行います
+  const [sortKey, setSortKey] = useState('shot_id');
+  const [ascending, setAscending] = useState(true);
 
   useEffect(() => {
     setFilteredShots(sheets);
@@ -67,6 +79,18 @@ function App() {
     }));
   }, []);
 
+  // ソートを実行するハンドラ関数
+  const handleSort = (key) => {
+    if (key === sortKey) {
+        // 同じキーなら昇順/降順を切り替え
+        setAscending(!ascending);
+    } else {
+        // 新しいキーなら、それをキーとして昇順でソート
+        setSortKey(key);
+        setAscending(true);
+    }
+  };
+
   if (!isInitialized) {
       return (
           <div className="flex justify-center items-center h-screen bg-gray-100 dark:bg-gray-900">
@@ -77,6 +101,19 @@ function App() {
           </div>
       );
   }
+  
+  // ソートされたリストを作成
+  const sortedShots = [...filteredShots].sort((a, b) => {
+    const valA = a[sortKey];
+    const valB = b[sortKey];
+
+    if (!valA) return 1;
+    if (!valB) return -1;
+
+    if (valA < valB) return ascending ? -1 : 1;
+    if (valA > valB) return ascending ? 1 : -1;
+    return 0;
+  });
 
   return (
     <div className="App bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 h-screen flex flex-col">
@@ -92,12 +129,15 @@ function App() {
           <Routes>
             <Route path="/" element={
               <MainView
-                sheets={filteredShots} // ソートされていないリストを渡します
+                sheets={sortedShots} // ソート済みのリストを渡します
                 fields={fields}
                 onFilterChange={setFilteredShots}
                 allShots={sheets}
                 columnWidths={columnWidths}
                 onColumnResize={handleColumnResize}
+                sortKey={sortKey}
+                onSort={handleSort}
+                ascending={ascending}
               />
             } />
             <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={fields} />} />
