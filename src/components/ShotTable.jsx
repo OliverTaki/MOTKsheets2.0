@@ -1,22 +1,71 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PencilIcon } from '@heroicons/react/24/solid';
 import { Link } from 'react-router-dom';
 
-// リサイズ機能とソート機能は、UIが完全に安定した後に改めて実装します。
-const ShotTable = ({ shots, fields, columnWidths = {} }) => {
+const ShotTable = ({ shots, fields, columnWidths, onColumnResize }) => {
+    // 現在リサイズ中の列のIDを追跡します
+    const [resizingFieldId, setResizingFieldId] = useState(null);
+    
+    // ドラッグ開始時のカーソル位置と列の幅を保持するためのRef
+    const startCursorX = useRef(0);
+    const startColumnWidth = useRef(0);
+
+    // リサイズハンドルのマウス押下イベント
+    const handleMouseDown = (e, fieldId) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        setResizingFieldId(fieldId);
+        startCursorX.current = e.clientX;
+        startColumnWidth.current = columnWidths[fieldId] || 150;
+    };
+
+    // リサイズ中のマウス移動とマウスボタン解放を監視するEffect
+    useEffect(() => {
+        const handleMouseMove = (e) => {
+            if (!resizingFieldId) return;
+            e.preventDefault();
+
+            const deltaX = e.clientX - startCursorX.current;
+            const newWidth = startColumnWidth.current + deltaX;
+            
+            onColumnResize(resizingFieldId, Math.max(60, newWidth));
+        };
+
+        const handleMouseUp = () => {
+            setResizingFieldId(null);
+        };
+
+        if (resizingFieldId) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        }
+
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [resizingFieldId, onColumnResize]);
+
     return (
-        // `table-fixed`でレイアウト計算を固定にし、親のレイアウトから完全に独立させます。
         <table className="table-fixed text-sm text-left text-gray-500 dark:text-gray-400 border-collapse">
             <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 sticky top-0 z-10">
                 <tr>
                     {fields.map((field) => {
-                        // App.jsxから渡される幅、またはデフォルト幅をピクセル単位で指定します。
-                        const style = { width: `${columnWidths[field.id] || 150}px` };
+                        const style = { width: columnWidths[field.id] ? `${columnWidths[field.id]}px` : '150px' };
                         
                         return (
-                            // ヘッダーの上下パディングをpy-2に設定
-                            <th key={field.id} scope="col" style={style} className="py-2 px-3 border border-gray-200 dark:border-gray-600 font-medium">
-                                {field.label}
+                            <th key={field.id} scope="col" style={style} className="py-2 px-3 border border-gray-200 dark:border-gray-600 relative select-none">
+                                <div className="truncate h-full flex items-center">
+                                    {field.label}
+                                </div>
+                                
+                                <div
+                                    className="group absolute top-0 right-[-5px] h-full w-[10px] cursor-col-resize z-20"
+                                    onMouseDown={(e) => handleMouseDown(e, field.id)}
+                                >
+                                  <div className="w-px h-full bg-gray-300 dark:bg-gray-600 group-hover:bg-blue-400 transition-colors mx-auto"></div>
+                                </div>
                             </th>
                         );
                     })}
@@ -27,13 +76,13 @@ const ShotTable = ({ shots, fields, columnWidths = {} }) => {
                     <tr key={shot.shot_id || rowIndex} className="hover:bg-gray-50 dark:hover:bg-gray-600">
                         {fields.map((field) => {
                             const cellValue = shot[field.id];
-                            // セル自体のパディングを削除
+                            // ユーザーが修正した、正常に動作するtdの記述
                             const tdClassName = "border border-gray-200 dark:border-gray-600";
 
                             return (
                                 <td key={field.id} className={tdClassName} style={{ position: 'relative' }}>
-                                    {/* コンテンツエリア */}
-                                    <div className="overflow-hidden whitespace-nowrap" style={{ padding: '0px 4px' }}>
+                                    {/* ユーザーが修正した、正常に動作するコンテンツエリアの記述 */}
+                                    <div className="overflow-hidden whitespace-nowrap" style={{ padding: '8px 12px' }}>
                                         {field.id === 'thumbnail' ? (
                                             cellValue && <img src={cellValue.replace("via.placeholder.com", "placehold.co")} alt={`Thumbnail for ${shot.shot_code}`} className="max-h-16 w-auto object-contain" onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/120x68/EFEFEF/AAAAAA?text=Error'; }} />
                                         ) : field.id === 'shot_code' ? (
@@ -44,13 +93,13 @@ const ShotTable = ({ shots, fields, columnWidths = {} }) => {
                                             <span title={cellValue}>{cellValue}</span>
                                         )}
                                     </div>
-                                    {/* アイコンはtdを基準に絶対配置 */}
+                                    {/* ユーザーが修正した、正常に動作するアイコンの記述 */}
                                     {field.id !== 'thumbnail' && (
                                         <PencilIcon
                                             style={{
                                                 position: 'absolute',
-                                                top: '2px',    // 必要に応じて微調整
-                                                right: '2px',
+                                                top: '4px',
+                                                right: '4px',
                                                 width: '11px',
                                                 height: '11px'
                                             }}
