@@ -7,10 +7,10 @@ import { Select, MenuItem, FormControl, InputLabel, IconButton, Button } from '@
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import AddIcon from '@mui/icons-material/Add';
-import usePagesData from '../hooks/usePagesData';
 
 const Toolbar = ({
     fields,
+    pages, // Receive pages as a prop
     activeFilters,
     onFilterChange,
     allShots,
@@ -28,7 +28,6 @@ const Toolbar = ({
     loadedPageId,
 }) => {
     const navigate = useNavigate();
-    const { pages } = usePagesData();
     const [isManageViewsDialogOpen, setManageViewsDialogOpen] = useState(false);
 
     const handleAddNew = () => {

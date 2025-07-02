@@ -12,12 +12,17 @@ import ShotDetailPage from './ShotDetailPage';
 import { appendField } from '../api/appendField';
 import { updateCell } from '../api/updateCell';
 import { updateNonUuidIds } from '../api/updateNonUuidIds';
+import { appendPage } from '../api/appendPage';
+import { updatePage } from '../api/updatePage';
+import { deletePage } from '../api/deletePage';
+import { v4 as uuidv4 } from 'uuid';
 
 const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 
 const MainView = ({
   sheets,
   fields,
+  pages,
   columnWidths,
   onColumnResize,
   activeFilters,
@@ -43,6 +48,7 @@ const MainView = ({
     <div className="flex flex-col h-full gap-4">
       <Toolbar
         fields={fields}
+        pages={pages}
         activeFilters={activeFilters}
         onFilterChange={onFilterChange}
         allShots={allShots}
@@ -84,21 +90,20 @@ const theme = createTheme({
 export const AppContainer = () => {
   const { token, isInitialized } = useContext(AuthContext);
   const { sheets, setSheets, fields, loading, error, refreshData, updateFieldOptions, idToColIndex } = useSheetsData(spreadsheetId);
-  const { pages, addPage, updatePage, removePage } = usePagesData();
+  const { pages, refreshPages } = usePagesData();
 
   const [columnWidths, setColumnWidths] = useState({});
   const [activeFilters, setActiveFilters] = useState({});
   const [sortKey, setSortKey] = useState('');
   const [ascending, setAscending] = useState(true);
   const [visibleFieldIds, setVisibleFieldIds] = useState([]);
-  const [loadedPageId, setLoadedPageId] = useState(null); // Start with no page loaded
+  const [loadedPageId, setLoadedPageId] = useState(null);
 
-  // This effect now correctly waits for fields to be loaded before setting the default view.
   useEffect(() => {
     if (fields.length > 0 && pages.length > 0 && !loadedPageId) {
       const defaultPage = pages.find(p => p.page_id === 'default');
       if (defaultPage) {
-        handleLoadView(defaultPage, true); // Pass true to indicate it's the initial load
+        handleLoadView(defaultPage, true);
       }
     }
   }, [fields, pages, loadedPageId]);
@@ -253,16 +258,19 @@ export const AppContainer = () => {
       return;
     }
     const currentView = getCurrentView();
-    await updatePage(loadedPageId, currentView);
+    await updatePage(spreadsheetId, token, loadedPageId, currentView);
     alert('View saved successfully!');
-  }, [loadedPageId, updatePage, columnWidths, visibleFieldIds, activeFilters, sortKey, ascending]);
+    refreshPages();
+  }, [loadedPageId, token, columnWidths, visibleFieldIds, activeFilters, sortKey, ascending, refreshPages]);
 
   const handleSaveViewAs = useCallback(async (title) => {
-    const currentView = { ...getCurrentView(), title };
-    const newPage = await addPage(currentView);
-    setLoadedPageId(newPage.page_id);
+    const page_id = uuidv4();
+    const currentView = { ...getCurrentView(), page_id, title };
+    await appendPage(spreadsheetId, token, currentView);
+    setLoadedPageId(page_id);
     alert(`View "${title}" saved successfully!`);
-  }, [addPage, columnWidths, visibleFieldIds, activeFilters, sortKey, ascending]);
+    refreshPages();
+  }, [token, columnWidths, visibleFieldIds, activeFilters, sortKey, ascending, refreshPages]);
 
   const handleDeleteView = useCallback(async (pageId) => {
     if (pageId === 'default') {
@@ -270,13 +278,14 @@ export const AppContainer = () => {
       return;
     }
     if (window.confirm('Are you sure you want to delete this view?')) {
-      await removePage(pageId);
+      await deletePage(spreadsheetId, token, pageId);
       if (loadedPageId === pageId) {
-        setLoadedPageId(null); // Reset if the deleted page was loaded
+        setLoadedPageId(null);
       }
       alert('View deleted successfully!');
+      refreshPages();
     }
-  }, [removePage, loadedPageId]);
+  }, [token, loadedPageId, refreshPages]);
 
   if (!isInitialized) {
     return (
@@ -307,6 +316,7 @@ export const AppContainer = () => {
                 <MainView
                   sheets={processedShots}
                   fields={fields}
+                  pages={pages}
                   columnWidths={columnWidths}
                   onColumnResize={handleColumnResize}
                   activeFilters={activeFilters}
@@ -338,3 +348,4 @@ export const AppContainer = () => {
     </ThemeProvider>
   );
 };
+

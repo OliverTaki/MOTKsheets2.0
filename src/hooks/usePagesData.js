@@ -1,68 +1,57 @@
-import { useState, useEffect, useCallback } from 'react';
-import { v4 as uuidv4 } from 'uuid';
+import { useState, useEffect, useCallback, useContext } from 'react';
+import { AuthContext } from '../AuthContext';
 
-// Initial mock data including a non-deletable default view.
-const initialMockPages = [
-  {
-    page_id: 'default', // Special ID for the default view
-    title: 'Default View',
-    columnWidths: {},
-    columnOrder: [],
-    filterSettings: {},
-    fieldVisibility: [],
-    sortOrder: { key: 'shot_id', ascending: true },
-  },
-  {
-    page_id: 'anim-view-1',
-    title: 'Animation Dept. View',
-    columnWidths: { shot_id: 250, status: 120, memo: 400 },
-    columnOrder: ['shot_id', 'status', 'memo'],
-    filterSettings: { status: ['In Progress', 'Review'] },
-    fieldVisibility: ['shot_id', 'status', 'memo'],
-    sortOrder: { key: 'status', ascending: false },
-  },
-];
+const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
+const apiKey = import.meta.env.VITE_SHEETS_API_KEY;
 
-/**
- * MOCK: A custom hook to manage saved page configurations.
- * This hook simulates fetching, adding, updating, and deleting page data.
- */
 const usePagesData = () => {
-  const [pages, setPages] = useState(initialMockPages);
+  const [pages, setPages] = useState([]);
+  const { token } = useContext(AuthContext);
 
-  const refreshPages = useCallback(() => {
-    console.log('Mock refreshPages called');
-  }, []);
+  const refreshPages = useCallback(async () => {
+    if (!token) return;
+    try {
+      const range = 'PAGES!A:G';
+      const response = await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?key=${apiKey}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const data = await response.json();
+      const [header, ...rows] = data.values || [];
+      if (!header) return;
 
-  const addPage = useCallback((newPage) => {
-    const pageWithId = { ...newPage, page_id: uuidv4() };
-    setPages(prev => [...prev, pageWithId]);
-    console.log('Mock addPage called, new page:', pageWithId);
-    return Promise.resolve(pageWithId);
-  }, []);
+      const pageIdCol = header.indexOf('page_id');
+      const titleCol = header.indexOf('title');
+      const columnWidthsCol = header.indexOf('columnWidths');
+      const columnOrderCol = header.indexOf('columnOrder');
+      const filterSettingsCol = header.indexOf('filterSettings');
+      const fieldVisibilityCol = header.indexOf('fieldVisibility');
+      const sortOrderCol = header.indexOf('sortOrder');
 
-  const updatePage = useCallback((pageId, updatedPage) => {
-    setPages(prev => prev.map(p => (p.page_id === pageId ? { ...p, ...updatedPage } : p)));
-    console.log('Mock updatePage called for pageId:', pageId);
-    return Promise.resolve(updatedPage);
-  }, []);
-
-  const removePage = useCallback((pageId) => {
-    if (pageId === 'default') {
-      console.log('Cannot delete the default page.');
-      return Promise.reject(new Error('Cannot delete the default page.'));
+      const parsedPages = rows.map(row => ({
+        page_id: row[pageIdCol],
+        title: row[titleCol],
+        columnWidths: JSON.parse(row[columnWidthsCol] || '{}'),
+        columnOrder: JSON.parse(row[columnOrderCol] || '[]'),
+        filterSettings: JSON.parse(row[filterSettingsCol] || '{}'),
+        fieldVisibility: JSON.parse(row[fieldVisibilityCol] || '[]'),
+        sortOrder: JSON.parse(row[sortOrderCol] || '{}'),
+      }));
+      setPages(parsedPages);
+    } catch (error) {
+      console.error('Error fetching pages:', error);
     }
-    setPages(prev => prev.filter(p => p.page_id !== pageId));
-    console.log('Mock removePage called for pageId:', pageId);
-    return Promise.resolve();
-  }, []);
-
+  }, [token]);
 
   useEffect(() => {
     refreshPages();
   }, [refreshPages]);
 
-  return { pages, refreshPages, addPage, updatePage, removePage };
+  return { pages, refreshPages };
 };
 
 export default usePagesData;
