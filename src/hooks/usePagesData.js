@@ -1,56 +1,25 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 /**
- * PAGESシートから、保存されたビュー（ページ）の一覧を取得するフック
+ * MOCK: A custom hook to manage saved page configurations.
+ * In a real application, this would fetch data from a backend API.
  */
-export default function usePagesData() {
+const usePagesData = () => {
   const [pages, setPages] = useState([]);
-  const apiKey  = import.meta.env.VITE_SHEETS_API_KEY;
-  const sheetId = import.meta.env.VITE_SHEETS_ID;
+
+  // Simulate fetching pages
+  const refreshPages = useCallback(() => {
+    console.log('Mock refreshPages called');
+    // In a real app, you'd fetch this from a backend.
+    // For now, we'll just return an empty array.
+    setPages([]);
+  }, []);
 
   useEffect(() => {
-    if (!apiKey || !sheetId) return;
+    refreshPages();
+  }, [refreshPages]);
 
-    const range = 'PAGES!A1:C'; // page_id, title, settings_json
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?key=${apiKey}`;
+  return { pages, refreshPages };
+};
 
-    fetch(url)
-      .then(r => r.json())
-      .then(({ values }) => {
-        if (!values) return;
-        const [header, ...rows] = values;
-        const pageIdCol = header.indexOf('page_id');
-        const titleCol = header.indexOf('title');
-        const settingsCol = header.indexOf('settings_json');
-
-        const list = rows.map((row) => {
-          const rawSettings = row[settingsCol] || '{}';
-          let settings = { filters: [], sort: {} };
-          try {
-            const parsed = JSON.parse(rawSettings);
-            // 過去のデータ形式にも対応
-            if (parsed.filters) {
-              settings = { ...settings, ...parsed };
-            } else {
-              // 古い形式(filter_json)の場合
-              settings.filters = Object.entries(parsed).map(([field_id, value]) => ({
-                id: field_id, field_id, operator: 'is', value
-              }));
-            }
-          }
-          catch (e) {
-            console.error('Failed to parse page settings JSON:', rawSettings, e);
-          }
-          return {
-            page_id: row[pageIdCol],
-            title:   row[titleCol],
-            settings,
-          };
-        });
-        setPages(list);
-      })
-      .catch(console.error);
-  }, [apiKey, sheetId]);
-
-  return pages;
-}
+export default usePagesData;
