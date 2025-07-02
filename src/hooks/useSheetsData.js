@@ -3,7 +3,7 @@ import { AuthContext } from '../AuthContext';
 import { parseShots, parseFields } from '../utils/parse';
 import { missingIdHandler } from '../utils/missingIdHandler';
 
-const useSheetsData = (spreadsheetId, useMock = false) => {
+const useSheetsData = (spreadsheetId) => {
     const { token, isInitialized, clearToken } = useContext(AuthContext);
     const [sheets, setSheets] = useState([]);
     const [fields, setFields] = useState([]);
@@ -15,25 +15,20 @@ const useSheetsData = (spreadsheetId, useMock = false) => {
             setLoading(false);
             return;
         }
-
         setLoading(true);
         setError(null);
-
-        const rangeShots = 'Shots!A:AZ';
-        const rangeFields = 'FIELDS!A:C';
-
         try {
-            const params = new URLSearchParams();
-            params.append('ranges', rangeShots);
-            params.append('ranges', rangeFields);
-            params.append('valueRenderOption', 'FORMATTED_VALUE');
-            params.append('dateTimeRenderOption', 'SERIAL_NUMBER');
+            // APIリクエストのrangesパラメータの書式を修正
+            const params = new URLSearchParams({
+                valueRenderOption: 'FORMATTED_VALUE',
+                dateTimeRenderOption: 'SERIAL_NUMBER',
+            });
+            params.append('ranges', 'Shots!A:AZ');
+            params.append('ranges', 'FIELDS!A:F'); // options列まで取得
             
             const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?${params.toString()}`;
-
-            const response = await fetch(url, {
-                headers: { 'Authorization': `Bearer ${currentToken}` },
-            });
+            
+            const response = await fetch(url, { headers: { 'Authorization': `Bearer ${currentToken}` } });
 
             if (!response.ok) {
                 const errorData = await response.json();
@@ -60,9 +55,10 @@ const useSheetsData = (spreadsheetId, useMock = false) => {
         } catch (err) {
             console.error('Error during fetchSheetsData:', err);
             if (err.status === 401) {
-                // トークンが無効なら、トークンをクリアして再ログインを促す
                 setError(new Error("Your session has expired. Please sign in again."));
-                clearToken();
+                if (clearToken) {
+                    clearToken();
+                }
             } else {
                 setError(err);
             }
@@ -75,20 +71,17 @@ const useSheetsData = (spreadsheetId, useMock = false) => {
         if (!spreadsheetId) {
             setError(new Error("Configuration Error: VITE_SHEETS_ID is not set."));
             setLoading(false);
-            return; 
+            return;
         }
-
-        if (isInitialized) {
-            if (token) {
-                setError(null); 
-                fetchSheetsData(token);
-            } else {
-                setLoading(false);
-            }
+        if (isInitialized && token) {
+            fetchSheetsData(token);
+        } else if (isInitialized) {
+            setLoading(false);
         }
     }, [spreadsheetId, token, isInitialized, fetchSheetsData]);
 
-    return { sheets, fields, loading, error };
+    // データを再読み込みするための関数を返す
+    return { sheets, fields, loading, error, refreshData: () => fetchSheetsData(token) };
 };
 
 export default useSheetsData;

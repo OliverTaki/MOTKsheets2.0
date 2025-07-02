@@ -6,10 +6,14 @@ import Toolbar from './components/Toolbar';
 import LoginButton from './components/LoginButton';
 import { AuthContext } from './AuthContext';
 import ShotDetailPage from './components/ShotDetailPage';
+import FieldManager from './components/FieldManager';
+import { appendField } from './api/appendField';
+import { updateCell } from './api/updateCell';
 
 const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 
-const MainView = ({ sheets, fields, columnWidths, onColumnResize, activeFilters, onFilterChange, allShots, sortKey, ascending, onSort }) => {
+// MainViewに、全ての機能のpropsを渡すように修正
+const MainView = ({ sheets, fields, columnWidths, onColumnResize, activeFilters, onFilterChange, allShots, sortKey, ascending, onSort, visibleFieldIds, onVisibilityChange, onAddField, onCellSave }) => {
   return (
     <div className="flex flex-col h-full gap-4">
       <Toolbar 
@@ -20,45 +24,43 @@ const MainView = ({ sheets, fields, columnWidths, onColumnResize, activeFilters,
         sortKey={sortKey}
         ascending={ascending}
         onSort={onSort}
+        visibleFieldIds={visibleFieldIds}
+        onVisibilityChange={onVisibilityChange}
+        onAddField={onAddField}
       />
       <div className="flex-1 overflow-auto shadow-md sm:rounded-lg border border-gray-200 dark:border-gray-700">
           <ShotTable
             shots={sheets}
-            fields={fields}
+            fields={fields.filter(f => visibleFieldIds.includes(f.id))}
             columnWidths={columnWidths}
             onColumnResize={onColumnResize}
+            onCellSave={onCellSave}
           />
       </div>
     </div>
   );
 };
 
-const NewShotPage = () => {
-    return (
-      <div className="text-center p-8 bg-white dark:bg-gray-700 rounded-lg shadow">
-        <h2 className="text-2xl font-bold">Add New Shot</h2>
-        <p className="mt-2">この機能は現在開発中です。</p>
-      </div>
-    );
-}
+const NewShotPage = () => <div className="p-8"><h2>Add New Shot (WIP)</h2></div>;
 
 function App() {
   const { token, isInitialized } = useContext(AuthContext);
-  const { sheets, fields, loading, error } = useSheetsData(spreadsheetId);
+  const { sheets, setSheets, fields, loading, error, refreshData } = useSheetsData(spreadsheetId);
   const [columnWidths, setColumnWidths] = useState({});
-  // フィルターの状態を、複数選択に対応した形式に変更
-  // 例: { status: ['WIP', 'Ready'], version: ['v1'] }
   const [activeFilters, setActiveFilters] = useState({});
-  
   const [sortKey, setSortKey] = useState('');
   const [ascending, setAscending] = useState(true);
+  const [visibleFieldIds, setVisibleFieldIds] = useState([]);
 
-  // フィルターとソートを適用した最終的なショットリスト
+  useEffect(() => {
+      if(fields.length > 0) {
+          setVisibleFieldIds(fields.map(f => f.id));
+      }
+  }, [fields]);
+
   const processedShots = useMemo(() => {
     let filtered = sheets;
-    // 複数選択に対応したフィルターロジック
     const activeFilterKeys = Object.keys(activeFilters).filter(key => activeFilters[key] && activeFilters[key].length > 0);
-
     if (activeFilterKeys.length > 0) {
         filtered = sheets.filter(shot => {
             return activeFilterKeys.every(fieldId => {
@@ -67,12 +69,8 @@ function App() {
             });
         });
     }
-
-    if (!sortKey) {
-        return filtered;
-    }
-
-    const sorted = [...filtered].sort((a, b) => {
+    if (!sortKey) return filtered;
+    return [...filtered].sort((a, b) => {
         const valA = a[sortKey];
         const valB = b[sortKey];
         if (valA === undefined || valA === null) return 1;
@@ -81,10 +79,7 @@ function App() {
         if (valA > valB) return ascending ? 1 : -1;
         return 0;
     });
-
-    return sorted;
   }, [activeFilters, sheets, sortKey, ascending]);
-
 
   useEffect(() => {
     if (fields.length > 0) {
@@ -103,34 +98,72 @@ function App() {
   }, [fields]);
 
   const handleColumnResize = useCallback((fieldId, newWidth) => {
-    setColumnWidths(prevWidths => ({
-        ...prevWidths,
-        [fieldId]: newWidth < 60 ? 60 : newWidth
-    }));
+    setColumnWidths(prevWidths => ({ ...prevWidths, [fieldId]: newWidth < 60 ? 60 : newWidth }));
   }, []);
 
   const handleSort = (key) => {
     if (!key) return;
-    if (key === sortKey) {
-        setAscending(!ascending);
-    } else {
-        setSortKey(key);
-        setAscending(true);
-    }
+    if (key === sortKey) setAscending(!ascending);
+    else { setSortKey(key); setAscending(true); }
   };
   
-  // フィルターが変更されたときの新しいハンドラ
   const handleFilterChange = useCallback((fieldId, value) => {
-      // Clear all
-      if (fieldId === null) {
-          setActiveFilters({});
-          return;
-      }
-      setActiveFilters(prev => ({
-          ...prev,
-          [fieldId]: value
-      }));
+      if (fieldId === null) setActiveFilters({});
+      else setActiveFilters(prev => ({ ...prev, [fieldId]: value }));
   }, []);
+
+  const handleVisibilityChange = useCallback((fieldId) => {
+      setVisibleFieldIds(prev => 
+        prev.includes(fieldId) 
+            ? prev.filter(id => id !== fieldId)
+            : [...prev, fieldId]
+      );
+  }, []);
+
+  const handleAddField = useCallback(async (newFieldDetails) => {
+    if (!token) { alert("Authentication required."); return; }
+    try {
+        await appendField(spreadsheetId, token, newFieldDetails, fields);
+        alert(`Field "${newFieldDetails.label}" added successfully!`);
+        if(refreshData) refreshData();
+    } catch (err) {
+        console.error("Failed to add field:", err);
+        alert(`Error: ${err.message}`);
+    }
+  }, [token, fields, refreshData]);
+
+  const handleCellSave = useCallback(async (shotId, fieldId, newValue) => {
+    if (!token) { alert("Authentication required."); return; }
+
+    const originalRowIndex = sheets.findIndex(s => s.shot_id === shotId);
+    if (originalRowIndex === -1) {
+        console.error("Could not find shot to update");
+        return;
+    }
+    const sheetRowIndex = originalRowIndex + 2;
+
+    const sheetColumnIndex = fields.findIndex(f => f.id === fieldId);
+    if (sheetColumnIndex === -1) {
+        console.error("Could not find field to update");
+        return;
+    }
+    const columnLetter = String.fromCharCode('A'.charCodeAt(0) + sheetColumnIndex);
+    const range = `Shots!${columnLetter}${sheetRowIndex}`;
+
+    try {
+        await updateCell(spreadsheetId, token, range, newValue);
+        setSheets(prevSheets => 
+            prevSheets.map(shot => 
+                shot.shot_id === shotId ? { ...shot, [fieldId]: newValue } : shot
+            )
+        );
+        console.log(`Cell ${range} updated successfully.`);
+    } catch (err) {
+        console.error("Failed to update cell:", err);
+        alert(`Error: ${err.message}`);
+    }
+  }, [token, sheets, fields, setSheets]);
+
 
   if (!isInitialized) {
       return (
@@ -167,6 +200,10 @@ function App() {
                 sortKey={sortKey}
                 ascending={ascending}
                 onSort={handleSort}
+                visibleFieldIds={visibleFieldIds}
+                onVisibilityChange={handleVisibilityChange}
+                onAddField={handleAddField}
+                onCellSave={handleCellSave}
               />
             } />
             <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={fields} />} />

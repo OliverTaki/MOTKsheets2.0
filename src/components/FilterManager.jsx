@@ -52,7 +52,7 @@ const FilterManager = ({ fields, allShots, activeFilters, onFilterChange }) => {
     }, [wrapperRef]);
 
     // フィルター可能なフィールドを定義
-    const filterableFields = fields.filter(f => f.type === 'select' || f.options);
+    const filterableFields = fields.filter(f => f.type === 'select' || (f.options && f.options.trim() !== ''));
 
     // 各フィールドのユニークな値を取得
     const getUniqueValues = (fieldId) => {

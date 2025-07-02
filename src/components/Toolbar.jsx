@@ -1,9 +1,21 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import FilterManager from './FilterManager'; // 新しい設計のFilterManagerをインポート
+import FilterManager from './FilterManager';
+import FieldManager from './FieldManager';
 
-// onSort, sortKey, ascending をpropsとして受け取ります
-const Toolbar = ({ fields, activeFilters, onFilterChange, allShots, onSort, sortKey, ascending }) => {
+// 全ての機能に必要なpropsを受け取るように修正
+const Toolbar = ({
+    fields,
+    activeFilters,
+    onFilterChange, // setActiveFiltersからonFilterChangeに変更
+    allShots,
+    sortKey,
+    ascending,
+    onSort,
+    visibleFieldIds,
+    onVisibilityChange,
+    onAddField
+}) => {
     const navigate = useNavigate();
 
     const handleAddNew = () => {
@@ -13,11 +25,11 @@ const Toolbar = ({ fields, activeFilters, onFilterChange, allShots, onSort, sort
     return (
         <div className="flex flex-wrap items-center justify-between mb-4 gap-4">
             <div className="flex items-center gap-4">
-                {/* 新しいFilterManagerを呼び出します */}
+                {/* フィルター機能 */}
                 <FilterManager
                     fields={fields}
                     activeFilters={activeFilters}
-                    onFilterChange={onFilterChange}
+                    onFilterChange={onFilterChange} // 正しいpropを渡す
                     allShots={allShots}
                 />
                 {/* ソート機能 */}
@@ -41,6 +53,13 @@ const Toolbar = ({ fields, activeFilters, onFilterChange, allShots, onSort, sort
                         {ascending ? '▲' : '▼'}
                     </button>
                 </div>
+                {/* フィールド管理機能 */}
+                <FieldManager 
+                    allFields={fields}
+                    visibleFieldIds={visibleFieldIds}
+                    onVisibilityChange={onVisibilityChange}
+                    onAddField={onAddField}
+                />
             </div>
             
             <div className="flex items-center gap-4">
