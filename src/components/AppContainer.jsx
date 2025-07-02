@@ -84,20 +84,28 @@ const theme = createTheme({
 export const AppContainer = () => {
   const { token, isInitialized } = useContext(AuthContext);
   const { sheets, setSheets, fields, loading, error, refreshData, updateFieldOptions, idToColIndex } = useSheetsData(spreadsheetId);
-  const { addPage, updatePage, removePage } = usePagesData();
+  const { pages, addPage, updatePage, removePage } = usePagesData();
 
   const [columnWidths, setColumnWidths] = useState({});
   const [activeFilters, setActiveFilters] = useState({});
   const [sortKey, setSortKey] = useState('');
   const [ascending, setAscending] = useState(true);
   const [visibleFieldIds, setVisibleFieldIds] = useState([]);
-  const [loadedPageId, setLoadedPageId] = useState(null);
+  const [loadedPageId, setLoadedPageId] = useState('default'); // Load default page on startup
 
   useEffect(() => {
     if (fields.length > 0) {
       setVisibleFieldIds(fields.map(f => f.id));
     }
   }, [fields]);
+
+  // Load the default page's settings when the app starts
+  useEffect(() => {
+    const defaultPage = pages.find(p => p.page_id === 'default');
+    if (defaultPage) {
+      handleLoadView(defaultPage);
+    }
+  }, [pages]);
 
   const processedShots = useMemo(() => {
     let filtered = sheets;
@@ -123,7 +131,7 @@ export const AppContainer = () => {
   }, [activeFilters, sheets, sortKey, ascending]);
 
   useEffect(() => {
-    if (fields.length > 0) {
+    if (fields.length > 0 && !loadedPageId) { // Only set initial widths if no page is loaded
       const initialWidths = {};
       fields.forEach(field => {
         if (field.id === 'shot_id') initialWidths[field.id] = 200;
@@ -136,7 +144,7 @@ export const AppContainer = () => {
       });
       setColumnWidths(initialWidths);
     }
-  }, [fields]);
+  }, [fields, loadedPageId]);
 
   const handleColumnResize = useCallback((fieldId, newWidth) => {
     setColumnWidths(prevWidths => ({ ...prevWidths, [fieldId]: newWidth < 60 ? 60 : newWidth }));
@@ -254,6 +262,10 @@ export const AppContainer = () => {
   }, [addPage, columnWidths, visibleFieldIds, activeFilters, sortKey, ascending]);
 
   const handleDeleteView = useCallback(async (pageId) => {
+    if (pageId === 'default') {
+      alert("You cannot delete the default view.");
+      return;
+    }
     if (window.confirm('Are you sure you want to delete this view?')) {
       await removePage(pageId);
       if (loadedPageId === pageId) {

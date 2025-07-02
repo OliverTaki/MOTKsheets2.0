@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
-// Initial mock data for demonstration
+// Initial mock data including a non-deletable default view.
 const initialMockPages = [
   {
-    page_id: 'default-view-1',
-    title: 'All Shots',
+    page_id: 'default', // Special ID for the default view
+    title: 'Default View',
     columnWidths: {},
     columnOrder: [],
     filterSettings: {},
@@ -13,7 +13,7 @@ const initialMockPages = [
     sortOrder: { key: 'shot_id', ascending: true },
   },
   {
-    page_id: 'default-view-2',
+    page_id: 'anim-view-1',
     title: 'Animation Dept. View',
     columnWidths: { shot_id: 250, status: 120, memo: 400 },
     columnOrder: ['shot_id', 'status', 'memo'],
@@ -31,8 +31,6 @@ const usePagesData = () => {
   const [pages, setPages] = useState(initialMockPages);
 
   const refreshPages = useCallback(() => {
-    // In a real app, this would re-fetch from the backend.
-    // For the mock, we just log it.
     console.log('Mock refreshPages called');
   }, []);
 
@@ -50,6 +48,10 @@ const usePagesData = () => {
   }, []);
 
   const removePage = useCallback((pageId) => {
+    if (pageId === 'default') {
+      console.log('Cannot delete the default page.');
+      return Promise.reject(new Error('Cannot delete the default page.'));
+    }
     setPages(prev => prev.filter(p => p.page_id !== pageId));
     console.log('Mock removePage called for pageId:', pageId);
     return Promise.resolve();
