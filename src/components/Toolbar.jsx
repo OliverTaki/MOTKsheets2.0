@@ -137,6 +137,7 @@ const Toolbar = ({
                 onSaveAs={onSaveViewAs}
                 onDelete={onDeleteView}
                 loadedPageId={loadedPageId}
+                pages={pages} // Pass pages
             />
         </>
     );
