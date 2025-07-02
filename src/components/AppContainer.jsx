@@ -89,8 +89,8 @@ const theme = createTheme({
 
 export const AppContainer = () => {
   const { token, user, isInitialized } = useContext(AuthContext);
-  const { sheets, setSheets, fields, loading, error, refreshData, updateFieldOptions, idToColIndex } = useSheetsData(spreadsheetId);
-  const { pages, refreshPages } = usePagesData();
+  const { sheets, setSheets, fields, loading: fieldsLoading, error, refreshData, updateFieldOptions, idToColIndex } = useSheetsData(spreadsheetId);
+  const { pages, loading: pagesLoading, refreshPages } = usePagesData();
 
   const [columnWidths, setColumnWidths] = useState({});
   const [activeFilters, setActiveFilters] = useState({});
@@ -224,7 +224,7 @@ export const AppContainer = () => {
 
   const handleLoadView = useCallback((page) => {
     setColumnWidths(page.columnWidths || {});
-    setVisibleFieldIds(page.visibleFieldIds || fields.map(f => f.id));
+    setVisibleFieldIds((page.visibleFieldIds && page.visibleFieldIds.length > 0) ? page.visibleFieldIds : fields.map(f => f.id));
     setActiveFilters(page.filterSettings || {});
     setSortKey(page.sortOrder?.key || '');
     setAscending(page.sortOrder?.ascending ?? true);
@@ -269,12 +269,12 @@ export const AppContainer = () => {
     }
   }, [token, loadedPageId, refreshPages]);
 
-  if (!isInitialized) {
+  if (!isInitialized || fieldsLoading || pagesLoading) {
     return (
       <div className="flex justify-center items-center h-screen bg-gray-100 dark:bg-gray-900">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">MOTK Sheets 2.0</h1>
-          <p className="text-xl">Initializing Authentication...</p>
+          <p className="text-xl">Loading...</p>
         </div>
       </div>
     );
@@ -290,9 +290,8 @@ export const AppContainer = () => {
         </header>
 
         <main className="p-4 overflow-hidden">
-          {loading && <p className="text-center">Loading sheet data...</p>}
           {error && <p className="text-red-500 text-center">Error: {error.message}</p>}
-          {!loading && !error && (
+          {!error && (
             <Routes>
               <Route path="/" element={
                 <MainView
@@ -330,5 +329,6 @@ export const AppContainer = () => {
     </ThemeProvider>
   );
 };
+
 
 
