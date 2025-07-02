@@ -13,6 +13,7 @@ import FieldManager from './FieldManager';
 import { appendField } from '../api/appendField';
 import { updateCell } from '../api/updateCell';
 import { updateNonUuidIds } from '../api/updateNonUuidIds';
+import { deletePage } from '../api/deletePage'; // Import deletePage
 
 const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 
@@ -35,7 +36,8 @@ const MainView = ({
   onUpdateNonUuidIds,
   idToColIndex,
   onSaveView,
-  onLoadView, // Pass onLoadView
+  onLoadView,
+  onDeleteView, // Pass onDeleteView
 }) => {
   return (
     <div className="flex flex-col h-full gap-4">
@@ -53,7 +55,8 @@ const MainView = ({
         onUpdateNonUuidIds={onUpdateNonUuidIds}
         columnWidths={columnWidths}
         onSaveView={onSaveView}
-        onLoadView={onLoadView} // Pass onLoadView
+        onLoadView={onLoadView}
+        onDeleteView={onDeleteView} // Pass onDeleteView
       />
       <div className="shadow-md sm:rounded-lg border border-gray-200 dark:border-gray-700">
         <ShotTable
@@ -230,6 +233,25 @@ export const AppContainer = () => {
     setAscending(page.sortOrder?.ascending ?? true);
   }, [fields]);
 
+  const handleDeleteView = useCallback(async (pageId) => {
+    if (!token) {
+      alert('Authentication required.');
+      return;
+    }
+    if (window.confirm('Are you sure you want to delete this view?')) {
+      try {
+        await deletePage(spreadsheetId, token, pageId);
+        alert('View deleted successfully!');
+        if (refreshPages) {
+          refreshPages();
+        }
+      } catch (error) {
+        console.error('Failed to delete view:', error);
+        alert(`Error: ${error.message}`);
+      }
+    }
+  }, [token, refreshPages]);
+
   if (!isInitialized) {
     return (
       <div className="flex justify-center items-center h-screen bg-gray-100 dark:bg-gray-900">
@@ -275,7 +297,8 @@ export const AppContainer = () => {
                   onUpdateNonUuidIds={handleUpdateNonUuidIds}
                   idToColIndex={idToColIndex}
                   onSaveView={handleSaveView}
-                  onLoadView={handleLoadView} // Pass handler
+                  onLoadView={handleLoadView}
+                  onDeleteView={handleDeleteView} // Pass handler
                 />
               } />
               <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={fields} />} />

@@ -1,13 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FilterManager from './FilterManager';
 import FieldManager from './FieldManager';
 import SaveViewControl from './SaveViewControl';
+import ManageViewsDialog from './ManageViewsDialog'; // Import ManageViewsDialog
 import { Select, MenuItem, FormControl, InputLabel, IconButton, Button } from '@mui/material';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import AddIcon from '@mui/icons-material/Add';
-import usePagesData from '../hooks/usePagesData'; // Import usePagesData
+import usePagesData from '../hooks/usePagesData';
 
 const Toolbar = ({
     fields,
@@ -23,10 +24,12 @@ const Toolbar = ({
     onUpdateNonUuidIds,
     columnWidths,
     onSaveView,
-    onLoadView, // Add onLoadView prop
+    onLoadView,
+    onDeleteView, // Add onDeleteView prop
 }) => {
     const navigate = useNavigate();
-    const { pages } = usePagesData(); // Fetch pages
+    const { pages } = usePagesData();
+    const [isManageViewsDialogOpen, setManageViewsDialogOpen] = useState(false);
 
     const handleAddNew = () => {
         navigate('/shots/new');
@@ -43,92 +46,105 @@ const Toolbar = ({
     };
 
     return (
-        <div className="flex flex-wrap items-center justify-between mb-4 gap-4">
-            <div className="flex items-center gap-4">
-                {/* Page Selector */}
-                <FormControl variant="outlined" size="small" sx={{ minWidth: 150 }}>
-                    <InputLabel id="page-select-label">View</InputLabel>
-                    <Select
-                        labelId="page-select-label"
-                        id="page-select"
-                        onChange={handlePageChange}
-                        label="View"
-                    >
-                        <MenuItem value=""><em>Default View</em></MenuItem>
-                        {pages.map(page => (
-                            <MenuItem key={page.page_id} value={page.page_id}>{page.title}</MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
-
-                {/* Filter Manager */}
-                <FilterManager
-                    fields={fields}
-                    activeFilters={activeFilters}
-                    onFilterChange={onFilterChange}
-                    allShots={allShots}
-                />
-                {/* Sort Controls */}
-                <div className="flex items-center gap-2">
-                    <FormControl variant="outlined" size="small" sx={{ minWidth: 120 }}>
-                        <InputLabel id="sort-by-label">Sort by</InputLabel>
+        <>
+            <div className="flex flex-wrap items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    {/* Page Selector */}
+                    <FormControl variant="outlined" size="small" sx={{ minWidth: 150 }}>
+                        <InputLabel id="page-select-label">View</InputLabel>
                         <Select
-                            labelId="sort-by-label"
-                            id="sort-by"
-                            value={sortKey || ''}
-                            label="Sort by"
-                            onChange={(e) => onSort(e.target.value)}
+                            labelId="page-select-label"
+                            id="page-select"
+                            onChange={handlePageChange}
+                            label="View"
                         >
-                            <MenuItem value=""><em>None</em></MenuItem>
-                            {fields.map(field => (
-                                <MenuItem key={field.id} value={field.id}>{field.label}</MenuItem>
+                            <MenuItem value=""><em>Default View</em></MenuItem>
+                            {pages.map(page => (
+                                <MenuItem key={page.page_id} value={page.page_id}>{page.title}</MenuItem>
                             ))}
                         </Select>
                     </FormControl>
-                    <IconButton
-                        onClick={() => onSort(sortKey)}
-                        disabled={!sortKey}
-                        color="primary"
-                    >
-                        {ascending ? <ArrowUpwardIcon /> : <ArrowDownwardIcon />}
-                    </IconButton>
+
+                    {/* Filter Manager */}
+                    <FilterManager
+                        fields={fields}
+                        activeFilters={activeFilters}
+                        onFilterChange={onFilterChange}
+                        allShots={allShots}
+                    />
+                    {/* Sort Controls */}
+                    <div className="flex items-center gap-2">
+                        <FormControl variant="outlined" size="small" sx={{ minWidth: 120 }}>
+                            <InputLabel id="sort-by-label">Sort by</InputLabel>
+                            <Select
+                                labelId="sort-by-label"
+                                id="sort-by"
+                                value={sortKey || ''}
+                                label="Sort by"
+                                onChange={(e) => onSort(e.target.value)}
+                            >
+                                <MenuItem value=""><em>None</em></MenuItem>
+                                {fields.map(field => (
+                                    <MenuItem key={field.id} value={field.id}>{field.label}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <IconButton
+                            onClick={() => onSort(sortKey)}
+                            disabled={!sortKey}
+                            color="primary"
+                        >
+                            {ascending ? <ArrowUpwardIcon /> : <ArrowDownwardIcon />}
+                        </IconButton>
+                    </div>
+                    {/* Field Manager */}
+                    <FieldManager 
+                        allFields={fields}
+                        visibleFieldIds={visibleFieldIds}
+                        onVisibilityChange={onVisibilityChange}
+                        onAddField={onAddField}
+                    />
                 </div>
-                {/* Field Manager */}
-                <FieldManager 
-                    allFields={fields}
-                    visibleFieldIds={visibleFieldIds}
-                    onVisibilityChange={onVisibilityChange}
-                    onAddField={onAddField}
-                />
+                
+                <div className="flex items-center gap-4">
+                    {/* Save View Control */}
+                    <SaveViewControl
+                        columnWidths={columnWidths}
+                        visibleFieldIds={visibleFieldIds}
+                        activeFilters={activeFilters}
+                        sortKey={sortKey}
+                        ascending={ascending}
+                        onSave={onSaveView}
+                    />
+                    <Button
+                        variant="outlined"
+                        onClick={() => setManageViewsDialogOpen(true)}
+                    >
+                        Manage Views
+                    </Button>
+                    <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={handleAddNew}
+                        sx={{ bgcolor: 'success.main', '&:hover': { bgcolor: 'success.dark' } }}
+                    >
+                        Add New Shot
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        onClick={onUpdateNonUuidIds}
+                        sx={{ borderColor: 'warning.main', color: 'warning.main', '&:hover': { borderColor: 'warning.dark', color: 'warning.dark' } }}
+                    >
+                        Update Non-UUID IDs
+                    </Button>
+                </div>
             </div>
-            
-            <div className="flex items-center gap-4">
-                {/* Save View Control */}
-                <SaveViewControl
-                    columnWidths={columnWidths}
-                    visibleFieldIds={visibleFieldIds}
-                    activeFilters={activeFilters}
-                    sortKey={sortKey}
-                    ascending={ascending}
-                    onSave={onSaveView}
-                />
-                <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={handleAddNew}
-                    sx={{ bgcolor: 'success.main', '&:hover': { bgcolor: 'success.dark' } }}
-                >
-                    Add New Shot
-                </Button>
-                <Button
-                    variant="outlined"
-                    onClick={onUpdateNonUuidIds}
-                    sx={{ borderColor: 'warning.main', color: 'warning.main', '&:hover': { borderColor: 'warning.dark', color: 'warning.dark' } }}
-                >
-                    Update Non-UUID IDs
-                </Button>
-            </div>
-        </div>
+            <ManageViewsDialog
+                open={isManageViewsDialogOpen}
+                onClose={() => setManageViewsDialogOpen(false)}
+                onDelete={onDeleteView}
+            />
+        </>
     );
 };
 
