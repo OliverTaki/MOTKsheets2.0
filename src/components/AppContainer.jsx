@@ -3,7 +3,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import React, { useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import useSheetsData from '../hooks/useSheetsData';
-import usePagesData from '../hooks/usePagesData'; // Import usePagesData
+import usePagesData from '../hooks/usePagesData';
 import ShotTable from './ShotTable';
 import Toolbar from './Toolbar';
 import LoginButton from './LoginButton';
@@ -16,7 +16,6 @@ import { updateNonUuidIds } from '../api/updateNonUuidIds';
 
 const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 
-// MainViewに、全ての機能のpropsを渡すように修正
 const MainView = ({
   sheets,
   fields,
@@ -35,7 +34,8 @@ const MainView = ({
   onUpdateFieldOptions,
   onUpdateNonUuidIds,
   idToColIndex,
-  onSaveView, // Pass onSaveView
+  onSaveView,
+  onLoadView, // Pass onLoadView
 }) => {
   return (
     <div className="flex flex-col h-full gap-4">
@@ -51,8 +51,9 @@ const MainView = ({
         onVisibilityChange={onVisibilityChange}
         onAddField={onAddField}
         onUpdateNonUuidIds={onUpdateNonUuidIds}
-        columnWidths={columnWidths} // Pass columnWidths
-        onSaveView={onSaveView}     // Pass onSaveView
+        columnWidths={columnWidths}
+        onSaveView={onSaveView}
+        onLoadView={onLoadView} // Pass onLoadView
       />
       <div className="shadow-md sm:rounded-lg border border-gray-200 dark:border-gray-700">
         <ShotTable
@@ -79,7 +80,7 @@ const theme = createTheme({
 export const AppContainer = () => {
   const { token, isInitialized } = useContext(AuthContext);
   const { sheets, setSheets, fields, loading, error, refreshData, updateFieldOptions, idToColIndex } = useSheetsData(spreadsheetId);
-  const { pages, refreshPages } = usePagesData(); // Use usePagesData hook
+  const { pages, refreshPages } = usePagesData();
 
   console.log('App: loading=', loading, 'error=', error);
   const [columnWidths, setColumnWidths] = useState({});
@@ -221,6 +222,14 @@ export const AppContainer = () => {
     }
   }, [refreshPages]);
 
+  const handleLoadView = useCallback((page) => {
+    setColumnWidths(page.columnWidths || {});
+    setVisibleFieldIds(page.fieldVisibility || fields.map(f => f.id));
+    setActiveFilters(page.filterSettings || {});
+    setSortKey(page.sortOrder?.key || '');
+    setAscending(page.sortOrder?.ascending ?? true);
+  }, [fields]);
+
   if (!isInitialized) {
     return (
       <div className="flex justify-center items-center h-screen bg-gray-100 dark:bg-gray-900">
@@ -265,7 +274,8 @@ export const AppContainer = () => {
                   onUpdateFieldOptions={updateFieldOptions}
                   onUpdateNonUuidIds={handleUpdateNonUuidIds}
                   idToColIndex={idToColIndex}
-                  onSaveView={handleSaveView} // Pass handler
+                  onSaveView={handleSaveView}
+                  onLoadView={handleLoadView} // Pass handler
                 />
               } />
               <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={fields} />} />
