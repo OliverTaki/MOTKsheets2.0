@@ -13,7 +13,7 @@ import { updateCell } from './api/updateCell';
 const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 
 // MainViewに、全ての機能のpropsを渡すように修正
-const MainView = ({ sheets, fields, columnWidths, onColumnResize, activeFilters, onFilterChange, allShots, sortKey, ascending, onSort, visibleFieldIds, onVisibilityChange, onAddField, onCellSave }) => {
+const MainView = ({ sheets, fields, columnWidths, onColumnResize, activeFilters, onFilterChange, allShots, sortKey, ascending, onSort, visibleFieldIds, onVisibilityChange, onAddField, onCellSave, onUpdateFieldOptions }) => {
   return (
     <div className="flex flex-col h-full gap-4">
       <Toolbar 
@@ -35,6 +35,7 @@ const MainView = ({ sheets, fields, columnWidths, onColumnResize, activeFilters,
             columnWidths={columnWidths}
             onColumnResize={onColumnResize}
             onCellSave={onCellSave}
+            onUpdateFieldOptions={onUpdateFieldOptions}
           />
       </div>
     </div>
@@ -45,7 +46,7 @@ const NewShotPage = () => <div className="p-8"><h2>Add New Shot (WIP)</h2></div>
 
 function App() {
   const { token, isInitialized } = useContext(AuthContext);
-  const { sheets, setSheets, fields, loading, error, refreshData } = useSheetsData(spreadsheetId);
+  const { sheets, setSheets, fields, loading, error, refreshData, updateFieldOptions } = useSheetsData(spreadsheetId);
   const [columnWidths, setColumnWidths] = useState({});
   const [activeFilters, setActiveFilters] = useState({});
   const [sortKey, setSortKey] = useState('');
@@ -162,7 +163,7 @@ function App() {
         console.error("Failed to update cell:", err);
         alert(`Error: ${err.message}`);
     }
-  }, [token, sheets, fields, setSheets]);
+  }, [token, setSheets]);
 
 
   if (!isInitialized) {
@@ -204,6 +205,7 @@ function App() {
                 onVisibilityChange={handleVisibilityChange}
                 onAddField={handleAddField}
                 onCellSave={handleCellSave}
+                onUpdateFieldOptions={updateFieldOptions}
               />
             } />
             <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={fields} />} />

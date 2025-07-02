@@ -18,6 +18,7 @@ export function parseFields(rawData) {
     let idIndex = normalizedHeader.indexOf('fields_id');
     const labelIndex = normalizedHeader.indexOf('field_name');
     const typeIndex = normalizedHeader.indexOf('type');
+    const editableIndex = normalizedHeader.indexOf('editable');
     const optionsIndex = normalizedHeader.indexOf('options');
 
     if (idIndex === -1 && normalizedHeader[0] === '') {
@@ -34,6 +35,7 @@ export function parseFields(rawData) {
         id: row[idIndex],
         label: row[labelIndex],
         type: row[typeIndex] || 'text',
+        editable: row[editableIndex] ? row[editableIndex].toUpperCase() === 'TRUE' : false, // editable列をパース
         options: optionsIndex !== -1 ? row[optionsIndex] : null,
     })).filter(field => field.id && String(field.id).trim() !== '');
 }

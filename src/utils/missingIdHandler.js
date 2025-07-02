@@ -13,9 +13,9 @@ export function missingIdHandler(shots) {
 
     shotsWithIds.forEach((shot, index) => {
         // shot.idが存在しない、または空文字列の場合
-        if (!shot.id || String(shot.id).trim() === '') {
+        if (!shot.shot_id || String(shot.shot_id).trim() === '') {
             const newId = generateId(shot, index);
-            shot.id = newId;
+            shot.shot_id = newId;
             // どの行に新しいIDが振られたかを記録
             missingIdsFound.push({ index: index, newId: newId });
             updated = true;

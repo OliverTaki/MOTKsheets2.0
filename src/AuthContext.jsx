@@ -90,7 +90,13 @@ export const AuthProvider = ({ children }) => {
         }
     }, []);
 
-    const value = { token, signIn, signOut, isInitialized, error };
+    const clearToken = useCallback(() => {
+        setToken(null);
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
+        console.log('Local token cleared.');
+    }, []);
+
+    const value = { token, signIn, signOut, isInitialized, error, clearToken };
 
     return (
         <AuthContext.Provider value={value}>

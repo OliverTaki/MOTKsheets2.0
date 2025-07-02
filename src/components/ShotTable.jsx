@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { PencilIcon } from '@heroicons/react/24/solid';
 import { Link } from 'react-router-dom';
 
-const ShotTable = ({ shots, fields, columnWidths, onColumnResize, onCellSave }) => {
+const ShotTable = ({ shots, fields, columnWidths, onColumnResize, onCellSave, onUpdateFieldOptions }) => {
     const [resizingFieldId, setResizingFieldId] = useState(null);
     const startCursorX = useRef(0);
     const startColumnWidth = useRef(0);
@@ -53,8 +53,12 @@ const ShotTable = ({ shots, fields, columnWidths, onColumnResize, onCellSave }) 
     useEffect(() => {
         if (editingCell && inputRef.current) {
             inputRef.current.focus();
+            // If it's a select field, programmatically open the dropdown
+            if (fields.find(f => f.id === editingCell.fieldId)?.type === 'select') {
+                inputRef.current.click();
+            }
         }
-    }, [editingCell]);
+    }, [editingCell, fields]);
 
 
     // 列リサイズのイベントリスナー
@@ -105,15 +109,46 @@ const ShotTable = ({ shots, fields, columnWidths, onColumnResize, onCellSave }) 
                             return (
                                 <td key={field.id} className={tdClassName}>
                                     {isEditing ? (
-                                        <input
-                                            ref={inputRef}
-                                            type="text"
-                                            value={editValue}
-                                            onChange={(e) => setEditValue(e.target.value)}
-                                            onBlur={handleInputBlur}
-                                            onKeyDown={handleInputKeyDown}
-                                            className="absolute inset-0 w-full h-full bg-blue-100 dark:bg-blue-900 border-2 border-blue-500 outline-none p-2"
-                                        />
+                                        field.type === 'select' && field.options ? (
+                                            <select
+                                                ref={inputRef}
+                                                value={editValue}
+                                                onChange={async (e) => {
+                                                    const newValue = e.target.value;
+                                                    if (newValue === '__ADD_NEW__') {
+                                                        const newOption = prompt('Enter new option:');
+                                                        if (newOption) {
+                                                            await onUpdateFieldOptions(field.id, newOption);
+                                                            // Immediately save the cell with the new option
+                                                            onCellSave(editingCell.shotId, field.id, newOption);
+                                                            setEditingCell(null); // Exit editing mode
+                                                        } else {
+                                                            setEditValue(editValue); // Revert to current value if cancelled
+                                                        }
+                                                    } else {
+                                                        setEditValue(newValue);
+                                                    }
+                                                }}
+                                                onBlur={handleInputBlur}
+                                                onKeyDown={handleInputKeyDown}
+                                                className="absolute inset-0 w-full h-full bg-blue-100 dark:bg-blue-900 border-2 border-blue-500 outline-none p-2"
+                                            >
+                                                {field.options.split(',').map(option => (
+                                                    <option key={option} value={option}>{option}</option>
+                                                ))}
+                                                <option value="__ADD_NEW__">Add New...</option>
+                                            </select>
+                                        ) : (
+                                            <input
+                                                ref={inputRef}
+                                                type="text"
+                                                value={editValue}
+                                                onChange={(e) => setEditValue(e.target.value)}
+                                                onBlur={handleInputBlur}
+                                                onKeyDown={handleInputKeyDown}
+                                                className="absolute inset-0 w-full h-full bg-blue-100 dark:bg-blue-900 border-2 border-blue-500 outline-none p-2"
+                                            />
+                                        )
                                     ) : (
                                         <>
                                             <div className="overflow-hidden whitespace-nowrap">
@@ -127,10 +162,10 @@ const ShotTable = ({ shots, fields, columnWidths, onColumnResize, onCellSave }) 
                                                     <span title={cellValue}>{cellValue}</span>
                                                 )}
                                             </div>
-                                            {field.editable === 'TRUE' && (
+                                            {field.editable && (
                                                 <PencilIcon
                                                     style={{ width: '11px', height: '11px' }}
-                                                    className="absolute top-2 right-2 text-gray-400 opacity-0 group-hover:opacity-100 cursor-pointer"
+                                                    className="absolute top-1 right-1 text-gray-400 opacity-0 group-hover:opacity-100 cursor-pointer"
                                                     onClick={() => handleCellClick(shot.shot_id, field.id, cellValue)}
                                                 />
                                             )}

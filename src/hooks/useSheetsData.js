@@ -2,6 +2,7 @@ import { useState, useEffect, useContext, useCallback } from 'react';
 import { AuthContext } from '../AuthContext';
 import { parseShots, parseFields } from '../utils/parse';
 import { missingIdHandler } from '../utils/missingIdHandler';
+import { updateCell } from '../api/updateCell';
 
 const useSheetsData = (spreadsheetId) => {
     const { token, isInitialized, clearToken } = useContext(AuthContext);
@@ -67,6 +68,57 @@ const useSheetsData = (spreadsheetId) => {
         }
     }, [spreadsheetId, clearToken]);
 
+    const updateFieldOptions = useCallback(async (fieldId, newOption) => {
+        if (!token) {
+            alert("Authentication required to update field options.");
+            return;
+        }
+        try {
+            // Find the field in the current fields state
+            const fieldToUpdate = fields.find(f => f.id === fieldId);
+            if (!fieldToUpdate) {
+                throw new Error(`Field with ID ${fieldId} not found.`);
+            }
+
+            // Get the current options and append the new one
+            const currentOptions = fieldToUpdate.options ? fieldToUpdate.options.split(',') : [];
+            if (!currentOptions.includes(newOption)) {
+                currentOptions.push(newOption);
+            }
+            const updatedOptionsString = currentOptions.join(',');
+
+            // Determine the row index for the field in the FIELDS sheet
+            // Assuming FIELDS sheet starts from row 1 (header) and data starts from row 2
+            // And assuming field.id corresponds to the first column (A)
+            const fieldRowIndex = fields.findIndex(f => f.id === fieldId) + 2; // +1 for 0-based to 1-based, +1 for header row
+
+            // Determine the column index for 'options' in the FIELDS sheet
+            // This is a bit brittle, ideally we'd get this from the parsed header
+            // For now, let's assume 'options' is column F (index 5, 0-based)
+            // Based on parse.js, it's the 5th column (0-indexed) if it exists.
+            // A=0, B=1, C=2, D=3, E=4, F=5
+            const optionsColumnLetter = 'F'; // Assuming 'options' is in column F
+
+            const range = `FIELDS!${optionsColumnLetter}${fieldRowIndex}`;
+
+            await updateCell(spreadsheetId, token, range, updatedOptionsString);
+
+            // Optimistically update the local state
+            setFields(prevFields => prevFields.map(f =>
+                f.id === fieldId ? { ...f, options: updatedOptionsString } : f
+            ));
+            console.log(`Field options for ${fieldId} updated successfully in Google Sheet.`);
+        } catch (err) {
+            console.error('Error updating field options:', err);
+            alert(`Error updating field options: ${err.message}`);
+            if (err.status === 401) {
+                if (clearToken) {
+                    clearToken();
+                }
+            }
+        }
+    }, [spreadsheetId, token, fields]);
+
     useEffect(() => {
         if (!spreadsheetId) {
             setError(new Error("Configuration Error: VITE_SHEETS_ID is not set."));
@@ -81,7 +133,7 @@ const useSheetsData = (spreadsheetId) => {
     }, [spreadsheetId, token, isInitialized, fetchSheetsData]);
 
     // データを再読み込みするための関数を返す
-    return { sheets, fields, loading, error, refreshData: () => fetchSheetsData(token) };
+    return { sheets, setSheets, fields, loading, error, refreshData: () => fetchSheetsData(token), updateFieldOptions };
 };
 
 export default useSheetsData;
