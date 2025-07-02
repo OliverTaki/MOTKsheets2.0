@@ -1,23 +1,31 @@
-import { google } from 'googleapis';
+const apiKey = import.meta.env.VITE_SHEETS_API_KEY;
 
-/**
- * Deletes a page (view configuration) from the 'PAGES' sheet.
- * @param {string} spreadsheetId - The ID of the spreadsheet.
- * @param {google.auth.OAuth2} auth - The authenticated Google OAuth2 client.
- * @param {string} pageId - The ID of the page to delete.
- * @returns {Promise<any>}
- */
-export async function deletePage(spreadsheetId, auth, pageId) {
-  const sheets = google.sheets({ version: 'v4', auth });
+async function getSheetId(spreadsheetId, sheetName, token) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?key=${apiKey}`;
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  const spreadsheet = await response.json();
+  const sheet = spreadsheet.sheets.find(s => s.properties.title === sheetName);
+  if (!sheet) {
+    throw new Error(`Sheet "${sheetName}" not found.`);
+  }
+  return sheet.properties.sheetId;
+}
 
+export async function deletePage(spreadsheetId, token, pageId) {
   try {
-    // First, get all the data from the PAGES sheet to find the row index of the pageId.
-    const getPagesResponse = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: 'PAGES!A:A', // Look in the first column for the page_id
+    const range = 'PAGES!A:A';
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?key=${apiKey}`;
+    const getPagesResponse = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     });
-
-    const rows = getPagesResponse.data.values;
+    const pagesData = await getPagesResponse.json();
+    const rows = pagesData.values;
     if (!rows) {
       throw new Error('No data found in PAGES sheet.');
     }
@@ -27,47 +35,38 @@ export async function deletePage(spreadsheetId, auth, pageId) {
       throw new Error(`Page with ID "${pageId}" not found.`);
     }
 
-    // The sheet is 1-indexed, so add 1 to the rowIndex.
-    const sheetRowIndex = rowIndex + 1;
-
-    // Now, create a request to delete that row.
+    const sheetId = await getSheetId(spreadsheetId, 'PAGES', token);
+    const batchUpdateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate?key=${apiKey}`;
     const batchUpdateRequest = {
       requests: [
         {
           deleteDimension: {
             range: {
-              sheetId: await getSheetId(sheets, spreadsheetId, 'PAGES'), // Helper to get sheetId by name
+              sheetId,
               dimension: 'ROWS',
-              startIndex: rowIndex, // 0-indexed
-              endIndex: sheetRowIndex,
+              startIndex: rowIndex,
+              endIndex: rowIndex + 1,
             },
           },
         },
       ],
     };
 
-    const response = await sheets.spreadsheets.batchUpdate({
-      spreadsheetId,
-      resource: batchUpdateRequest,
+    const response = await fetch(batchUpdateUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(batchUpdateRequest),
     });
-
-    return response.data;
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error.message);
+    }
+    return data;
   } catch (err) {
     console.error('Error deleting page:', err);
     throw new Error('Failed to delete the page from the sheet.');
   }
-}
-
-// Helper function to get the sheetId from its name, as the deleteDimension request requires a sheetId.
-async function getSheetId(sheets, spreadsheetId, sheetName) {
-  const spreadsheet = await sheets.spreadsheets.get({
-    spreadsheetId,
-  });
-  const sheet = spreadsheet.data.sheets.find(
-    s => s.properties.title === sheetName
-  );
-  if (!sheet) {
-    throw new Error(`Sheet "${sheetName}" not found.`);
-  }
-  return sheet.properties.sheetId;
 }

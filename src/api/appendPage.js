@@ -1,15 +1,6 @@
-import { google } from 'googleapis';
+const apiKey = import.meta.env.VITE_SHEETS_API_KEY;
 
-/**
- * Appends a new page (view configuration) to the 'PAGES' sheet.
- * @param {string} spreadsheetId - The ID of the spreadsheet.
- * @param {google.auth.OAuth2} auth - The authenticated Google OAuth2 client.
- * @param {object} pageData - The page data to append.
- * @returns {Promise<any>}
- */
-export async function appendPage(spreadsheetId, auth, pageData) {
-  const sheets = google.sheets({ version: 'v4', auth });
-
+export async function appendPage(spreadsheetId, token, pageData) {
   const {
     page_id,
     title,
@@ -30,17 +21,25 @@ export async function appendPage(spreadsheetId, auth, pageData) {
     JSON.stringify(sortOrder),
   ];
 
+  const range = 'PAGES!A1';
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}:append?valueInputOption=USER_ENTERED&key=${apiKey}`;
+
   try {
-    const response = await sheets.spreadsheets.values.append({
-      spreadsheetId,
-      range: 'PAGES!A1',
-      valueInputOption: 'USER_ENTERED',
-      insertDataOption: 'INSERT_ROWS',
-      resource: {
-        values: [newRow],
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
+      body: JSON.stringify({
+        values: [newRow],
+      }),
     });
-    return response.data;
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error.message);
+    }
+    return data;
   } catch (err) {
     console.error('Error appending page:', err);
     throw new Error('Failed to save the new page to the sheet.');

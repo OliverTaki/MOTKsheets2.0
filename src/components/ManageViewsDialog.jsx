@@ -13,7 +13,6 @@ import {
   Box,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import usePagesData from '../hooks/usePagesData';
 
 const ManageViewsDialog = ({
   open,
@@ -22,8 +21,8 @@ const ManageViewsDialog = ({
   onSaveAs,
   onDelete,
   loadedPageId,
+  pages, // Receive pages as a prop
 }) => {
-  const { pages } = usePagesData();
   const [newPageName, setNewPageName] = useState('');
 
   const handleSaveAs = () => {
@@ -55,7 +54,7 @@ const ManageViewsDialog = ({
         <List>
           {pages.map((page) => (
             <ListItem
-              key={page.page_id}
+              key={page.page_id} // Added key prop
               selected={page.page_id === loadedPageId}
               secondaryAction={
                 <IconButton edge="end" aria-label="delete" onClick={() => onDelete(page.page_id)}>

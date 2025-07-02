@@ -1,23 +1,15 @@
-import { google } from 'googleapis';
+const apiKey = import.meta.env.VITE_SHEETS_API_KEY;
 
-/**
- * Updates an existing page (view configuration) in the 'PAGES' sheet.
- * @param {string} spreadsheetId - The ID of the spreadsheet.
- * @param {google.auth.OAuth2} auth - The authenticated Google OAuth2 client.
- * @param {string} pageId - The ID of the page to update.
- * @param {object} pageData - The updated page data.
- * @returns {Promise<any>}
- */
-export async function updatePage(spreadsheetId, auth, pageId, pageData) {
-  const sheets = google.sheets({ version: 'v4', auth });
-
+export async function updatePage(spreadsheetId, token, pageId, pageData) {
   try {
-    const getPagesResponse = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: 'PAGES!A:A',
+    const getPagesUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/PAGES!A:A?key=${apiKey}`;
+    const getPagesResponse = await fetch(getPagesUrl, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     });
-
-    const rows = getPagesResponse.data.values;
+    const pagesData = await getPagesResponse.json();
+    const rows = pagesData.values;
     if (!rows) {
       throw new Error('No data found in PAGES sheet.');
     }
@@ -29,6 +21,7 @@ export async function updatePage(spreadsheetId, auth, pageId, pageData) {
 
     const sheetRowIndex = rowIndex + 1;
     const range = `PAGES!A${sheetRowIndex}:G${sheetRowIndex}`;
+    const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?valueInputOption=USER_ENTERED&key=${apiKey}`;
 
     const {
       title,
@@ -49,15 +42,21 @@ export async function updatePage(spreadsheetId, auth, pageId, pageData) {
       JSON.stringify(sortOrder),
     ];
 
-    const response = await sheets.spreadsheets.values.update({
-      spreadsheetId,
-      range,
-      valueInputOption: 'USER_ENTERED',
-      resource: {
-        values: [newRow],
+    const response = await fetch(updateUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
+      body: JSON.stringify({
+        values: [newRow],
+      }),
     });
-    return response.data;
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error.message);
+    }
+    return data;
   } catch (err) {
     console.error('Error updating page:', err);
     throw new Error('Failed to update the page in the sheet.');
