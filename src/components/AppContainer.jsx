@@ -88,7 +88,7 @@ const theme = createTheme({
 });
 
 export const AppContainer = () => {
-  const { token, user, isInitialized } = useContext(AuthContext); // Add user from context
+  const { token, user, isInitialized } = useContext(AuthContext);
   const { sheets, setSheets, fields, loading, error, refreshData, updateFieldOptions, idToColIndex } = useSheetsData(spreadsheetId);
   const { pages, refreshPages } = usePagesData();
 
@@ -104,10 +104,10 @@ export const AppContainer = () => {
       const pageIdToLoad = loadedPageId || 'default';
       const pageToLoad = pages.find(p => p.page_id === pageIdToLoad) || pages.find(p => p.page_id === 'default');
       if (pageToLoad) {
-        handleLoadView(pageToLoad, true);
+        handleLoadView(pageToLoad);
       }
     }
-  }, [fields, pages]);
+  }, [fields, pages, loadedPageId]);
 
   const processedShots = useMemo(() => {
     let filtered = sheets;
@@ -222,7 +222,7 @@ export const AppContainer = () => {
     author: user?.email || 'Unknown',
   });
 
-  const handleLoadView = useCallback((page, isInitialLoad = false) => {
+  const handleLoadView = useCallback((page) => {
     setColumnWidths(page.columnWidths || {});
     setVisibleFieldIds(page.visibleFieldIds || fields.map(f => f.id));
     setActiveFilters(page.filterSettings || {});
@@ -330,4 +330,5 @@ export const AppContainer = () => {
     </ThemeProvider>
   );
 };
+
 

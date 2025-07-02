@@ -7,8 +7,9 @@ export async function appendPage(spreadsheetId, token, pageData) {
     columnWidths,
     columnOrder,
     filterSettings,
-    visibleFieldIds, // Corrected property name
+    visibleFieldIds,
     sortOrder,
+    author, // Add author
   } = pageData;
 
   const newRow = [
@@ -17,8 +18,9 @@ export async function appendPage(spreadsheetId, token, pageData) {
     JSON.stringify(columnWidths),
     JSON.stringify(columnOrder),
     JSON.stringify(filterSettings),
-    JSON.stringify(visibleFieldIds), // Corrected property name
+    JSON.stringify(visibleFieldIds),
     JSON.stringify(sortOrder),
+    author, // Add author
   ];
 
   const range = 'PAGES!A1';

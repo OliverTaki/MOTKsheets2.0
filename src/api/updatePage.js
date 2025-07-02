@@ -20,7 +20,7 @@ export async function updatePage(spreadsheetId, token, pageId, pageData) {
     }
 
     const sheetRowIndex = rowIndex + 1;
-    const range = `PAGES!A${sheetRowIndex}:G${sheetRowIndex}`;
+    const range = `PAGES!A${sheetRowIndex}:H${sheetRowIndex}`; // Update range to include author
     const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?valueInputOption=USER_ENTERED&key=${apiKey}`;
 
     const {
@@ -28,8 +28,9 @@ export async function updatePage(spreadsheetId, token, pageId, pageData) {
       columnWidths,
       columnOrder,
       filterSettings,
-      visibleFieldIds, // Corrected property name
+      visibleFieldIds,
       sortOrder,
+      author, // Add author
     } = pageData;
 
     const newRow = [
@@ -38,8 +39,9 @@ export async function updatePage(spreadsheetId, token, pageId, pageData) {
       JSON.stringify(columnWidths),
       JSON.stringify(columnOrder),
       JSON.stringify(filterSettings),
-      JSON.stringify(visibleFieldIds), // Corrected property name
+      JSON.stringify(visibleFieldIds),
       JSON.stringify(sortOrder),
+      author, // Add author
     ];
 
     const response = await fetch(updateUrl, {

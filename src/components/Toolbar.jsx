@@ -10,7 +10,7 @@ import AddIcon from '@mui/icons-material/Add';
 
 const Toolbar = ({
     fields,
-    pages, // Receive pages as a prop
+    pages,
     activeFilters,
     onFilterChange,
     allShots,
@@ -58,7 +58,6 @@ const Toolbar = ({
                             onChange={handlePageChange}
                             label="View"
                         >
-                            <MenuItem value=""><em>Default View</em></MenuItem>
                             {pages.map(page => (
                                 <MenuItem key={page.page_id} value={page.page_id}>{page.title}</MenuItem>
                             ))}
@@ -137,7 +136,7 @@ const Toolbar = ({
                 onSaveAs={onSaveViewAs}
                 onDelete={onDeleteView}
                 loadedPageId={loadedPageId}
-                pages={pages} // Pass pages
+                pages={pages}
             />
         </>
     );
