@@ -2,16 +2,17 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import FilterManager from './FilterManager';
 import FieldManager from './FieldManager';
+import SaveViewControl from './SaveViewControl'; // Import SaveViewControl
 import { Select, MenuItem, FormControl, InputLabel, IconButton, Button } from '@mui/material';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import AddIcon from '@mui/icons-material/Add';
 
-// 全ての機能に必要なpropsを受け取るように修正
+// Add props for SaveViewControl
 const Toolbar = ({
     fields,
     activeFilters,
-    onFilterChange, // setActiveFiltersからonFilterChangeに変更
+    onFilterChange,
     allShots,
     sortKey,
     ascending,
@@ -19,7 +20,9 @@ const Toolbar = ({
     visibleFieldIds,
     onVisibilityChange,
     onAddField,
-    onUpdateNonUuidIds
+    onUpdateNonUuidIds,
+    columnWidths, // Pass columnWidths
+    onSaveView,   // Pass onSaveView
 }) => {
     const navigate = useNavigate();
 
@@ -30,14 +33,14 @@ const Toolbar = ({
     return (
         <div className="flex flex-wrap items-center justify-between mb-4 gap-4">
             <div className="flex items-center gap-4">
-                {/* フィルター機能 */}
+                {/* Filter Manager */}
                 <FilterManager
                     fields={fields}
                     activeFilters={activeFilters}
-                    onFilterChange={onFilterChange} // 正しいpropを渡す
+                    onFilterChange={onFilterChange}
                     allShots={allShots}
                 />
-                {/* ソート機能 */}
+                {/* Sort Controls */}
                 <div className="flex items-center gap-2">
                     <FormControl variant="outlined" size="small" sx={{ minWidth: 120 }}>
                         <InputLabel id="sort-by-label">Sort by</InputLabel>
@@ -62,7 +65,7 @@ const Toolbar = ({
                         {ascending ? <ArrowUpwardIcon /> : <ArrowDownwardIcon />}
                     </IconButton>
                 </div>
-                {/* フィールド管理機能 */}
+                {/* Field Manager */}
                 <FieldManager 
                     allFields={fields}
                     visibleFieldIds={visibleFieldIds}
@@ -72,6 +75,15 @@ const Toolbar = ({
             </div>
             
             <div className="flex items-center gap-4">
+                {/* Save View Control */}
+                <SaveViewControl
+                    columnWidths={columnWidths}
+                    visibleFieldIds={visibleFieldIds}
+                    activeFilters={activeFilters}
+                    sortKey={sortKey}
+                    ascending={ascending}
+                    onSave={onSaveView}
+                />
                 <Button
                     variant="contained"
                     startIcon={<AddIcon />}
