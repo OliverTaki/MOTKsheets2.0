@@ -1,50 +1,41 @@
 import React, { useContext } from 'react';
 import { AuthContext } from '../AuthContext';
+import { Button, CircularProgress, Typography, Box } from '@mui/material';
 
 const LoginButton = () => {
-    // useAuth() の代わりに useContext(AuthContext) を使用する
     const { token, signIn, signOut, isInitialized, error } = useContext(AuthContext);
 
     if (!isInitialized) {
         return (
-            <button className="bg-gray-500 text-white font-bold py-2 px-4 rounded" disabled>
+            <Button variant="contained" disabled startIcon={<CircularProgress size={20} color="inherit" />}>
                 Initializing Auth...
-            </button>
+            </Button>
         );
     }
 
     if (error) {
         return (
-            <div>
-                <p className="text-red-500">Authentication Error: {error.message || 'An unknown error occurred.'}</p>
-                <button 
-                    onClick={signIn} 
-                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography color="error" variant="body2">Auth Error: {error.message || 'Unknown error.'}</Typography>
+                <Button onClick={signIn} variant="contained" color="primary">
                     Retry Sign In
-                </button>
-            </div>
+                </Button>
+            </Box>
         );
     }
 
     return (
-        <div>
+        <Box>
             {token ? (
-                <button 
-                    onClick={signOut} 
-                    className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-                >
+                <Button onClick={signOut} variant="contained" color="error">
                     Sign Out
-                </button>
+                </Button>
             ) : (
-                <button 
-                    onClick={signIn} 
-                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                >
+                <Button onClick={signIn} variant="contained" color="primary">
                     Sign In with Google
-                </button>
+                </Button>
             )}
-        </div>
+        </Box>
     );
 };
 

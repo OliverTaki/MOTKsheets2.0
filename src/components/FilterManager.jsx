@@ -1,60 +1,66 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDownIcon } from '@heroicons/react/24/solid';
+import Button from '@mui/material/Button';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Accordion from '@mui/material/Accordion';
+import AccordionSummary from '@mui/material/AccordionSummary';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import Typography from '@mui/material/Typography';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import FilterListIcon from '@mui/icons-material/FilterList';
 
-// 各フィルターセクション（例：Shooting Status）のコンポーネント
 const FilterSection = ({ title, options, selectedValues, onFilterChange }) => {
-    const [isExpanded, setIsExpanded] = useState(true);
+    const [expanded, setExpanded] = useState(true);
+
+    const handleChange = () => {
+        setExpanded(!expanded);
+    };
 
     return (
-        <div className="border-b border-gray-200 dark:border-gray-700 py-3">
-            <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full flex items-center justify-between text-left text-sm font-medium text-gray-800 dark:text-gray-200"
+        <Accordion expanded={expanded} onChange={handleChange} sx={{ boxShadow: 'none', '&:before': { display: 'none' }, '&.Mui-expanded': { margin: '0' } }}>
+            <AccordionSummary
+                expandIcon={<ExpandMoreIcon />}
+                aria-controls={`${title}-content`}
+                id={`${title}-header`}
+                sx={{ minHeight: '48px', '&.Mui-expanded': { minHeight: '48px' }, '.MuiAccordionSummary-content': { margin: '12px 0' } }}
             >
-                <span>{title}</span>
-                <ChevronDownIcon className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-            </button>
-            {isExpanded && (
-                <div className="mt-2 pl-2 space-y-2">
-                    {options.map(option => (
-                        <label key={option} className="flex items-center text-sm cursor-pointer">
-                            <input
-                                type="checkbox"
-                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 bg-white dark:bg-gray-700"
+                <Typography variant="subtitle1">{title}</Typography>
+            </AccordionSummary>
+            <AccordionDetails sx={{ padding: '0 16px 8px' }}>
+                {options.map(option => (
+                    <FormControlLabel
+                        key={option}
+                        control={
+                            <Checkbox
+                                size="small"
                                 checked={selectedValues.includes(option)}
                                 onChange={() => onFilterChange(option)}
                             />
-                            <span className="ml-2 text-gray-700 dark:text-gray-300">{option}</span>
-                        </label>
-                    ))}
-                </div>
-            )}
-        </div>
+                        }
+                        label={<Typography variant="body2">{option}</Typography>}
+                    />
+                ))}
+            </AccordionDetails>
+        </Accordion>
     );
 };
 
-
 const FilterManager = ({ fields, allShots, activeFilters, onFilterChange }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const wrapperRef = useRef(null);
+    const [anchorEl, setAnchorEl] = useState(null);
+    const open = Boolean(anchorEl);
 
-    // ポップアップの外側をクリックしたら閉じる
-    useEffect(() => {
-        function handleClickOutside(event) {
-            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-                setIsOpen(false);
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, [wrapperRef]);
+    const handleClick = (event) => {
+        setAnchorEl(event.currentTarget);
+    };
 
-    // フィルター可能なフィールドを定義
+    const handleClose = () => {
+        setAnchorEl(null);
+    };
+
     const filterableFields = fields.filter(f => f.type === 'select' || (f.options && f.options.trim() !== ''));
 
-    // 各フィールドのユニークな値を取得
     const getUniqueValues = (fieldId) => {
         const field = fields.find(f => f.id === fieldId);
         if (field && field.options) {
@@ -70,53 +76,74 @@ const FilterManager = ({ fields, allShots, activeFilters, onFilterChange }) => {
             : [...currentSelection, value];
         onFilterChange(fieldId, newSelection);
     };
-    
+
     const clearAllFilters = () => {
-        onFilterChange(null, {}); // 全てのフィルターをリセット
+        onFilterChange(null, {});
+        handleClose(); // Close menu after clearing filters
     };
-    
+
     const activeFilterCount = Object.values(activeFilters).flat().length;
 
     return (
-        <div className="relative" ref={wrapperRef}>
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600"
+        <div>
+            <Button
+                id="filter-button"
+                aria-controls={open ? 'filter-menu' : undefined}
+                aria-haspopup="true"
+                aria-expanded={open ? 'true' : undefined}
+                onClick={handleClick}
+                variant="outlined"
+                startIcon={<FilterListIcon />}
+                sx={{
+                    borderColor: 'gray',
+                    color: 'gray',
+                    '&:hover': {
+                        borderColor: 'darkgray',
+                        color: 'darkgray',
+                    },
+                }}
             >
                 Filter
                 {activeFilterCount > 0 && (
-                    <span className="ml-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-blue-500 rounded-full">
+                    <Typography component="span" sx={{ ml: 1, px: 1, py: 0.5, borderRadius: '50%', bgcolor: 'primary.main', color: 'white', fontSize: '0.75rem' }}>
                         {activeFilterCount}
-                    </span>
+                    </Typography>
                 )}
-            </button>
-
-            {isOpen && (
-                <div className="absolute top-full mt-2 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
-                    <div className="p-3">
-                        <div className="flex justify-between items-center mb-2">
-                            <h3 className="text-base font-semibold text-gray-900 dark:text-white">Filter by</h3>
-                            <button 
-                                onClick={clearAllFilters}
-                                className="text-sm text-blue-500 hover:underline"
-                            >
-                                Clear all
-                            </button>
-                        </div>
-                        <div className="max-h-96 overflow-y-auto">
-                            {filterableFields.map(field => (
-                                <FilterSection
-                                    key={field.id}
-                                    title={field.label}
-                                    options={getUniqueValues(field.id)}
-                                    selectedValues={activeFilters[field.id] || []}
-                                    onFilterChange={(value) => handleCheckboxChange(field.id, value)}
-                                />
-                            ))}
-                        </div>
-                    </div>
+            </Button>
+            <Menu
+                id="filter-menu"
+                anchorEl={anchorEl}
+                open={open}
+                onClose={handleClose}
+                MenuListProps={{
+                    'aria-labelledby': 'filter-button',
+                }}
+                PaperProps={{
+                    sx: {
+                        width: 280, // Fixed width for the filter menu
+                        maxHeight: 400, // Max height for scrollability
+                        bgcolor: 'background.paper', // Use MUI theme background
+                        border: '1px solid',
+                        borderColor: 'divider',
+                    },
+                }}
+            >
+                <MenuItem disableRipple sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+                    <Typography variant="h6">Filter by</Typography>
+                    <Button onClick={clearAllFilters} size="small">Clear all</Button>
+                </MenuItem>
+                <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+                    {filterableFields.map(field => (
+                        <FilterSection
+                            key={field.id}
+                            title={field.label}
+                            options={getUniqueValues(field.id)}
+                            selectedValues={activeFilters[field.id] || []}
+                            onFilterChange={(value) => handleCheckboxChange(field.id, value)}
+                        />
+                    ))}
                 </div>
-            )}
+            </Menu>
         </div>
     );
 };

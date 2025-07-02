@@ -2,7 +2,9 @@ function findHeaderAndBody(rawData) {
     if (!rawData) return { header: null, body: [] };
     const nonEmptyRows = rawData.filter(row => row && row.some(cell => cell && String(cell).trim() !== ''));
     if (nonEmptyRows.length === 0) return { header: null, body: [] };
-    return { header: nonEmptyRows[0], body: nonEmptyRows.slice(1) };
+    // The first row is the header with field_ids, the second is the human-readable header (which we skip),
+    // and the rest is the body.
+    return { header: nonEmptyRows[0], body: nonEmptyRows.slice(2) };
 }
 
 export function parseFields(rawData) {
@@ -46,13 +48,10 @@ export function parseShots(rawData, fields) {
     if (!header || body.length === 0 || !fields || fields.length === 0) {
         return [];
     }
-    
-    const normalizedHeader = header.map(cell => String(cell || '').trim().toLowerCase());
 
-    const fieldMap = fields.reduce((acc, field) => {
-        const index = normalizedHeader.indexOf(String(field.id).trim().toLowerCase());
-        if (index !== -1) {
-            acc[field.id] = index;
+    const idToColIndex = header.reduce((acc, id, index) => {
+        if (id) {
+            acc[id.trim()] = index;
         }
         return acc;
     }, {});
@@ -60,9 +59,13 @@ export function parseShots(rawData, fields) {
     return body.map(row => {
         const shot = {};
         for (const field of fields) {
-            const colIndex = fieldMap[field.id];
-            shot[field.id] = colIndex !== undefined ? row[colIndex] : '';
+            const colIndex = idToColIndex[field.id];
+            if (colIndex !== undefined) {
+                shot[field.id] = row[colIndex] || '';
+            }
         }
+        const shotIdField = fields.find(f => f.label === 'Shot ID');
+        shot.shot_id = shotIdField ? shot[shotIdField.id] : (row[0] || '');
         return shot;
     });
 }

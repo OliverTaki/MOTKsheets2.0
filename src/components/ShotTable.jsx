@@ -1,18 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { PencilIcon } from '@heroicons/react/24/solid';
 import { Link } from 'react-router-dom';
+import { 
+    Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
+    TextField, Select, MenuItem, FormControl, InputLabel, IconButton, Box, Typography
+} from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
 
 const ShotTable = ({ shots, fields, columnWidths, onColumnResize, onCellSave, onUpdateFieldOptions }) => {
     const [resizingFieldId, setResizingFieldId] = useState(null);
     const startCursorX = useRef(0);
     const startColumnWidth = useRef(0);
     
-    // 編集中のセルを管理するState
     const [editingCell, setEditingCell] = useState(null); // { shotId, fieldId }
     const [editValue, setEditValue] = useState('');
     const inputRef = useRef(null);
 
-    // 列リサイズのマウスダウンイベント
     const handleColResizeMouseDown = (e, fieldId) => {
         e.preventDefault();
         e.stopPropagation();
@@ -21,13 +23,11 @@ const ShotTable = ({ shots, fields, columnWidths, onColumnResize, onCellSave, on
         startColumnWidth.current = columnWidths[fieldId] || 150;
     };
 
-    // セル編集のクリックイベント
     const handleCellClick = (shotId, fieldId, currentValue) => {
         setEditingCell({ shotId, fieldId });
         setEditValue(currentValue);
     };
 
-    // 編集内容を保存するハンドラ
     const handleSave = () => {
         if (editingCell) {
             onCellSave(editingCell.shotId, editingCell.fieldId, editValue);
@@ -35,12 +35,10 @@ const ShotTable = ({ shots, fields, columnWidths, onColumnResize, onCellSave, on
         }
     };
 
-    // input要素からフォーカスが外れたら保存
     const handleInputBlur = () => {
         handleSave();
     };
 
-    // Enterキーで保存、Escapeキーでキャンセル
     const handleInputKeyDown = (e) => {
         if (e.key === 'Enter') {
             handleSave();
@@ -49,19 +47,18 @@ const ShotTable = ({ shots, fields, columnWidths, onColumnResize, onCellSave, on
         }
     };
     
-    // 編集モードになったらinputにフォーカスを当てる
     useEffect(() => {
         if (editingCell && inputRef.current) {
             inputRef.current.focus();
-            // If it's a select field, programmatically open the dropdown
-            if (fields.find(f => f.id === editingCell.fieldId)?.type === 'select') {
-                inputRef.current.click();
+            const field = fields.find(f => f.id === editingCell.fieldId);
+            if (field?.type === 'select') {
+                // For MUI Select, we might need to programmatically open it
+                // This is often tricky with native select elements, but MUI's Select might respond better
+                // inputRef.current.click(); // This might not work consistently
             }
         }
     }, [editingCell, fields]);
 
-
-    // 列リサイズのイベントリスナー
     useEffect(() => {
         const handleMouseMove = (e) => {
             if (!resizingFieldId) return;
@@ -81,103 +78,164 @@ const ShotTable = ({ shots, fields, columnWidths, onColumnResize, onCellSave, on
         };
     }, [resizingFieldId, onColumnResize]);
 
+    console.log('ShotTable: columnWidths', columnWidths);
     return (
-        <table className="table-fixed text-sm text-left text-gray-500 dark:text-gray-400 border-collapse">
-            <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 sticky top-0 z-10">
-                <tr>
-                    {fields.map((field) => {
-                        const style = { width: `${columnWidths[field.id] || 150}px` };
-                        return (
-                            <th key={field.id} scope="col" style={style} className="py-2 px-3 border border-gray-200 dark:border-gray-600 relative select-none">
-                                <div className="truncate h-full flex items-center">{field.label}</div>
-                                <div className="group absolute top-0 right-[-5px] h-full w-[10px] cursor-col-resize z-20" onMouseDown={(e) => handleColResizeMouseDown(e, field.id)}>
-                                    <div className="w-px h-full bg-gray-300 dark:bg-gray-600 group-hover:bg-blue-400 transition-colors mx-auto"></div>
-                                </div>
-                            </th>
-                        );
-                    })}
-                </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-800">
-                {shots.map((shot, rowIndex) => (
-                    <tr key={shot.shot_id || rowIndex} className="hover:bg-gray-50 dark:hover:bg-gray-600">
+        <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 200px)', overflow: 'auto', margin: 0 }}>
+            <Table stickyHeader sx={{ tableLayout: 'fixed' }} aria-label="shot table">
+                <TableHead>
+                    <TableRow>
                         {fields.map((field) => {
-                            const cellValue = shot[field.id];
-                            const isEditing = editingCell && editingCell.shotId === shot.shot_id && editingCell.fieldId === field.id;
-                            const tdClassName = "py-2 px-3 border border-gray-200 dark:border-gray-600 group relative";
-
+                            const style = { width: `${columnWidths[field.id] || 150}px` };
                             return (
-                                <td key={field.id} className={tdClassName}>
-                                    {isEditing ? (
-                                        field.type === 'select' && field.options ? (
-                                            <select
-                                                ref={inputRef}
-                                                value={editValue}
-                                                onChange={async (e) => {
-                                                    const newValue = e.target.value;
-                                                    if (newValue === '__ADD_NEW__') {
-                                                        const newOption = prompt('Enter new option:');
-                                                        if (newOption) {
-                                                            await onUpdateFieldOptions(field.id, newOption);
-                                                            // Immediately save the cell with the new option
-                                                            onCellSave(editingCell.shotId, field.id, newOption);
-                                                            setEditingCell(null); // Exit editing mode
-                                                        } else {
-                                                            setEditValue(editValue); // Revert to current value if cancelled
-                                                        }
-                                                    } else {
-                                                        setEditValue(newValue);
-                                                    }
-                                                }}
-                                                onBlur={handleInputBlur}
-                                                onKeyDown={handleInputKeyDown}
-                                                className="absolute inset-0 w-full h-full bg-blue-100 dark:bg-blue-900 border-2 border-blue-500 outline-none p-2"
-                                            >
-                                                {field.options.split(',').map(option => (
-                                                    <option key={option} value={option}>{option}</option>
-                                                ))}
-                                                <option value="__ADD_NEW__">Add New...</option>
-                                            </select>
-                                        ) : (
-                                            <input
-                                                ref={inputRef}
-                                                type="text"
-                                                value={editValue}
-                                                onChange={(e) => setEditValue(e.target.value)}
-                                                onBlur={handleInputBlur}
-                                                onKeyDown={handleInputKeyDown}
-                                                className="absolute inset-0 w-full h-full bg-blue-100 dark:bg-blue-900 border-2 border-blue-500 outline-none p-2"
-                                            />
-                                        )
-                                    ) : (
-                                        <>
-                                            <div className="overflow-hidden whitespace-nowrap">
-                                                {field.id === 'thumbnail' ? (
-                                                    cellValue && <img src={cellValue.replace("via.placeholder.com", "placehold.co")} alt={`Thumbnail for ${shot.shot_code}`} className="max-h-16 w-auto object-contain" onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/120x68/EFEFEF/AAAAAA?text=Error'; }} />
-                                                ) : field.id === 'shot_code' ? (
-                                                    <Link to={`/shot/${shot.shot_id}`} className="font-medium text-blue-600 dark:text-blue-500 hover:underline" title={cellValue}>
-                                                        {cellValue}
-                                                    </Link>
-                                                ) : (
-                                                    <span title={cellValue}>{cellValue}</span>
-                                                )}
-                                            </div>
-                                            {field.editable && (
-                                                <PencilIcon
-                                                    style={{ width: '11px', height: '11px' }}
-                                                    className="absolute top-1 right-1 text-gray-400 opacity-0 group-hover:opacity-100 cursor-pointer"
-                                                    onClick={() => handleCellClick(shot.shot_id, field.id, cellValue)}
-                                                />
-                                            )}
-                                        </>
-                                    )}
-                                </td>
+                                <TableCell
+                                    key={field.id}
+                                    sx={{
+                                        ...style,
+                                        py: 1,
+                                        px: 1.5,
+                                        border: '1px solid',
+                                        borderColor: 'divider',
+                                        position: 'relative',
+                                        userSelect: 'none',
+                                        bgcolor: 'background.paper',
+                                        width: style.width, // Explicitly set width for fixed layout
+                                    }}
+                                >
+                                    <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+                                        <Typography variant="subtitle2" noWrap>{field.label}</Typography>
+                                    </Box>
+                                    <Box
+                                        onMouseDown={(e) => handleColResizeMouseDown(e, field.id)}
+                                        sx={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            right: -5,
+                                            height: '100%',
+                                            width: '10px',
+                                            cursor: 'col-resize',
+                                            zIndex: 2,
+                                            '&:hover': {
+                                                '& > div': { bgcolor: 'primary.main' }
+                                            }
+                                        }}
+                                    >
+                                        <Box sx={{ width: '1px', height: '100%', bgcolor: 'divider', mx: 'auto' }} />
+                                    </Box>
+                                </TableCell>
                             );
                         })}
-                    </tr>
-                ))}
-            </tbody>
-        </table>
+                    </TableRow>
+                </TableHead>
+                <TableBody>
+                    {shots.map((shot, rowIndex) => (
+                        <TableRow key={shot.shot_id || rowIndex} hover>
+                            {fields.map((field) => {
+                                const cellValue = shot[field.id];
+                                const isEditing = editingCell && editingCell.shotId === shot.shot_id && editingCell.fieldId === field.id;
+                                const style = { width: `${columnWidths[field.id] || 150}px` }; // Define style here
+
+                                return (
+                                    <TableCell
+                                    key={field.id}
+                                    sx={{
+                                        ...style,
+                                        py: 1,
+                                        px: 1.5,
+                                        border: '1px solid',
+                                        borderColor: 'divider',
+                                        position: 'relative',
+                                        userSelect: 'none',
+                                        bgcolor: 'background.paper',
+                                        width: style.width, // Explicitly set width for fixed layout
+                                    }}
+                                >
+                                        {isEditing ? (
+                                            field.type === 'select' && field.options ? (
+                                                <FormControl fullWidth size="small">
+                                                    <Select
+                                                        inputRef={inputRef}
+                                                        value={editValue}
+                                                        onChange={async (e) => {
+                                                            const newValue = e.target.value;
+                                                            if (newValue === '__ADD_NEW__') {
+                                                                const newOption = prompt('Enter new option:');
+                                                                if (newOption) {
+                                                                    await onUpdateFieldOptions(field.id, newOption);
+                                                                    onCellSave(editingCell.shotId, field.id, newOption);
+                                                                    setEditingCell(null); 
+                                                                } else {
+                                                                    setEditValue(editValue); 
+                                                                }
+                                                            } else {
+                                                                setEditValue(newValue);
+                                                            }
+                                                        }}
+                                                        onBlur={handleInputBlur}
+                                                        onKeyDown={handleInputKeyDown}
+                                                        sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'background.paper' }}
+                                                    >
+                                                        {field.options.split(',').map(option => (
+                                                            <MenuItem key={option} value={option}>{option}</MenuItem>
+                                                        ))}
+                                                        <MenuItem value="__ADD_NEW__">Add New...</MenuItem>
+                                                    </Select>
+                                                </FormControl>
+                                            ) : (
+                                                <TextField
+                                                    inputRef={inputRef}
+                                                    type="text"
+                                                    value={editValue}
+                                                    onChange={(e) => setEditValue(e.target.value)}
+                                                    onBlur={handleInputBlur}
+                                                    onKeyDown={handleInputKeyDown}
+                                                    fullWidth
+                                                    size="small"
+                                                    sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'background.paper' }}
+                                                />
+                                            )
+                                        ) : (
+                                            <Box sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+                                                {field.label.toLowerCase() === 'thumbnail' ? (
+                                                                                                        cellValue && <img src={cellValue.replace("via.placeholder.com", "placehold.co")} alt={`Thumbnail for ${shot.shot_code}`} style={{ maxHeight: '64px', width: 'auto', objectFit: 'contain', display: 'block' }} onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/120x68/EFEFEF/AAAAAA?text=Error'; }} />
+                                                ) : field.id === 'shot_code' ? (
+                                                    <Link to={`/shot/${shot.shot_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                                        <Typography variant="body2" color="primary" sx={{ '&:hover': { textDecoration: 'underline' } }}>
+                                                            {cellValue}
+                                                        </Typography>
+                                                    </Link>
+                                                ) : (
+                                                    <Typography variant="body2" color="text.primary" title={cellValue}>{cellValue}</Typography>
+                                                )}
+                                                {console.log('Cell Value:', field.id, cellValue)}
+                                                {field.id === 'thumbnail' && console.log('Thumbnail src:', cellValue && cellValue.replace("via.placeholder.com", "placehold.co"))}
+                                                {field.editable && (
+                                                    <IconButton
+                                                        size="small"
+                                                        sx={{
+                                                            position: 'absolute',
+                                                            top: 4,
+                                                            right: 4,
+                                                            color: 'text.secondary',
+                                                            opacity: 0,
+                                                            transition: 'opacity 0.2s',
+                                                            '.MuiTableRow-root:hover &': { opacity: 1 },
+                                                            '.MuiTableCell-root:hover &': { opacity: 1 },
+                                                        }}
+                                                        onClick={() => handleCellClick(shot.shot_id, field.id, cellValue)}
+                                                    >
+                                                        <EditIcon fontSize="small" />
+                                                    </IconButton>
+                                                )}
+                                            </Box>
+                                        )}
+                                    </TableCell>
+                                );
+                            })}
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </TableContainer>
     );
 };
 

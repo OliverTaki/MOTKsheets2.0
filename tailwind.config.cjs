@@ -18,6 +18,8 @@ module.exports = {
           'link': '#e1e3e6',         // リンク文字 (白基調)
           'link-hover': '#ffffff',     // リンクのホバー (明るい白)
         },
+        'dropdown-light-bg': '#ffffff',
+        'dropdown-dark-bg': '#1f2937', // A dark gray for dark mode dropdowns
       }
     },
   },

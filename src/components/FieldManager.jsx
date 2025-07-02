@@ -1,93 +1,147 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { EyeIcon, EyeSlashIcon, PlusIcon } from '@heroicons/react/24/solid';
+import Button from '@mui/material/Button';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
+import Select from '@mui/material/Select';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import AddIcon from '@mui/icons-material/Add';
 
-// allFieldsとvisibleFieldIdsにデフォルト値として空の配列[]を設定し、クラッシュを防ぎます
 const FieldManager = ({ allFields = [], visibleFieldIds = [], onVisibilityChange, onAddField }) => {
-    const [isOpen, setIsOpen] = useState(false);
+    const [anchorEl, setAnchorEl] = useState(null);
+    const open = Boolean(anchorEl);
     const [newField, setNewField] = useState({
         label: '',
         type: 'text',
         editable: true,
         options: ''
     });
-    const wrapperRef = useRef(null);
 
-    useEffect(() => {
-        function handleClickOutside(event) {
-            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) setIsOpen(false);
-        }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [wrapperRef]);
+    const handleClick = (event) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleClose = () => {
+        setAnchorEl(null);
+    };
 
     const handleAddFieldClick = () => {
         if (newField.label.trim()) {
-            onAddField(newField);
+            const fieldToAdd = { ...newField, id: crypto.randomUUID() }; // Always generate a unique ID
+            onAddField(fieldToAdd);
             setNewField({ label: '', type: 'text', editable: true, options: '' });
+            // Optionally close the menu after adding a field
+            // handleClose();
         }
     };
 
     return (
-        <div className="relative" ref={wrapperRef}>
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600"
+        <div>
+            <Button
+                id="fields-button"
+                aria-controls={open ? 'fields-menu' : undefined}
+                aria-haspopup="true"
+                aria-expanded={open ? 'true' : undefined}
+                onClick={handleClick}
+                variant="outlined"
+                sx={{
+                    borderColor: 'gray',
+                    color: 'gray',
+                    '&:hover': {
+                        borderColor: 'darkgray',
+                        color: 'darkgray',
+                    },
+                }}
             >
                 Fields
-            </button>
+            </Button>
+            <Menu
+                id="fields-menu"
+                anchorEl={anchorEl}
+                open={open}
+                onClose={handleClose}
+                MenuListProps={{
+                    'aria-labelledby': 'fields-button',
+                }}
+                PaperProps={{
+                    sx: {
+                        width: 320, // Fixed width for the fields menu
+                        maxHeight: 450, // Max height for scrollability
+                        bgcolor: 'background.paper', // Use MUI theme background
+                        border: '1px solid',
+                        borderColor: 'divider',
+                    },
+                }}
+            >
+                <Box sx={{ p: 2 }}>
+                    <Typography variant="h6" gutterBottom>Manage Fields</Typography>
+                    <Box sx={{ maxHeight: 200, overflowY: 'auto', mb: 2 }}>
+                        {allFields.map(field => (
+                            <MenuItem key={field.id} disableRipple sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 0 }}>
+                                <Typography variant="body2">{field.label}</Typography>
+                                <IconButton onClick={() => onVisibilityChange(field.id)} size="small">
+                                    {visibleFieldIds.includes(field.id) ? <VisibilityIcon fontSize="small" /> : <VisibilityOffIcon fontSize="small" />}
+                                </IconButton>
+                            </MenuItem>
+                        ))}
+                    </Box>
 
-            {isOpen && (
-                <div className="absolute top-full mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
-                    <div className="p-3 space-y-3">
-                        <div>
-                            <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">Manage Fields</h3>
-                            <div className="max-h-60 overflow-y-auto pr-2">
-                                {allFields.map(field => (
-                                    <div key={field.id} className="flex items-center justify-between py-1.5">
-                                        <span className="text-sm text-gray-800 dark:text-gray-200">{field.label}</span>
-                                        <button onClick={() => onVisibilityChange(field.id)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                                            {visibleFieldIds.includes(field.id) ? <EyeIcon className="w-5 h-5" /> : <EyeSlashIcon className="w-5 h-5" />}
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="border-t border-gray-200 dark:border-gray-700 pt-3 space-y-2">
-                            <h3 className="text-base font-semibold text-gray-900 dark:text-white">Add New Field</h3>
-                            <input
-                                type="text"
-                                value={newField.label}
-                                onChange={e => setNewField({...newField, label: e.target.value})}
-                                placeholder="Field Name"
-                                className="w-full px-3 py-2 rounded-md sm:text-sm border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                            />
-                            <select value={newField.type} onChange={e => setNewField({...newField, type: e.target.value})} className="w-full px-3 py-2 rounded-md sm:text-sm border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                <option value="text">Text</option>
-                                <option value="select">Select</option>
-                                <option value="image">Image</option>
-                                <option value="uuid">UUID</option>
-                            </select>
-                            {newField.type === 'select' && (
-                                <input
-                                    type="text"
-                                    value={newField.options}
-                                    onChange={e => setNewField({...newField, options: e.target.value})}
-                                    placeholder="Options (comma-separated)"
-                                    className="w-full px-3 py-2 rounded-md sm:text-sm border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                />
-                            )}
-                            <label className="flex items-center text-sm">
-                                <input type="checkbox" checked={newField.editable} onChange={e => setNewField({...newField, editable: e.target.checked})} className="h-4 w-4 rounded border-gray-300"/>
-                                <span className="ml-2 text-gray-700 dark:text-gray-300">Editable</span>
-                            </label>
-                            <button onClick={handleAddFieldClick} className="w-full inline-flex justify-center items-center px-3 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600">
-                                <PlusIcon className="w-5 h-5 mr-2" /> Add
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+                    <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>Add New Field</Typography>
+                    <TextField
+                        fullWidth
+                        label="Field Name"
+                        variant="outlined"
+                        size="small"
+                        value={newField.label}
+                        onChange={e => setNewField({...newField, label: e.target.value})}
+                        sx={{ mb: 1 }}
+                    />
+                    <FormControl fullWidth size="small" sx={{ mb: 1 }}>
+                        <InputLabel>Type</InputLabel>
+                        <Select
+                            value={newField.type}
+                            label="Type"
+                            onChange={e => setNewField({...newField, type: e.target.value})}
+                        >
+                            <MenuItem value="text">Text</MenuItem>
+                            <MenuItem value="select">Select</MenuItem>
+                            <MenuItem value="image">Image</MenuItem>
+                        </Select>
+                    </FormControl>
+                    {newField.type === 'select' && (
+                        <TextField
+                            fullWidth
+                            label="Options (comma-separated)"
+                            variant="outlined"
+                            size="small"
+                            value={newField.options}
+                            onChange={e => setNewField({...newField, options: e.target.value})}
+                            sx={{ mb: 1 }}
+                        />
+                    )}
+                    <FormControlLabel
+                        control={<Checkbox checked={newField.editable} onChange={e => setNewField({...newField, editable: e.target.checked})} size="small" />}
+                        label="Editable"
+                        sx={{ mb: 1 }}
+                    />
+                    <Button
+                        fullWidth
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={handleAddFieldClick}
+                    >
+                        Add
+                    </Button>
+                </Box>
+            </Menu>
         </div>
     );
 };

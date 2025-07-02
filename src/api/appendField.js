@@ -34,7 +34,7 @@ const getSheetIds = async (spreadsheetId, token) => {
  */
 export const appendField = async (spreadsheetId, token, newFieldDetails, existingFields) => {
     // 新しいフィールドIDを自動生成 (例: "new_field_name")
-    const newFieldId = newFieldDetails.label.toLowerCase().replace(/\s+/g, '_');
+    const newFieldId = newFieldDetails.id || newFieldDetails.label.toLowerCase().replace(/\s+/g, '_');
     
     // シート名から実際のシートIDを取得 (大文字に変換して比較)
     const sheetIds = await getSheetIds(spreadsheetId, token);
@@ -83,6 +83,18 @@ export const appendField = async (spreadsheetId, token, newFieldDetails, existin
                     sheetId: shotsSheetId,
                     rowIndex: 0, // ヘッダー行
                     columnIndex: existingFields.length // 既存のフィールド数 = 新しい列のインデックス
+                }
+            }
+        },
+        // 4. 追加した新しい列���2行目にフィールド名を設定する
+        {
+            updateCells: {
+                rows: [ { values: [ { userEnteredValue: { stringValue: newFieldDetails.label } } ] } ],
+                fields: "userEnteredValue",
+                start: {
+                    sheetId: shotsSheetId,
+                    rowIndex: 1, // 2行目
+                    columnIndex: existingFields.length
                 }
             }
         }

@@ -6,3 +6,8 @@ export function genId(prefix = "sh", len = 10) {
   });
   return `${prefix}_${id}`;
 }
+
+export function isValidUUID(uuid) {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+}

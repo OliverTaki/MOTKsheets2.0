@@ -10,6 +10,7 @@ const useSheetsData = (spreadsheetId) => {
     const [fields, setFields] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [idToColIndex, setIdToColIndex] = useState({});
 
     const fetchSheetsData = useCallback(async (currentToken) => {
         if (!currentToken) {
@@ -47,10 +48,31 @@ const useSheetsData = (spreadsheetId) => {
             }
 
             const parsedFields = parseFields(fieldsData);
-            const parsedShots = parseShots(shotsData, parsedFields);
+            const shotsDataValues = data.valueRanges?.[0]?.values;
+            const shotsHeader = shotsDataValues?.[0] || []; // This is the UUID row
+            const shotIdUuid = shotsHeader?.[0];
+            const shotCodeUuid = shotsHeader?.[1];
+
+            const finalFields = [
+                // Manually prepend fields that are not in the FIELDS sheet but are in the Shots sheet.
+                { id: shotIdUuid, label: 'Shot ID', type: 'text', editable: false },
+                { id: shotCodeUuid, label: 'Shot Code', type: 'text', editable: false },
+                ...parsedFields.filter(f => f.id !== shotIdUuid && f.id !== shotCodeUuid)
+            ];
+
+            const parsedShots = parseShots(shotsDataValues, finalFields, shotIdUuid);
             const { shotsWithIds } = missingIdHandler(parsedShots);
 
-            setFields(parsedFields);
+            // Create the idToColIndex map from the actual sheet header (UUIDs)
+            const newIdToColIndex = shotsHeader.reduce((acc, id, index) => {
+                if (id) {
+                    acc[id.trim()] = index;
+                }
+                return acc;
+            }, {});
+            setIdToColIndex(newIdToColIndex);
+
+            setFields(finalFields);
             setSheets(shotsWithIds);
             console.log('Successfully fetched and parsed data.');
         } catch (err) {
@@ -133,7 +155,8 @@ const useSheetsData = (spreadsheetId) => {
     }, [spreadsheetId, token, isInitialized, fetchSheetsData]);
 
     // データを再読み込みするための関数を返す
-    return { sheets, setSheets, fields, loading, error, refreshData: () => fetchSheetsData(token), updateFieldOptions };
+    const shotsHeader = sheets.length > 0 ? Object.keys(sheets[0]) : [];
+    return { sheets, setSheets, fields, shotsHeader, loading, error, refreshData: () => fetchSheetsData(token), updateFieldOptions, idToColIndex };
 };
 
 export default useSheetsData;
