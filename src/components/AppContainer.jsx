@@ -91,21 +91,17 @@ export const AppContainer = () => {
   const [sortKey, setSortKey] = useState('');
   const [ascending, setAscending] = useState(true);
   const [visibleFieldIds, setVisibleFieldIds] = useState([]);
-  const [loadedPageId, setLoadedPageId] = useState('default'); // Load default page on startup
+  const [loadedPageId, setLoadedPageId] = useState(null); // Start with no page loaded
 
+  // This effect now correctly waits for fields to be loaded before setting the default view.
   useEffect(() => {
-    if (fields.length > 0) {
-      setVisibleFieldIds(fields.map(f => f.id));
+    if (fields.length > 0 && pages.length > 0 && !loadedPageId) {
+      const defaultPage = pages.find(p => p.page_id === 'default');
+      if (defaultPage) {
+        handleLoadView(defaultPage, true); // Pass true to indicate it's the initial load
+      }
     }
-  }, [fields]);
-
-  // Load the default page's settings when the app starts
-  useEffect(() => {
-    const defaultPage = pages.find(p => p.page_id === 'default');
-    if (defaultPage) {
-      handleLoadView(defaultPage);
-    }
-  }, [pages]);
+  }, [fields, pages, loadedPageId]);
 
   const processedShots = useMemo(() => {
     let filtered = sheets;
@@ -129,22 +125,6 @@ export const AppContainer = () => {
       return 0;
     });
   }, [activeFilters, sheets, sortKey, ascending]);
-
-  useEffect(() => {
-    if (fields.length > 0 && !loadedPageId) { // Only set initial widths if no page is loaded
-      const initialWidths = {};
-      fields.forEach(field => {
-        if (field.id === 'shot_id') initialWidths[field.id] = 200;
-        else if (field.id === 'shot_code') initialWidths[field.id] = 120;
-        else if (field.id === 'status') initialWidths[field.id] = 100;
-        else if (field.id === 'version') initialWidths[field.id] = 80;
-        else if (field.id === 'thumbnail') initialWidths[field.id] = 160;
-        else if (field.id === 'memo') initialWidths[field.id] = 400;
-        else initialWidths[field.id] = 150;
-      });
-      setColumnWidths(initialWidths);
-    }
-  }, [fields, loadedPageId]);
 
   const handleColumnResize = useCallback((fieldId, newWidth) => {
     setColumnWidths(prevWidths => ({ ...prevWidths, [fieldId]: newWidth < 60 ? 60 : newWidth }));
@@ -235,13 +215,36 @@ export const AppContainer = () => {
     sortOrder: { key: sortKey, ascending },
   });
 
-  const handleLoadView = useCallback((page) => {
+  const handleLoadView = useCallback((page, isInitialLoad = false) => {
+    const fieldIdMap = fields.reduce((acc, field) => {
+        acc[field.label.toLowerCase().replace(/ /g, '_')] = field.id;
+        return acc;
+    }, {});
+
+    const sortKeyId = fieldIdMap[page.sortOrder?.key] || page.sortOrder?.key;
+
     setColumnWidths(page.columnWidths || {});
-    setVisibleFieldIds(page.fieldVisibility || fields.map(f => f.id));
+    setVisibleFieldIds(page.fieldVisibility.map(key => fieldIdMap[key] || key));
     setActiveFilters(page.filterSettings || {});
-    setSortKey(page.sortOrder?.key || '');
+    setSortKey(sortKeyId);
     setAscending(page.sortOrder?.ascending ?? true);
     setLoadedPageId(page.page_id);
+
+    if (isInitialLoad) {
+        const allFieldIds = fields.map(f => f.id);
+        setVisibleFieldIds(allFieldIds);
+        const initialWidths = {};
+        fields.forEach(field => {
+            if (field.id === 'shot_id') initialWidths[field.id] = 200;
+            else if (field.id === 'shot_code') initialWidths[field.id] = 120;
+            else if (field.id === 'status') initialWidths[field.id] = 100;
+            else if (field.id === 'version') initialWidths[field.id] = 80;
+            else if (field.id === 'thumbnail') initialWidths[field.id] = 160;
+            else if (field.id === 'memo') initialWidths[field.id] = 400;
+            else initialWidths[field.id] = 150;
+        });
+        setColumnWidths(initialWidths);
+    }
   }, [fields]);
 
   const handleSaveView = useCallback(async () => {
