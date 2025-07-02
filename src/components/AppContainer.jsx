@@ -100,14 +100,14 @@ export const AppContainer = () => {
   const [loadedPageId, setLoadedPageId] = useState(() => localStorage.getItem('loadedPageId') || null);
 
   useEffect(() => {
-    if (fields.length > 0 && pages.length > 0) {
+    if (!fieldsLoading && !pagesLoading) {
       const pageIdToLoad = loadedPageId || 'default';
       const pageToLoad = pages.find(p => p.page_id === pageIdToLoad) || pages.find(p => p.page_id === 'default');
       if (pageToLoad) {
         handleLoadView(pageToLoad);
       }
     }
-  }, [fields, pages, loadedPageId]);
+  }, [fieldsLoading, pagesLoading, loadedPageId]);
 
   const processedShots = useMemo(() => {
     let filtered = sheets;
