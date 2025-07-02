@@ -29,7 +29,7 @@ const usePagesData = () => {
       const columnWidthsCol = header.indexOf('columnWidths');
       const columnOrderCol = header.indexOf('columnOrder');
       const filterSettingsCol = header.indexOf('filterSettings');
-      const fieldVisibilityCol = header.indexOf('fieldVisibility');
+      const visibleFieldIdsCol = header.indexOf('visibleFieldIds'); // Corrected property name
       const sortOrderCol = header.indexOf('sortOrder');
 
       const parsedPages = rows.map(row => ({
@@ -38,7 +38,7 @@ const usePagesData = () => {
         columnWidths: JSON.parse(row[columnWidthsCol] || '{}'),
         columnOrder: JSON.parse(row[columnOrderCol] || '[]'),
         filterSettings: JSON.parse(row[filterSettingsCol] || '{}'),
-        fieldVisibility: JSON.parse(row[fieldVisibilityCol] || '[]'),
+        visibleFieldIds: JSON.parse(row[visibleFieldIdsCol] || '[]'), // Corrected property name
         sortOrder: JSON.parse(row[sortOrderCol] || '{}'),
       }));
       setPages(parsedPages);

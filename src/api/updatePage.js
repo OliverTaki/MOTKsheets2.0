@@ -28,7 +28,7 @@ export async function updatePage(spreadsheetId, token, pageId, pageData) {
       columnWidths,
       columnOrder,
       filterSettings,
-      fieldVisibility,
+      visibleFieldIds, // Corrected property name
       sortOrder,
     } = pageData;
 
@@ -38,7 +38,7 @@ export async function updatePage(spreadsheetId, token, pageId, pageData) {
       JSON.stringify(columnWidths),
       JSON.stringify(columnOrder),
       JSON.stringify(filterSettings),
-      JSON.stringify(fieldVisibility),
+      JSON.stringify(visibleFieldIds), // Corrected property name
       JSON.stringify(sortOrder),
     ];
 

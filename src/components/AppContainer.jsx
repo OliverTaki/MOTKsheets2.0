@@ -229,7 +229,7 @@ export const AppContainer = () => {
     const sortKeyId = fieldIdMap[page.sortOrder?.key] || page.sortOrder?.key;
 
     setColumnWidths(page.columnWidths || {});
-    setVisibleFieldIds(page.fieldVisibility.map(key => fieldIdMap[key] || key));
+    setVisibleFieldIds(page.visibleFieldIds.map(key => fieldIdMap[key] || key)); // Corrected property name
     setActiveFilters(page.filterSettings || {});
     setSortKey(sortKeyId);
     setAscending(page.sortOrder?.ascending ?? true);

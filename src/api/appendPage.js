@@ -7,7 +7,7 @@ export async function appendPage(spreadsheetId, token, pageData) {
     columnWidths,
     columnOrder,
     filterSettings,
-    fieldVisibility,
+    visibleFieldIds, // Corrected property name
     sortOrder,
   } = pageData;
 
@@ -17,7 +17,7 @@ export async function appendPage(spreadsheetId, token, pageData) {
     JSON.stringify(columnWidths),
     JSON.stringify(columnOrder),
     JSON.stringify(filterSettings),
-    JSON.stringify(fieldVisibility),
+    JSON.stringify(visibleFieldIds), // Corrected property name
     JSON.stringify(sortOrder),
   ];
 
