@@ -88,7 +88,7 @@ const theme = createTheme({
 });
 
 export const AppContainer = () => {
-  const { token, isInitialized } = useContext(AuthContext);
+  const { token, user, isInitialized } = useContext(AuthContext); // Add user from context
   const { sheets, setSheets, fields, loading, error, refreshData, updateFieldOptions, idToColIndex } = useSheetsData(spreadsheetId);
   const { pages, refreshPages } = usePagesData();
 
@@ -97,16 +97,17 @@ export const AppContainer = () => {
   const [sortKey, setSortKey] = useState('');
   const [ascending, setAscending] = useState(true);
   const [visibleFieldIds, setVisibleFieldIds] = useState([]);
-  const [loadedPageId, setLoadedPageId] = useState(null);
+  const [loadedPageId, setLoadedPageId] = useState(() => localStorage.getItem('loadedPageId') || null);
 
   useEffect(() => {
-    if (fields.length > 0 && pages.length > 0 && !loadedPageId) {
-      const defaultPage = pages.find(p => p.page_id === 'default');
-      if (defaultPage) {
-        handleLoadView(defaultPage, true);
+    if (fields.length > 0 && pages.length > 0) {
+      const pageIdToLoad = loadedPageId || 'default';
+      const pageToLoad = pages.find(p => p.page_id === pageIdToLoad) || pages.find(p => p.page_id === 'default');
+      if (pageToLoad) {
+        handleLoadView(pageToLoad, true);
       }
     }
-  }, [fields, pages, loadedPageId]);
+  }, [fields, pages]);
 
   const processedShots = useMemo(() => {
     let filtered = sheets;
@@ -218,38 +219,17 @@ export const AppContainer = () => {
     visibleFieldIds,
     activeFilters,
     sortOrder: { key: sortKey, ascending },
+    author: user?.email || 'Unknown',
   });
 
   const handleLoadView = useCallback((page, isInitialLoad = false) => {
-    const fieldIdMap = fields.reduce((acc, field) => {
-        acc[field.label.toLowerCase().replace(/ /g, '_')] = field.id;
-        return acc;
-    }, {});
-
-    const sortKeyId = fieldIdMap[page.sortOrder?.key] || page.sortOrder?.key;
-
     setColumnWidths(page.columnWidths || {});
-    setVisibleFieldIds(page.visibleFieldIds.map(key => fieldIdMap[key] || key)); // Corrected property name
+    setVisibleFieldIds(page.visibleFieldIds || fields.map(f => f.id));
     setActiveFilters(page.filterSettings || {});
-    setSortKey(sortKeyId);
+    setSortKey(page.sortOrder?.key || '');
     setAscending(page.sortOrder?.ascending ?? true);
     setLoadedPageId(page.page_id);
-
-    if (isInitialLoad) {
-        const allFieldIds = fields.map(f => f.id);
-        setVisibleFieldIds(allFieldIds);
-        const initialWidths = {};
-        fields.forEach(field => {
-            if (field.id === 'shot_id') initialWidths[field.id] = 200;
-            else if (field.id === 'shot_code') initialWidths[field.id] = 120;
-            else if (field.id === 'status') initialWidths[field.id] = 100;
-            else if (field.id === 'version') initialWidths[field.id] = 80;
-            else if (field.id === 'thumbnail') initialWidths[field.id] = 160;
-            else if (field.id === 'memo') initialWidths[field.id] = 400;
-            else initialWidths[field.id] = 150;
-        });
-        setColumnWidths(initialWidths);
-    }
+    localStorage.setItem('loadedPageId', page.page_id);
   }, [fields]);
 
   const handleSaveView = useCallback(async () => {
@@ -258,10 +238,11 @@ export const AppContainer = () => {
       return;
     }
     const currentView = getCurrentView();
-    await updatePage(spreadsheetId, token, loadedPageId, currentView);
+    const existingPage = pages.find(p => p.page_id === loadedPageId);
+    await updatePage(spreadsheetId, token, loadedPageId, { ...existingPage, ...currentView });
     alert('View saved successfully!');
     refreshPages();
-  }, [loadedPageId, token, columnWidths, visibleFieldIds, activeFilters, sortKey, ascending, refreshPages]);
+  }, [loadedPageId, token, pages, getCurrentView, refreshPages]);
 
   const handleSaveViewAs = useCallback(async (title) => {
     const page_id = uuidv4();
@@ -270,7 +251,7 @@ export const AppContainer = () => {
     setLoadedPageId(page_id);
     alert(`View "${title}" saved successfully!`);
     refreshPages();
-  }, [token, columnWidths, visibleFieldIds, activeFilters, sortKey, ascending, refreshPages]);
+  }, [token, getCurrentView, refreshPages]);
 
   const handleDeleteView = useCallback(async (pageId) => {
     if (pageId === 'default') {
@@ -281,6 +262,7 @@ export const AppContainer = () => {
       await deletePage(spreadsheetId, token, pageId);
       if (loadedPageId === pageId) {
         setLoadedPageId(null);
+        localStorage.removeItem('loadedPageId');
       }
       alert('View deleted successfully!');
       refreshPages();
