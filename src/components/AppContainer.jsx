@@ -9,11 +9,9 @@ import Toolbar from './Toolbar';
 import LoginButton from './LoginButton';
 import { AuthContext } from '../AuthContext';
 import ShotDetailPage from './ShotDetailPage';
-import FieldManager from './FieldManager';
 import { appendField } from '../api/appendField';
 import { updateCell } from '../api/updateCell';
 import { updateNonUuidIds } from '../api/updateNonUuidIds';
-import { deletePage } from '../api/deletePage'; // Import deletePage
 
 const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 
@@ -35,9 +33,11 @@ const MainView = ({
   onUpdateFieldOptions,
   onUpdateNonUuidIds,
   idToColIndex,
-  onSaveView,
   onLoadView,
-  onDeleteView, // Pass onDeleteView
+  onSaveView,
+  onSaveViewAs,
+  onDeleteView,
+  loadedPageId,
 }) => {
   return (
     <div className="flex flex-col h-full gap-4">
@@ -53,10 +53,11 @@ const MainView = ({
         onVisibilityChange={onVisibilityChange}
         onAddField={onAddField}
         onUpdateNonUuidIds={onUpdateNonUuidIds}
-        columnWidths={columnWidths}
-        onSaveView={onSaveView}
         onLoadView={onLoadView}
-        onDeleteView={onDeleteView} // Pass onDeleteView
+        onSaveView={onSaveView}
+        onSaveViewAs={onSaveViewAs}
+        onDeleteView={onDeleteView}
+        loadedPageId={loadedPageId}
       />
       <div className="shadow-md sm:rounded-lg border border-gray-200 dark:border-gray-700">
         <ShotTable
@@ -83,14 +84,14 @@ const theme = createTheme({
 export const AppContainer = () => {
   const { token, isInitialized } = useContext(AuthContext);
   const { sheets, setSheets, fields, loading, error, refreshData, updateFieldOptions, idToColIndex } = useSheetsData(spreadsheetId);
-  const { pages, refreshPages } = usePagesData();
+  const { addPage, updatePage, removePage } = usePagesData();
 
-  console.log('App: loading=', loading, 'error=', error);
   const [columnWidths, setColumnWidths] = useState({});
   const [activeFilters, setActiveFilters] = useState({});
   const [sortKey, setSortKey] = useState('');
   const [ascending, setAscending] = useState(true);
   const [visibleFieldIds, setVisibleFieldIds] = useState([]);
+  const [loadedPageId, setLoadedPageId] = useState(null);
 
   useEffect(() => {
     if (fields.length > 0) {
@@ -219,11 +220,12 @@ export const AppContainer = () => {
     }
   }, [spreadsheetId, token, sheets, fields, refreshData]);
 
-  const handleSaveView = useCallback(() => {
-    if (refreshPages) {
-      refreshPages();
-    }
-  }, [refreshPages]);
+  const getCurrentView = () => ({
+    columnWidths,
+    visibleFieldIds,
+    activeFilters,
+    sortOrder: { key: sortKey, ascending },
+  });
 
   const handleLoadView = useCallback((page) => {
     setColumnWidths(page.columnWidths || {});
@@ -231,26 +233,35 @@ export const AppContainer = () => {
     setActiveFilters(page.filterSettings || {});
     setSortKey(page.sortOrder?.key || '');
     setAscending(page.sortOrder?.ascending ?? true);
+    setLoadedPageId(page.page_id);
   }, [fields]);
 
-  const handleDeleteView = useCallback(async (pageId) => {
-    if (!token) {
-      alert('Authentication required.');
+  const handleSaveView = useCallback(async () => {
+    if (!loadedPageId) {
+      alert("No view loaded. Use 'Save As' to create a new view.");
       return;
     }
+    const currentView = getCurrentView();
+    await updatePage(loadedPageId, currentView);
+    alert('View saved successfully!');
+  }, [loadedPageId, updatePage, columnWidths, visibleFieldIds, activeFilters, sortKey, ascending]);
+
+  const handleSaveViewAs = useCallback(async (title) => {
+    const currentView = { ...getCurrentView(), title };
+    const newPage = await addPage(currentView);
+    setLoadedPageId(newPage.page_id);
+    alert(`View "${title}" saved successfully!`);
+  }, [addPage, columnWidths, visibleFieldIds, activeFilters, sortKey, ascending]);
+
+  const handleDeleteView = useCallback(async (pageId) => {
     if (window.confirm('Are you sure you want to delete this view?')) {
-      try {
-        await deletePage(spreadsheetId, token, pageId);
-        alert('View deleted successfully!');
-        if (refreshPages) {
-          refreshPages();
-        }
-      } catch (error) {
-        console.error('Failed to delete view:', error);
-        alert(`Error: ${error.message}`);
+      await removePage(pageId);
+      if (loadedPageId === pageId) {
+        setLoadedPageId(null); // Reset if the deleted page was loaded
       }
+      alert('View deleted successfully!');
     }
-  }, [token, refreshPages]);
+  }, [removePage, loadedPageId]);
 
   if (!isInitialized) {
     return (
@@ -296,9 +307,11 @@ export const AppContainer = () => {
                   onUpdateFieldOptions={updateFieldOptions}
                   onUpdateNonUuidIds={handleUpdateNonUuidIds}
                   idToColIndex={idToColIndex}
-                  onSaveView={handleSaveView}
                   onLoadView={handleLoadView}
-                  onDeleteView={handleDeleteView} // Pass handler
+                  onSaveView={handleSaveView}
+                  onSaveViewAs={handleSaveViewAs}
+                  onDeleteView={handleDeleteView}
+                  loadedPageId={loadedPageId}
                 />
               } />
               <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={fields} />} />

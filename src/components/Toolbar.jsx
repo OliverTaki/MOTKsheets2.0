@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FilterManager from './FilterManager';
 import FieldManager from './FieldManager';
-import SaveViewControl from './SaveViewControl';
-import ManageViewsDialog from './ManageViewsDialog'; // Import ManageViewsDialog
+import ManageViewsDialog from './ManageViewsDialog';
 import { Select, MenuItem, FormControl, InputLabel, IconButton, Button } from '@mui/material';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
@@ -22,10 +21,11 @@ const Toolbar = ({
     onVisibilityChange,
     onAddField,
     onUpdateNonUuidIds,
-    columnWidths,
-    onSaveView,
     onLoadView,
-    onDeleteView, // Add onDeleteView prop
+    onSaveView,
+    onSaveViewAs,
+    onDeleteView,
+    loadedPageId,
 }) => {
     const navigate = useNavigate();
     const { pages } = usePagesData();
@@ -55,6 +55,7 @@ const Toolbar = ({
                         <Select
                             labelId="page-select-label"
                             id="page-select"
+                            value={loadedPageId || ''}
                             onChange={handlePageChange}
                             label="View"
                         >
@@ -107,15 +108,6 @@ const Toolbar = ({
                 </div>
                 
                 <div className="flex items-center gap-4">
-                    {/* Save View Control */}
-                    <SaveViewControl
-                        columnWidths={columnWidths}
-                        visibleFieldIds={visibleFieldIds}
-                        activeFilters={activeFilters}
-                        sortKey={sortKey}
-                        ascending={ascending}
-                        onSave={onSaveView}
-                    />
                     <Button
                         variant="outlined"
                         onClick={() => setManageViewsDialogOpen(true)}
@@ -142,7 +134,10 @@ const Toolbar = ({
             <ManageViewsDialog
                 open={isManageViewsDialogOpen}
                 onClose={() => setManageViewsDialogOpen(false)}
+                onSave={onSaveView}
+                onSaveAs={onSaveViewAs}
                 onDelete={onDeleteView}
+                loadedPageId={loadedPageId}
             />
         </>
     );
