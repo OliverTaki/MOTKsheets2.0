@@ -88,7 +88,12 @@ const ShotTable = ({ shots, fields, columnWidths, onColumnResize, onCellSave, on
     const inputRef = useRef(null);
 
     const sensors = useSensors(
-      useSensor(PointerSensor),
+      useSensor(PointerSensor, {
+        activationConstraint: {
+          delay: 250,
+          tolerance: 5,
+        },
+      }),
       useSensor(KeyboardSensor, {
         coordinateGetter: sortableKeyboardCoordinates,
       })
