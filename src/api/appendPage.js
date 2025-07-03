@@ -5,18 +5,22 @@ export async function ensureSheetExists(spreadsheetId, token) {
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?key=${apiKey}&fields=sheets.properties`;
   
   try {
+    console.log("Ensuring sheet exists...");
     const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
     const spreadsheet = await response.json();
+    console.log("Spreadsheet data:", spreadsheet);
     const sheet = spreadsheet.sheets.find(s => s.properties.title === sheetName);
 
     if (sheet) {
+      console.log("Sheet found:", sheet.properties.sheetId);
       return sheet.properties.sheetId;
     }
 
+    console.log("Sheet not found, creating...");
     // Sheet doesn't exist, so create it with headers
     const batchUpdateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`;
     const headers = [
@@ -55,6 +59,7 @@ export async function ensureSheetExists(spreadsheetId, token) {
     }
     
     const newSheetId = addSheetResponseData.replies[0].addSheet.properties.sheetId;
+    console.log("Sheet created with ID:", newSheetId);
 
     const appendRequest = {
       requests: [
@@ -76,6 +81,7 @@ export async function ensureSheetExists(spreadsheetId, token) {
       ],
     };
 
+    console.log("Appending headers...");
     await fetch(batchUpdateUrl, {
       method: 'POST',
       headers: {
@@ -84,6 +90,7 @@ export async function ensureSheetExists(spreadsheetId, token) {
       },
       body: JSON.stringify(appendRequest),
     });
+    console.log("Headers appended.");
     return newSheetId;
   } catch (err) {
     console.error('Error ensuring sheet exists:', err);
