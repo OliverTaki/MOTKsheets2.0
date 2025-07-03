@@ -43,6 +43,10 @@ export async function ensureSheetExists(spreadsheetId, token) {
       
       const addSheetResponseData = await addSheetResponse.json();
       if (!addSheetResponse.ok || !addSheetResponseData.replies || !addSheetResponseData.replies[0].addSheet) {
+        // Check if the error is that the sheet already exists
+        if (addSheetResponseData.error && addSheetResponseData.error.message.includes('already exists')) {
+          return;
+        }
         console.error('Error creating sheet:', addSheetResponseData);
         throw new Error(addSheetResponseData.error?.message || 'Failed to create sheet.');
       }
