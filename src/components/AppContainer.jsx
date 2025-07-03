@@ -120,7 +120,7 @@ export const AppContainer = () => {
         setOrderedFields(fields);
       }
     }
-  }, [isAppReady, pages, fields]);
+  }, [isAppReady, pages, fields, loadedPageId]);
 
   const processedShots = useMemo(() => {
     let filtered = sheets;
