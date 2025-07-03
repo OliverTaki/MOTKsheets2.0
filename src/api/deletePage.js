@@ -1,22 +1,9 @@
 import { ensureSheetExists } from './appendPage';
 const apiKey = import.meta.env.VITE_SHEETS_API_KEY;
 
-async function getSheetId(spreadsheetId, sheetName, token) {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?key=${apiKey}`;
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  const spreadsheet = await response.json();
-  const sheet = spreadsheet.sheets.find(s => s.properties.title === sheetName);
-  return sheet ? sheet.properties.sheetId : null;
-}
-
 export async function deletePage(spreadsheetId, token, pageId) {
   try {
-    await ensureSheetExists(spreadsheetId, token);
-    const sheetId = await getSheetId(spreadsheetId, 'PAGES', token);
+    const sheetId = await ensureSheetExists(spreadsheetId, token);
     if (!sheetId) {
       console.log("PAGES sheet not found, nothing to delete.");
       return; // Exit gracefully

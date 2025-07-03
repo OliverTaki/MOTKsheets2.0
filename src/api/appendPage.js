@@ -11,9 +11,9 @@ export async function ensureSheetExists(spreadsheetId, token) {
       },
     });
     const spreadsheet = await response.json();
-    const sheetExists = spreadsheet.sheets.some(s => s.properties.title === sheetName);
+    let sheet = spreadsheet.sheets.find(s => s.properties.title === sheetName);
 
-    if (!sheetExists) {
+    if (!sheet) {
       // Sheet doesn't exist, so create it with headers
       const batchUpdateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`;
       const headers = [
@@ -81,7 +81,9 @@ export async function ensureSheetExists(spreadsheetId, token) {
         },
         body: JSON.stringify(appendRequest),
       });
+      return newSheetId;
     }
+    return sheet.properties.sheetId;
   } catch (err) {
     console.error('Error ensuring sheet exists:', err);
     throw new Error('Failed to ensure the PAGES sheet exists.');
