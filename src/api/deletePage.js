@@ -70,3 +70,4 @@ export async function deletePage(spreadsheetId, token, pageId) {
     throw new Error('Failed to delete the page from the sheet.');
   }
 }
+
