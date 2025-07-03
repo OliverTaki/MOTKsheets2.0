@@ -1,6 +1,6 @@
 const apiKey = import.meta.env.VITE_SHEETS_API_KEY;
 
-async function ensureSheetExists(spreadsheetId, token) {
+export async function ensureSheetExists(spreadsheetId, token) {
   const sheetName = 'PAGES';
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?key=${apiKey}`;
   

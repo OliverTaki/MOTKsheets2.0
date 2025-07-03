@@ -1,3 +1,4 @@
+import { ensureSheetExists } from './appendPage';
 const apiKey = import.meta.env.VITE_SHEETS_API_KEY;
 
 async function getSheetId(spreadsheetId, sheetName, token) {
@@ -14,6 +15,7 @@ async function getSheetId(spreadsheetId, sheetName, token) {
 
 export async function deletePage(spreadsheetId, token, pageId) {
   try {
+    await ensureSheetExists(spreadsheetId, token);
     const sheetId = await getSheetId(spreadsheetId, 'PAGES', token);
     if (!sheetId) {
       console.log("PAGES sheet not found, nothing to delete.");

@@ -110,18 +110,23 @@ export const AppContainer = () => {
     }
   }, [isInitialized, fieldsLoading, pagesLoading]);
 
+  const [isInitialViewLoaded, setIsInitialViewLoaded] = useState(false);
+
   useEffect(() => {
-    if (isAppReady) {
+    if (isAppReady && pages.length > 0 && !isInitialViewLoaded) {
       const pageIdToLoad = loadedPageId || 'default';
       const pageToLoad = pages.find(p => p.page_id === pageIdToLoad) || pages.find(p => p.page_id === 'default');
+      
       if (pageToLoad) {
         handleLoadView(pageToLoad);
       } else if (fields.length > 0) {
+        // Fallback to default field visibility if no page is loaded
         setVisibleFieldIds(fields.map(f => f.id));
         setOrderedFields(fields);
       }
+      setIsInitialViewLoaded(true);
     }
-  }, [isAppReady, pages, fields]);
+  }, [isAppReady, pages, fields, handleLoadView, isInitialViewLoaded, loadedPageId]);
 
   const processedShots = useMemo(() => {
     let filtered = sheets;
