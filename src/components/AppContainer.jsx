@@ -313,13 +313,13 @@ export const AppContainer = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <div className="App bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 h-screen flex flex-col">
+      <div className="App bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col">
         <header className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 shadow z-10">
           <h1 className="text-2xl font-bold">MOTK Sheets 2.0</h1>
           <LoginButton />
         </header>
 
-        <main className="p-4 overflow-hidden">
+        <main className="p-4">
           {(fieldsError || pagesError) && <p className="text-red-500 text-center">Error: {fieldsError?.message || pagesError?.message}</p>}
           {!fieldsError && !pagesError && (
             <Routes>
