@@ -50,16 +50,26 @@ const usePagesData = () => {
       const sortOrderCol = header.indexOf('sortOrder');
       const authorCol = header.indexOf('author');
 
-      const parsedPages = rows.map(row => ({
-        page_id: row[pageIdCol],
-        title: row[titleCol],
-        columnWidths: safeJsonParse(row[columnWidthsCol], {}),
-        columnOrder: safeJsonParse(row[columnOrderCol], []),
-        filterSettings: safeJsonParse(row[filterSettingsCol], {}),
-        visibleFieldIds: safeJsonParse(row[visibleFieldIdsCol], []),
-        sortOrder: safeJsonParse(row[sortOrderCol], {}),
-        author: row[authorCol] || 'Unknown',
-      })).filter(p => p.page_id); // Filter out empty rows
+      const parsedPages = rows.reduce((acc, row) => {
+        try {
+          const page = {
+            page_id: row[pageIdCol],
+            title: row[titleCol],
+            columnWidths: safeJsonParse(row[columnWidthsCol], {}),
+            columnOrder: safeJsonParse(row[columnOrderCol], []),
+            filterSettings: safeJsonParse(row[filterSettingsCol], {}),
+            visibleFieldIds: safeJsonParse(row[visibleFieldIdsCol], []),
+            sortOrder: safeJsonParse(row[sortOrderCol], {}),
+            author: row[authorCol] || 'Unknown',
+          };
+          if (page.page_id) {
+            acc.push(page);
+          }
+        } catch (e) {
+          console.error("Skipping corrupted page data:", row, e);
+        }
+        return acc;
+      }, []);
       
       setPages(parsedPages);
     } catch (error) {
