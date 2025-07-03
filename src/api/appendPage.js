@@ -11,79 +11,80 @@ export async function ensureSheetExists(spreadsheetId, token) {
       },
     });
     const spreadsheet = await response.json();
-    let sheet = spreadsheet.sheets.find(s => s.properties.title === sheetName);
+    const sheet = spreadsheet.sheets.find(s => s.properties.title === sheetName);
 
-    if (!sheet) {
-      // Sheet doesn't exist, so create it with headers
-      const batchUpdateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`;
-      const headers = [
-        'page_id', 'title', 'columnWidths', 'columnOrder', 
-        'filterSettings', 'visibleFieldIds', 'sortOrder', 'author'
-      ];
-      const addSheetRequest = {
-        requests: [
-          {
-            addSheet: {
-              properties: {
-                title: sheetName,
-                gridProperties: {
-                  rowCount: 1,
-                  columnCount: headers.length,
-                },
+    if (sheet) {
+      return sheet.properties.sheetId;
+    }
+
+    // Sheet doesn't exist, so create it with headers
+    const batchUpdateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`;
+    const headers = [
+      'page_id', 'title', 'columnWidths', 'columnOrder', 
+      'filterSettings', 'visibleFieldIds', 'sortOrder', 'author'
+    ];
+    const addSheetRequest = {
+      requests: [
+        {
+          addSheet: {
+            properties: {
+              title: sheetName,
+              gridProperties: {
+                rowCount: 1,
+                columnCount: headers.length,
               },
             },
           },
-        ],
-      };
-
-      const addSheetResponse = await fetch(batchUpdateUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(addSheetRequest),
-      });
-      
-      const addSheetResponseData = await addSheetResponse.json();
-      if (!addSheetResponse.ok) {
-        console.error('Error creating sheet:', addSheetResponseData);
-        throw new Error(addSheetResponseData.error?.message || 'Failed to create sheet.');
-      }
-      
-      const newSheetId = addSheetResponseData.replies[0].addSheet.properties.sheetId;
+      ],
+    };
 
-      const appendRequest = {
-        requests: [
-          {
-            updateCells: {
-              start: { sheetId: newSheetId, rowIndex: 0, columnIndex: 0 },
-              rows: [
-                {
-                  values: headers.map(header => ({
-                    userEnteredValue: {
-                      stringValue: header,
-                    },
-                  })),
-                },
-              ],
-              fields: 'userEnteredValue',
-            },
-          },
-        ],
-      };
-
-      await fetch(batchUpdateUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(appendRequest),
-      });
-      return newSheetId;
+    const addSheetResponse = await fetch(batchUpdateUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(addSheetRequest),
+    });
+    
+    const addSheetResponseData = await addSheetResponse.json();
+    if (!addSheetResponse.ok) {
+      console.error('Error creating sheet:', addSheetResponseData);
+      throw new Error(addSheetResponseData.error?.message || 'Failed to create sheet.');
     }
-    return sheet.properties.sheetId;
+    
+    const newSheetId = addSheetResponseData.replies[0].addSheet.properties.sheetId;
+
+    const appendRequest = {
+      requests: [
+        {
+          updateCells: {
+            start: { sheetId: newSheetId, rowIndex: 0, columnIndex: 0 },
+            rows: [
+              {
+                values: headers.map(header => ({
+                  userEnteredValue: {
+                    stringValue: header,
+                  },
+                })),
+              },
+            ],
+            fields: 'userEnteredValue',
+          },
+        },
+      ],
+    };
+
+    await fetch(batchUpdateUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(appendRequest),
+    });
+    return newSheetId;
   } catch (err) {
     console.error('Error ensuring sheet exists:', err);
     throw new Error('Failed to ensure the PAGES sheet exists.');
