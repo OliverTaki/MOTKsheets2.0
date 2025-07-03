@@ -9,14 +9,17 @@ async function getSheetId(spreadsheetId, sheetName, token) {
   });
   const spreadsheet = await response.json();
   const sheet = spreadsheet.sheets.find(s => s.properties.title === sheetName);
-  if (!sheet) {
-    throw new Error(`Sheet "${sheetName}" not found.`);
-  }
-  return sheet.properties.sheetId;
+  return sheet ? sheet.properties.sheetId : null;
 }
 
 export async function deletePage(spreadsheetId, token, pageId) {
   try {
+    const sheetId = await getSheetId(spreadsheetId, 'PAGES', token);
+    if (!sheetId) {
+      console.log("PAGES sheet not found, nothing to delete.");
+      return; // Exit gracefully
+    }
+
     const range = 'PAGES!A:A';
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?key=${apiKey}`;
     const getPagesResponse = await fetch(url, {
@@ -27,15 +30,16 @@ export async function deletePage(spreadsheetId, token, pageId) {
     const pagesData = await getPagesResponse.json();
     const rows = pagesData.values;
     if (!rows) {
-      throw new Error('No data found in PAGES sheet.');
+      console.log("No data found in PAGES sheet, nothing to delete.");
+      return;
     }
 
     const rowIndex = rows.findIndex(row => row[0] === pageId);
     if (rowIndex === -1) {
-      throw new Error(`Page with ID "${pageId}" not found.`);
+      console.log(`Page with ID "${pageId}" not found, nothing to delete.`);
+      return;
     }
 
-    const sheetId = await getSheetId(spreadsheetId, 'PAGES', token);
     const batchUpdateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`;
     const batchUpdateRequest = {
       requests: [
