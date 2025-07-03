@@ -2,7 +2,7 @@ const apiKey = import.meta.env.VITE_SHEETS_API_KEY;
 
 export async function ensureSheetExists(spreadsheetId, token) {
   const sheetName = 'PAGES';
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?key=${apiKey}`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?key=${apiKey}&fields=sheets.properties`;
   
   try {
     const response = await fetch(url, {
@@ -11,9 +11,9 @@ export async function ensureSheetExists(spreadsheetId, token) {
       },
     });
     const spreadsheet = await response.json();
-    let sheet = spreadsheet.sheets.find(s => s.properties.title === sheetName);
+    const sheetExists = spreadsheet.sheets.some(s => s.properties.title === sheetName);
 
-    if (!sheet) {
+    if (!sheetExists) {
       // Sheet doesn't exist, so create it with headers
       const batchUpdateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`;
       const headers = [
@@ -26,6 +26,10 @@ export async function ensureSheetExists(spreadsheetId, token) {
             addSheet: {
               properties: {
                 title: sheetName,
+                gridProperties: {
+                  rowCount: 1,
+                  columnCount: headers.length,
+                },
               },
             },
           },
@@ -42,11 +46,7 @@ export async function ensureSheetExists(spreadsheetId, token) {
       });
       
       const addSheetResponseData = await addSheetResponse.json();
-      if (!addSheetResponse.ok || !addSheetResponseData.replies || !addSheetResponseData.replies[0].addSheet) {
-        // Check if the error is that the sheet already exists
-        if (addSheetResponseData.error && addSheetResponseData.error.message.includes('already exists')) {
-          return;
-        }
+      if (!addSheetResponse.ok) {
         console.error('Error creating sheet:', addSheetResponseData);
         throw new Error(addSheetResponseData.error?.message || 'Failed to create sheet.');
       }
@@ -56,8 +56,8 @@ export async function ensureSheetExists(spreadsheetId, token) {
       const appendRequest = {
         requests: [
           {
-            appendCells: {
-              sheetId: newSheetId,
+            updateCells: {
+              start: { sheetId: newSheetId, rowIndex: 0, columnIndex: 0 },
               rows: [
                 {
                   values: headers.map(header => ({
