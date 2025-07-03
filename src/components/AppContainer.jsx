@@ -103,14 +103,29 @@ export const AppContainer = () => {
   const [isAppReady, setIsAppReady] = useState(false);
   const [orderedFields, setOrderedFields] = useState([]);
   const [columnOrder, setColumnOrder] = useState([]);
+  const [isInitialViewLoaded, setIsInitialViewLoaded] = useState(false);
+
+  const handleLoadView = useCallback((page) => {
+    if (!page) return;
+    setColumnWidths(page.columnWidths || {});
+    setVisibleFieldIds((page.visibleFieldIds && page.visibleFieldIds.length > 0) ? page.visibleFieldIds : fields.map(f => f.id));
+    setActiveFilters(page.filterSettings || {});
+    setSortKey(page.sortOrder?.key || '');
+    setAscending(page.sortOrder?.ascending ?? true);
+    setLoadedPageId(page.page_id);
+    localStorage.setItem('loadedPageId', page.page_id);
+    const newOrderedFields = page.columnOrder && page.columnOrder.length > 0
+      ? page.columnOrder.map(id => fields.find(f => f.id === id)).filter(Boolean)
+      : fields;
+    setOrderedFields(newOrderedFields);
+    setColumnOrder(page.columnOrder || []);
+  }, [fields]);
 
   useEffect(() => {
     if (isInitialized && !fieldsLoading && !pagesLoading) {
       setIsAppReady(true);
     }
   }, [isInitialized, fieldsLoading, pagesLoading]);
-
-  const [isInitialViewLoaded, setIsInitialViewLoaded] = useState(false);
 
   useEffect(() => {
     if (isAppReady && pages.length > 0 && !isInitialViewLoaded) {
@@ -242,22 +257,6 @@ export const AppContainer = () => {
     columnOrder: orderedFields.map(f => f.id),
   });
 
-  const handleLoadView = useCallback((page) => {
-    if (!page) return;
-    setColumnWidths(page.columnWidths || {});
-    setVisibleFieldIds((page.visibleFieldIds && page.visibleFieldIds.length > 0) ? page.visibleFieldIds : fields.map(f => f.id));
-    setActiveFilters(page.filterSettings || {});
-    setSortKey(page.sortOrder?.key || '');
-    setAscending(page.sortOrder?.ascending ?? true);
-    setLoadedPageId(page.page_id);
-    localStorage.setItem('loadedPageId', page.page_id);
-    const newOrderedFields = page.columnOrder && page.columnOrder.length > 0
-      ? page.columnOrder.map(id => fields.find(f => f.id === id)).filter(Boolean)
-      : fields;
-    setOrderedFields(newOrderedFields);
-    setColumnOrder(page.columnOrder || []);
-  }, [fields]);
-
   const handleSaveView = useCallback(async () => {
     if (!loadedPageId) {
       alert("No view loaded. Use 'Save As' to create a new view.");
@@ -361,8 +360,3 @@ export const AppContainer = () => {
     </ThemeProvider>
   );
 };
-
-
-
-
-
