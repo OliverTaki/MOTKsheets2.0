@@ -9,7 +9,7 @@ export async function appendPage(spreadsheetId, token, pageData) {
     filterSettings,
     visibleFieldIds,
     sortOrder,
-    author, // Add author
+    author,
   } = pageData;
 
   const newRow = [
@@ -20,7 +20,7 @@ export async function appendPage(spreadsheetId, token, pageData) {
     JSON.stringify(filterSettings),
     JSON.stringify(visibleFieldIds),
     JSON.stringify(sortOrder),
-    author, // Add author
+    author,
   ];
 
   const range = 'PAGES!A1';
@@ -47,3 +47,4 @@ export async function appendPage(spreadsheetId, token, pageData) {
     throw new Error('Failed to save the new page to the sheet.');
   }
 }
+

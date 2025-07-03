@@ -300,7 +300,7 @@ export const AppContainer = () => {
 
         <main className="p-4 overflow-hidden">
           {(fieldsError || pagesError) && <p className="text-red-500 text-center">Error: {fieldsError?.message || pagesError?.message}</p>}
-          {!(fieldsError || pagesError) && (
+          {!fieldsError && !pagesError && (
             <Routes>
               <Route path="/" element={
                 <MainView
