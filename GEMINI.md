@@ -53,3 +53,65 @@ Our immediate priority is to resolve the outstanding issues with the "Pages" fea
 *   **State Management:** The application's state will be updated to reflect any changes made to the shot.
 
 By following this plan, we will be able to complete the "Pages" feature and then move on to implementing the core functionality of the application.
+
+## Project Structure
+
+```
+.
+├── GEMINI.md
+├── README.md
+├── eslint.config.js
+├── index.html
+├── package-lock.json
+├── package.json
+├── postcss.config.cjs
+├── public
+│   └── vite.svg
+├── src
+│   ├── App.jsx
+│   ├── AuthContext.jsx
+│   ├── api
+│   │   ├── appendField.js
+│   │   ├── appendPage.js
+│   │   ├── appendRow.js
+│   │   ├── batchUpdate.js
+│   │   ├── deletePage.js
+│   │   ├── deleteRows.js
+│   │   ├── updateCell.js
+│   │   ├── updateNonUuidIds.js
+│   │   └─�� updatePage.js
+│   ├── components
+│   │   ├── AppContainer.jsx
+│   │   ├── FieldManager.jsx
+│   │   ├── FilterManager.jsx
+│   │   ├── LoginButton.jsx
+│   │   ├── ManageViewsDialog.jsx
+│   │   ├── MissingIdDialog.jsx
+│   │   ├── PageView.jsx
+│   │   ├── SavedFilters.jsx
+│   │   ├── ShotDetailPage.jsx
+│   │   ├── ShotDetailRow.jsx
+│   │   ├── ShotTable.jsx
+│   │   └── Toolbar.jsx
+│   ├── hooks
+│   │   ├── usePagesData.js
+│   │   └── useSheetsData.js
+│   ├── index.css
+│   ├── main.jsx
+│   ├── mock
+│   │   ├── fields.json
+│   │   └── shots.json
+│   ├── theme.css
+│   ├── utils
+│   │   ├── id.js
+│   │   ├── idGenerator.js
+│   │   ├── missingIdHandler.js
+│   │   ├── parse.js
+│   │   └── sheetSync.js
+│   └── vite-env.d.ts
+├── tailwind.config.cjs
+├── tsconfig.app.json
+├── tsconfig.json
+├── tsconfig.node.json
+└── vite.config.ts
+```
