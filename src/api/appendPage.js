@@ -11,11 +11,15 @@ export async function ensureSheetExists(spreadsheetId, token) {
       },
     });
     const spreadsheet = await response.json();
-    const sheet = spreadsheet.sheets.find(s => s.properties.title === sheetName);
+    let sheet = spreadsheet.sheets.find(s => s.properties.title === sheetName);
 
     if (!sheet) {
       // Sheet doesn't exist, so create it with headers
       const batchUpdateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`;
+      const headers = [
+        'page_id', 'title', 'columnWidths', 'columnOrder', 
+        'filterSettings', 'visibleFieldIds', 'sortOrder', 'author'
+      ];
       const addSheetRequest = {
         requests: [
           {
@@ -28,7 +32,7 @@ export async function ensureSheetExists(spreadsheetId, token) {
         ],
       };
 
-      await fetch(batchUpdateUrl, {
+      const addSheetResponse = await fetch(batchUpdateUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -36,22 +40,37 @@ export async function ensureSheetExists(spreadsheetId, token) {
         },
         body: JSON.stringify(addSheetRequest),
       });
+      
+      const addSheetResponseData = await addSheetResponse.json();
+      const newSheetId = addSheetResponseData.replies[0].addSheet.properties.sheetId;
 
-      // Now, add the headers to the newly created sheet
-      const headers = [
-        'page_id', 'title', 'columnWidths', 'columnOrder', 
-        'filterSettings', 'visibleFieldIds', 'sortOrder', 'author'
-      ];
-      const appendUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}!A1:append?valueInputOption=USER_ENTERED&key=${apiKey}`;
-      await fetch(appendUrl, {
+      const appendRequest = {
+        requests: [
+          {
+            appendCells: {
+              sheetId: newSheetId,
+              rows: [
+                {
+                  values: headers.map(header => ({
+                    userEnteredValue: {
+                      stringValue: header,
+                    },
+                  })),
+                },
+              ],
+              fields: 'userEnteredValue',
+            },
+          },
+        ],
+      };
+
+      await fetch(batchUpdateUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          values: [headers],
-        }),
+        body: JSON.stringify(appendRequest),
       });
     }
   } catch (err) {

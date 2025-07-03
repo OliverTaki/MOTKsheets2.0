@@ -141,7 +141,7 @@ export const AppContainer = () => {
       }
       setIsInitialViewLoaded(true);
     }
-  }, [isAppReady, pages, fields, handleLoadView, isInitialViewLoaded, loadedPageId]);
+  }, [isAppReady, pages, fields, handleLoadView, isInitialViewLoaded]);
 
   const processedShots = useMemo(() => {
     let filtered = sheets;
