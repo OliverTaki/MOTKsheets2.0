@@ -51,17 +51,17 @@ const usePagesData = () => {
       const authorCol = header.indexOf('author');
 
       const parsedPages = rows.reduce((acc, row) => {
-        const page = {};
         try {
-          page.page_id = row[pageIdCol];
-          page.title = row[titleCol];
-          page.columnWidths = safeJsonParse(row[columnWidthsCol], {});
-          page.columnOrder = safeJsonParse(row[columnOrderCol], []);
-          page.filterSettings = safeJsonParse(row[filterSettingsCol], {});
-          page.visibleFieldIds = safeJsonParse(row[visibleFieldIdsCol], []);
-          page.sortOrder = safeJsonParse(row[sortOrderCol], {});
-          page.author = row[authorCol] || 'Unknown';
-
+          const page = {
+            page_id: row[pageIdCol],
+            title: row[titleCol],
+            columnWidths: safeJsonParse(row[columnWidthsCol], {}),
+            columnOrder: safeJsonParse(row[columnOrderCol], []),
+            filterSettings: safeJsonParse(row[filterSettingsCol], {}),
+            visibleFieldIds: safeJsonParse(row[visibleFieldIdsCol], []),
+            sortOrder: safeJsonParse(row[sortOrderCol], {}),
+            author: row[authorCol] || 'Unknown',
+          };
           if (page.page_id) {
             acc.push(page);
           }
