@@ -110,6 +110,19 @@ export const AppContainer = () => {
     }
   }, [isInitialized, fieldsLoading, pagesLoading]);
 
+  useEffect(() => {
+    if (isAppReady) {
+      const pageIdToLoad = loadedPageId || 'default';
+      const pageToLoad = pages.find(p => p.page_id === pageIdToLoad) || pages.find(p => p.page_id === 'default');
+      if (pageToLoad) {
+        handleLoadView(pageToLoad);
+      } else if (fields.length > 0) {
+        setVisibleFieldIds(fields.map(f => f.id));
+        setOrderedFields(fields);
+      }
+    }
+  }, [isAppReady, pages, fields]);
+
   const processedShots = useMemo(() => {
     let filtered = sheets;
     const activeFilterKeys = Object.keys(activeFilters).filter(key => activeFilters[key] && activeFilters[key].length > 0);
