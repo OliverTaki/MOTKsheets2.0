@@ -96,6 +96,8 @@ const ShotTable = ({ shots, fields, columnWidths, onColumnResize, onCellSave, on
 
     const [isResizing, setIsResizing] = useState(false);
 
+    const [isResizing, setIsResizing] = useState(false);
+
     const handleDragEnd = (event) => {
       if (isResizing) {
         setIsResizing(false);
