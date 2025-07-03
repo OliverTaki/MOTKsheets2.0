@@ -110,19 +110,6 @@ export const AppContainer = () => {
     }
   }, [isInitialized, fieldsLoading, pagesLoading]);
 
-  useEffect(() => {
-    if (isAppReady) {
-      const pageIdToLoad = loadedPageId || 'default';
-      const pageToLoad = pages.find(p => p.page_id === pageIdToLoad) || pages.find(p => p.page_id === 'default');
-      if (pageToLoad) {
-        handleLoadView(pageToLoad);
-      } else if (fields.length > 0) {
-        setVisibleFieldIds(fields.map(f => f.id));
-        setOrderedFields(fields);
-      }
-    }
-  }, [isAppReady, pages, fields, loadedPageId]);
-
   const processedShots = useMemo(() => {
     let filtered = sheets;
     const activeFilterKeys = Object.keys(activeFilters).filter(key => activeFilters[key] && activeFilters[key].length > 0);
@@ -238,6 +225,7 @@ export const AppContainer = () => {
   });
 
   const handleLoadView = useCallback((page) => {
+    if (!page) return;
     setColumnWidths(page.columnWidths || {});
     setVisibleFieldIds((page.visibleFieldIds && page.visibleFieldIds.length > 0) ? page.visibleFieldIds : fields.map(f => f.id));
     setActiveFilters(page.filterSettings || {});
