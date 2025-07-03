@@ -46,7 +46,7 @@ const MainView = ({
   onColumnOrderChange,
 }) => {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col h-full gap-4">
       <Toolbar
         fields={fields}
         pages={pages}
