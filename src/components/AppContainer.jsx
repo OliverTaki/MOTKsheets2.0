@@ -105,9 +105,12 @@ export const AppContainer = () => {
       const pageToLoad = pages.find(p => p.page_id === pageIdToLoad) || pages.find(p => p.page_id === 'default');
       if (pageToLoad) {
         handleLoadView(pageToLoad);
+      } else if (fields.length > 0) {
+        // Fallback to showing all fields if no page is found
+        setVisibleFieldIds(fields.map(f => f.id));
       }
     }
-  }, [fieldsLoading, pagesLoading, loadedPageId]);
+  }, [fieldsLoading, pagesLoading, loadedPageId, fields, pages]);
 
   const processedShots = useMemo(() => {
     let filtered = sheets;

@@ -6,14 +6,14 @@ const apiKey = import.meta.env.VITE_SHEETS_API_KEY;
 
 const usePagesData = () => {
   const [pages, setPages] = useState([]);
-  const [loading, setLoading] = useState(true); // Add loading state
+  const [loading, setLoading] = useState(true);
   const { token } = useContext(AuthContext);
 
   const refreshPages = useCallback(async () => {
     if (!token) return;
     setLoading(true);
     try {
-      const range = 'PAGES!A:H'; // Update range to include author
+      const range = 'PAGES!A:H';
       const response = await fetch(
         `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?key=${apiKey}`,
         {
@@ -24,10 +24,12 @@ const usePagesData = () => {
       );
       const data = await response.json();
       const [header, ...rows] = data.values || [];
-      if (!header) {
+      
+      if (!header || !rows) {
         setPages([]);
+        setLoading(false);
         return;
-      };
+      }
 
       const pageIdCol = header.indexOf('page_id');
       const titleCol = header.indexOf('title');
@@ -47,7 +49,8 @@ const usePagesData = () => {
         visibleFieldIds: JSON.parse(row[visibleFieldIdsCol] || '[]'),
         sortOrder: JSON.parse(row[sortOrderCol] || '{}'),
         author: row[authorCol] || 'Unknown',
-      }));
+      })).filter(p => p.page_id); // Filter out empty rows
+      
       setPages(parsedPages);
     } catch (error) {
       console.error('Error fetching pages:', error);
@@ -57,8 +60,10 @@ const usePagesData = () => {
   }, [token]);
 
   useEffect(() => {
-    refreshPages();
-  }, [refreshPages]);
+    if(token) {
+      refreshPages();
+    }
+  }, [token, refreshPages]);
 
   return { pages, loading, refreshPages };
 };

@@ -36,7 +36,7 @@ export async function deletePage(spreadsheetId, token, pageId) {
     }
 
     const sheetId = await getSheetId(spreadsheetId, 'PAGES', token);
-    const batchUpdateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate?key=${apiKey}`;
+    const batchUpdateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`;
     const batchUpdateRequest = {
       requests: [
         {
