@@ -43,6 +43,7 @@ const MainView = ({
   onSaveViewAs,
   onDeleteView,
   loadedPageId,
+  onColumnOrderChange,
 }) => {
   return (
     <div className="flex flex-col h-full gap-4">
@@ -73,6 +74,7 @@ const MainView = ({
           onColumnResize={onColumnResize}
           onCellSave={(shotId, fieldId, newValue) => onCellSave(shotId, fieldId, newValue, idToColIndex)}
           onUpdateFieldOptions={onUpdateFieldOptions}
+          onColumnOrderChange={onColumnOrderChange}
         />
       </div>
     </div>
@@ -99,6 +101,7 @@ export const AppContainer = () => {
   const [visibleFieldIds, setVisibleFieldIds] = useState([]);
   const [loadedPageId, setLoadedPageId] = useState(() => localStorage.getItem('loadedPageId') || null);
   const [isAppReady, setIsAppReady] = useState(false);
+  const [orderedFields, setOrderedFields] = useState([]);
 
   useEffect(() => {
     if (isInitialized && !fieldsLoading && !pagesLoading) {
@@ -114,6 +117,7 @@ export const AppContainer = () => {
         handleLoadView(pageToLoad);
       } else if (fields.length > 0) {
         setVisibleFieldIds(fields.map(f => f.id));
+        setOrderedFields(fields);
       }
     }
   }, [isAppReady, pages, fields, loadedPageId]);
@@ -229,6 +233,7 @@ export const AppContainer = () => {
     activeFilters,
     sortOrder: { key: sortKey, ascending },
     author: user?.email || 'Unknown',
+    columnOrder: orderedFields.map(f => f.id),
   });
 
   const handleLoadView = useCallback((page) => {
@@ -239,6 +244,10 @@ export const AppContainer = () => {
     setAscending(page.sortOrder?.ascending ?? true);
     setLoadedPageId(page.page_id);
     localStorage.setItem('loadedPageId', page.page_id);
+    const newOrderedFields = page.columnOrder && page.columnOrder.length > 0
+      ? page.columnOrder.map(id => fields.find(f => f.id === id)).filter(Boolean)
+      : fields;
+    setOrderedFields(newOrderedFields);
   }, [fields]);
 
   const handleSaveView = useCallback(async () => {
@@ -278,6 +287,10 @@ export const AppContainer = () => {
     }
   }, [token, loadedPageId, refreshPages]);
 
+  const handleColumnOrderChange = (newOrder) => {
+    setOrderedFields(newOrder);
+  };
+
   if (!isAppReady) {
     return (
       <div className="flex justify-center items-center h-screen bg-gray-100 dark:bg-gray-900">
@@ -305,7 +318,7 @@ export const AppContainer = () => {
               <Route path="/" element={
                 <MainView
                   sheets={processedShots}
-                  fields={fields}
+                  fields={orderedFields}
                   pages={pages}
                   columnWidths={columnWidths}
                   onColumnResize={handleColumnResize}
@@ -327,6 +340,7 @@ export const AppContainer = () => {
                   onSaveViewAs={handleSaveViewAs}
                   onDeleteView={handleDeleteView}
                   loadedPageId={loadedPageId}
+                  onColumnOrderChange={handleColumnOrderChange}
                 />
               } />
               <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={fields} />} />
@@ -338,6 +352,7 @@ export const AppContainer = () => {
     </ThemeProvider>
   );
 };
+
 
 
 
