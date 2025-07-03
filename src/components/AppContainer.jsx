@@ -89,8 +89,8 @@ const theme = createTheme({
 
 export const AppContainer = () => {
   const { token, user, isInitialized } = useContext(AuthContext);
-  const { sheets, setSheets, fields, loading: fieldsLoading, error, refreshData, updateFieldOptions, idToColIndex } = useSheetsData(spreadsheetId);
-  const { pages, loading: pagesLoading, refreshPages } = usePagesData();
+  const { sheets, setSheets, fields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex } = useSheetsData(spreadsheetId);
+  const { pages, loading: pagesLoading, error: pagesError, refreshPages } = usePagesData();
 
   const [columnWidths, setColumnWidths] = useState({});
   const [activeFilters, setActiveFilters] = useState({});
@@ -98,19 +98,25 @@ export const AppContainer = () => {
   const [ascending, setAscending] = useState(true);
   const [visibleFieldIds, setVisibleFieldIds] = useState([]);
   const [loadedPageId, setLoadedPageId] = useState(() => localStorage.getItem('loadedPageId') || null);
+  const [isAppReady, setIsAppReady] = useState(false);
 
   useEffect(() => {
-    if (!fieldsLoading && !pagesLoading) {
+    if (isInitialized && !fieldsLoading && !pagesLoading) {
+      setIsAppReady(true);
+    }
+  }, [isInitialized, fieldsLoading, pagesLoading]);
+
+  useEffect(() => {
+    if (isAppReady) {
       const pageIdToLoad = loadedPageId || 'default';
       const pageToLoad = pages.find(p => p.page_id === pageIdToLoad) || pages.find(p => p.page_id === 'default');
       if (pageToLoad) {
         handleLoadView(pageToLoad);
       } else if (fields.length > 0) {
-        // Fallback to showing all fields if no page is found
         setVisibleFieldIds(fields.map(f => f.id));
       }
     }
-  }, [fieldsLoading, pagesLoading, loadedPageId, fields, pages]);
+  }, [isAppReady, pages, fields, loadedPageId]);
 
   const processedShots = useMemo(() => {
     let filtered = sheets;
@@ -272,7 +278,7 @@ export const AppContainer = () => {
     }
   }, [token, loadedPageId, refreshPages]);
 
-  if (!isInitialized || fieldsLoading || pagesLoading) {
+  if (!isAppReady) {
     return (
       <div className="flex justify-center items-center h-screen bg-gray-100 dark:bg-gray-900">
         <div className="text-center">
@@ -293,8 +299,8 @@ export const AppContainer = () => {
         </header>
 
         <main className="p-4 overflow-hidden">
-          {error && <p className="text-red-500 text-center">Error: {error.message}</p>}
-          {!error && (
+          {(fieldsError || pagesError) && <p className="text-red-500 text-center">Error: {fieldsError?.message || pagesError?.message}</p>}
+          {!(fieldsError || pagesError) && (
             <Routes>
               <Route path="/" element={
                 <MainView
