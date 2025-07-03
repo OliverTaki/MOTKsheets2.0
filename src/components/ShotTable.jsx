@@ -94,7 +94,13 @@ const ShotTable = ({ shots, fields, columnWidths, onColumnResize, onCellSave, on
       })
     );
 
+    const [isResizing, setIsResizing] = useState(false);
+
     const handleDragEnd = (event) => {
+      if (isResizing) {
+        setIsResizing(false);
+        return;
+      }
       const { active, over } = event;
       if (active.id !== over.id) {
         const oldIndex = fields.findIndex((f) => f.id === active.id);
@@ -106,6 +112,7 @@ const ShotTable = ({ shots, fields, columnWidths, onColumnResize, onCellSave, on
     const handleColResizeMouseDown = (e, fieldId) => {
         e.preventDefault();
         e.stopPropagation();
+        setIsResizing(true);
         setResizingFieldId(fieldId);
         startCursorX.current = e.clientX;
         startColumnWidth.current = columnWidths[fieldId] || 150;
