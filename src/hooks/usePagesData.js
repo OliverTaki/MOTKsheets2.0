@@ -4,6 +4,16 @@ import { AuthContext } from '../AuthContext';
 const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 const apiKey = import.meta.env.VITE_SHEETS_API_KEY;
 
+const safeJsonParse = (jsonString, defaultValue) => {
+  if (!jsonString) return defaultValue;
+  try {
+    return JSON.parse(jsonString);
+  } catch (e) {
+    console.error("Failed to parse JSON:", jsonString, e);
+    return defaultValue;
+  }
+};
+
 const usePagesData = () => {
   const [pages, setPages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,11 +53,11 @@ const usePagesData = () => {
       const parsedPages = rows.map(row => ({
         page_id: row[pageIdCol],
         title: row[titleCol],
-        columnWidths: JSON.parse(row[columnWidthsCol] || '{}'),
-        columnOrder: JSON.parse(row[columnOrderCol] || '[]'),
-        filterSettings: JSON.parse(row[filterSettingsCol] || '{}'),
-        visibleFieldIds: JSON.parse(row[visibleFieldIdsCol] || '[]'),
-        sortOrder: JSON.parse(row[sortOrderCol] || '{}'),
+        columnWidths: safeJsonParse(row[columnWidthsCol], {}),
+        columnOrder: safeJsonParse(row[columnOrderCol], []),
+        filterSettings: safeJsonParse(row[filterSettingsCol], {}),
+        visibleFieldIds: safeJsonParse(row[visibleFieldIdsCol], []),
+        sortOrder: safeJsonParse(row[sortOrderCol], {}),
         author: row[authorCol] || 'Unknown',
       })).filter(p => p.page_id); // Filter out empty rows
       
