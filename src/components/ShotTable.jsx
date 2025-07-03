@@ -88,12 +88,7 @@ const ShotTable = ({ shots, fields, columnWidths, onColumnResize, onCellSave, on
     const inputRef = useRef(null);
 
     const sensors = useSensors(
-      useSensor(PointerSensor, {
-        activationConstraint: {
-          delay: 250,
-          tolerance: 5,
-        },
-      }),
+      useSensor(PointerSensor),
       useSensor(KeyboardSensor, {
         coordinateGetter: sortableKeyboardCoordinates,
       })
@@ -166,7 +161,7 @@ const ShotTable = ({ shots, fields, columnWidths, onColumnResize, onCellSave, on
     }, [resizingFieldId, onColumnResize]);
 
     return (
-        <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 200px)', overflow: 'auto', margin: 0 }}>
+        <TableContainer component={Paper} sx={{ overflow: 'auto', margin: 0 }}>
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <Table stickyHeader sx={{ tableLayout: 'fixed' }} aria-label="shot table">
                     <TableHead>
