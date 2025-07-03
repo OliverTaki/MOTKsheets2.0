@@ -102,6 +102,7 @@ export const AppContainer = () => {
   const [loadedPageId, setLoadedPageId] = useState(() => localStorage.getItem('loadedPageId') || null);
   const [isAppReady, setIsAppReady] = useState(false);
   const [orderedFields, setOrderedFields] = useState([]);
+  const [columnOrder, setColumnOrder] = useState([]);
 
   useEffect(() => {
     if (isInitialized && !fieldsLoading && !pagesLoading) {
@@ -248,6 +249,7 @@ export const AppContainer = () => {
       ? page.columnOrder.map(id => fields.find(f => f.id === id)).filter(Boolean)
       : fields;
     setOrderedFields(newOrderedFields);
+    setColumnOrder(page.columnOrder || []);
   }, [fields]);
 
   const handleSaveView = useCallback(async () => {
@@ -289,6 +291,7 @@ export const AppContainer = () => {
 
   const handleColumnOrderChange = (newOrder) => {
     setOrderedFields(newOrder);
+    setColumnOrder(newOrder.map(f => f.id));
   };
 
   if (!isAppReady) {
@@ -352,6 +355,7 @@ export const AppContainer = () => {
     </ThemeProvider>
   );
 };
+
 
 "Authentication required."); return; }
     try {
