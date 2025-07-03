@@ -120,7 +120,7 @@ export const AppContainer = () => {
         setOrderedFields(fields);
       }
     }
-  }, [isAppReady, pages, fields, loadedPageId]);
+  }, [isAppReady, pages, fields]);
 
   const processedShots = useMemo(() => {
     let filtered = sheets;
@@ -352,6 +352,7 @@ export const AppContainer = () => {
     </ThemeProvider>
   );
 };
+
 "Authentication required."); return; }
     try {
       await appendField(spreadsheetId, token, newFieldDetails, fields);
