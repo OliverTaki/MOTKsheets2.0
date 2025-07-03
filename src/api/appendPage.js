@@ -42,6 +42,11 @@ export async function ensureSheetExists(spreadsheetId, token) {
       });
       
       const addSheetResponseData = await addSheetResponse.json();
+      if (!addSheetResponse.ok || !addSheetResponseData.replies || !addSheetResponseData.replies[0].addSheet) {
+        console.error('Error creating sheet:', addSheetResponseData);
+        throw new Error(addSheetResponseData.error?.message || 'Failed to create sheet.');
+      }
+      
       const newSheetId = addSheetResponseData.replies[0].addSheet.properties.sheetId;
 
       const appendRequest = {
