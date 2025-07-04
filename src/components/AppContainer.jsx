@@ -72,7 +72,8 @@ const MainView = ({
       <div className="shadow-md sm:rounded-lg border border-gray-200 dark:border-gray-700">
         <ShotTable
           shots={sheets}
-          fields={displayedFields.filter(f => visibleFieldIds.includes(f.id))}
+          fields={displayedFields}
+          visibleFieldIds={visibleFieldIds}
           columnWidths={columnWidths}
           onColumnResize={onColumnResize}
           onCellSave={(shotId, fieldId, newValue) => onCellSave(shotId, fieldId, newValue, idToColIndex)}
@@ -116,11 +117,22 @@ export const AppContainer = () => {
     setAscending(page.sortOrder?.ascending ?? true);
     setLoadedPageId(page.page_id);
     localStorage.setItem('loadedPageId', page.page_id);
-    const newOrderedFields = page.columnOrder && page.columnOrder.length > 0
+
+    // Start with the ordered fields from the saved view.
+    const baseOrderedFields = page.columnOrder && page.columnOrder.length > 0
       ? page.columnOrder.map(id => fields.find(f => f.id === id)).filter(Boolean)
-      : fields;
-    setOrderedFields(newOrderedFields);
-    setColumnOrder(page.columnOrder || []);
+      : fields; // Or all fields if no order is saved.
+
+    const baseFieldIds = new Set(baseOrderedFields.map(f => f.id));
+    
+    // Find any fields that exist in the master list but not in the view's order.
+    const newFields = fields.filter(f => !baseFieldIds.has(f.id));
+
+    // Append the new fields to the end of the ordered list.
+    const finalOrderedFields = [...baseOrderedFields, ...newFields];
+    
+    setOrderedFields(finalOrderedFields);
+    setColumnOrder(finalOrderedFields.map(f => f.id));
   }, [fields]);
 
   useEffect(() => {

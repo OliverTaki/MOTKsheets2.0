@@ -78,7 +78,7 @@ const SortableHeaderCell = ({ field, columnWidths, handleColResizeMouseDown }) =
   );
 };
 
-const ShotTable = ({ shots, fields, columnWidths, onColumnResize, onCellSave, onUpdateFieldOptions, onColumnOrderChange }) => {
+const ShotTable = ({ shots, fields, visibleFieldIds, columnWidths, onColumnResize, onCellSave, onUpdateFieldOptions, onColumnOrderChange }) => {
     const [resizingFieldId, setResizingFieldId] = useState(null);
     const startCursorX = useRef(0);
     const startColumnWidth = useRef(0);
@@ -179,7 +179,7 @@ const ShotTable = ({ shots, fields, columnWidths, onColumnResize, onCellSave, on
                         <TableRow>
                             <SortableContext items={fields.map(f => f.id)} strategy={horizontalListSortingStrategy}>
                                 {fields.map((field) => (
-                                    <SortableHeaderCell key={field.id} field={field} columnWidths={columnWidths} handleColResizeMouseDown={handleColResizeMouseDown} />
+                                    visibleFieldIds.includes(field.id) && <SortableHeaderCell key={field.id} field={field} columnWidths={columnWidths} handleColResizeMouseDown={handleColResizeMouseDown} />
                                 ))}
                             </SortableContext>
                         </TableRow>
@@ -188,6 +188,7 @@ const ShotTable = ({ shots, fields, columnWidths, onColumnResize, onCellSave, on
                         {shots.map((shot, rowIndex) => (
                             <TableRow key={shot.shot_id || rowIndex} hover>
                                 {fields.map((field) => {
+                                    if (!visibleFieldIds.includes(field.id)) return null;
                                     const cellValue = shot[field.id];
                                     const isEditing = editingCell && editingCell.shotId === shot.shot_id && editingCell.fieldId === field.id;
                                     const style = { width: `${columnWidths[field.id] || 150}px` };
