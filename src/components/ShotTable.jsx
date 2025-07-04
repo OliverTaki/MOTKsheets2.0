@@ -162,11 +162,13 @@ const ShotTable = ({ shots, fields, visibleFieldIds, columnWidths, onColumnResiz
         return fields.reduce((sum, field) => sum + (columnWidths[field.id] || 150), 0);
     }, [fields, columnWidths]);
 
+    const HDR = 56;
     return (
         <TableContainer
             component={Paper}
             sx={{
                 display: 'inline-block',
+                maxWidth: '100%',
                 overflowX: 'auto',
                 overflowY: 'visible',
                 flex: 'none',
@@ -174,13 +176,23 @@ const ShotTable = ({ shots, fields, visibleFieldIds, columnWidths, onColumnResiz
             }}
         >
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <Table stickyHeader sx={{ tableLayout: 'fixed', minWidth: totalColumnWidth }} aria-label="shot table">
-                    <TableHead sx={{ '& th': { bgcolor: 'background.paper' } }}>
+                <Table stickyHeader sx={{ tableLayout: 'fixed' }} aria-label="shot table">
+                    <TableHead>
                         <TableRow
                             sx={{
                                 position: 'sticky',
                                 top: 0,
                                 zIndex: 3,
+                                bgcolor: 'background.paper',
+                            }}
+                        >
+                            {/* top header cells */}
+                        </TableRow>
+                        <TableRow
+                            sx={{
+                                position: 'sticky',
+                                top: `${HDR}px`,
+                                zIndex: 2,
                                 bgcolor: 'background.paper',
                             }}
                         >
