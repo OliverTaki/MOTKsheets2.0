@@ -59,6 +59,11 @@ Our immediate priority is to resolve the outstanding issues with the "Pages" fea
 
 By following this plan, we will be able to complete the "Pages" feature and then move on to implementing the core functionality of the application.
 
+### 4. Non-UUID ID Update Refactoring
+
+*   **Button Hidden:** The "Update Non-UUID IDs" button has been temporarily hidden from the UI.
+*   **Refactor Functionality:** The existing `updateNonUuidIds` functionality will be refactored to provide a user-controlled interface. This will allow users to review and select specific non-UUID IDs to update, rather than performing an automatic update.
+
 ## Project Structure
 
 ```

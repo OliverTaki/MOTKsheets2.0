@@ -120,6 +120,7 @@ const Toolbar = ({
                     >
                         Add New Shot
                     </Button>
+                    {/*
                     <Button
                         variant="outlined"
                         onClick={onUpdateNonUuidIds}
@@ -127,6 +128,7 @@ const Toolbar = ({
                     >
                         Update Non-UUID IDs
                     </Button>
+                    */}
                 </div>
             </div>
             <ManageViewsDialog

@@ -50,13 +50,15 @@ const useSheetsData = (spreadsheetId) => {
             const parsedFields = parseFields(fieldsData);
             const shotsDataValues = data.valueRanges?.[0]?.values;
             const shotsHeader = shotsDataValues?.[0] || []; // This is the UUID row
+            console.log("useSheetsData: shotsHeader (UUID row):", shotsHeader);
             const shotIdUuid = shotsHeader?.[0];
             const shotCodeUuid = shotsHeader?.[1];
+            console.log("useSheetsData: shotIdUuid:", shotIdUuid, "shotCodeUuid:", shotCodeUuid);
 
             const finalFields = [
                 // Manually prepend fields that are not in the FIELDS sheet but are in the Shots sheet.
                 { id: shotIdUuid, label: 'Shot ID', type: 'text', editable: false },
-                { id: shotCodeUuid, label: 'Shot Code', type: 'text', editable: false },
+                { id: shotCodeUuid, label: 'Shot Code', type: 'text', editable: true }, // Set shot_code as editable
                 ...parsedFields.filter(f => f.id !== shotIdUuid && f.id !== shotCodeUuid)
             ];
 
@@ -71,6 +73,7 @@ const useSheetsData = (spreadsheetId) => {
                 return acc;
             }, {});
             setIdToColIndex(newIdToColIndex);
+            console.log("useSheetsData: idToColIndex:", newIdToColIndex);
 
             setFields(finalFields);
             setSheets(shotsWithIds);
@@ -159,4 +162,4 @@ const useSheetsData = (spreadsheetId) => {
     return { sheets, setSheets, fields, shotsHeader, loading, error, refreshData: () => fetchSheetsData(token), updateFieldOptions, idToColIndex };
 };
 
-export default useSheetsData;
+export { useSheetsData };

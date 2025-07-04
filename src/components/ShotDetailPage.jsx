@@ -1,86 +1,164 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import ShotDetailRow from './ShotDetailRow';
 import { AuthContext } from '../AuthContext';
 import { updateCell } from '../api/updateCell';
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Container,
+  CircularProgress,
+  Alert,
+  MenuItem,
+  Select,
+  InputLabel,
+  FormControl
+} from '@mui/material';
 
-const spreadsheetId = import.meta.env.VITE_GOOGLE_SHEET_ID;
-const sheetName = 'Shots';
+const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 
 const ShotDetailPage = ({ shots, fields }) => {
-    const { shotId } = useParams();
-    const [shot, setShot] = useState(null);
-    const { token } = useContext(AuthContext);
+  const { shotId } = useParams();
+  const { token, refreshData } = useContext(AuthContext); // Assuming refreshData is available from AuthContext or passed down
+  const [shot, setShot] = useState(null);
+  const [editValues, setEditValues] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
-    useEffect(() => {
-        const currentShot = shots.find(s => String(s.id) === String(shotId));
-        setShot(currentShot);
-    }, [shotId, shots]);
+  useEffect(() => {
+    const currentShot = shots.find(s => String(s.shot_id) === String(shotId));
+    setShot(currentShot);
+    if (currentShot) {
+      const initialEditValues = {};
+      fields.forEach(field => {
+        initialEditValues[field.id] = currentShot[field.id] || '';
+      });
+      setEditValues(initialEditValues);
+    }
+  }, [shotId, shots, fields]);
 
-    const handleSave = async (fieldId, value) => {
-        if (!shot || !token) {
-            alert('Cannot save. No shot data or user is not authenticated.');
-            return;
-        }
+  const handleChange = (fieldId, value) => {
+    setEditValues(prev => ({
+      ...prev,
+      [fieldId]: value,
+    }));
+  };
 
-        // スプレッドシート上の行インデックスを見つける (データ行は2行目からなので+2)
-        const dataRowIndex = shots.findIndex(s => s.id === shot.id);
-        if (dataRowIndex === -1) {
-            console.error("Could not find row index for shot");
-            alert("Error: Could not find the shot's row index.");
-            return;
-        }
-        const sheetRowIndex = dataRowIndex + 2; // +1 for 1-based index, +1 for header row
-
-        // スプレッドシート上の列インデックスを見つける
-        const sheetColumnIndex = fields.findIndex(f => f.id === fieldId);
-        if (sheetColumnIndex === -1) {
-            console.error(`Could not find column index for field: ${fieldId}`);
-            alert(`Error: Could not find the column index for ${fieldId}.`);
-            return;
-        }
-
-        try {
-            await updateCell(spreadsheetId, sheetName, sheetRowIndex, sheetColumnIndex, value, token);
-            // ローカルのstateを更新して即時反映
-            const updatedShot = { ...shot, [fieldId]: value };
-            setShot(updatedShot);
-            
-            // TODO: この変更をAppコンポーネントの全体stateに反映させる必要があります。
-            // 現状では、このページ内でのみ変更が反映されます。
-            console.log('Update successful locally. State management for global updates is needed.');
-
-        } catch (error) {
-            console.error('Failed to update cell:', error);
-            alert(`Error updating sheet: ${error.message}`);
-        }
-    };
-
-    if (!shot) {
-        return (
-             <div className="text-center p-8">
-                <p>Loading shot details or shot not found...</p>
-                <Link to="/" className="text-blue-500 hover:underline mt-4 inline-block">Back to list</Link>
-            </div>
-        );
+  const handleSave = async (fieldId) => {
+    if (!shot || !token) {
+      setSaveError('Cannot save. No shot data or user is not authenticated.');
+      return;
     }
 
+    setSaving(true);
+    setSaveError(null);
+    setSaveSuccess(false);
+
+    const newValue = editValues[fieldId];
+
+    // Find the row index in the Google Sheet (assuming header is row 1, UUIDs are row 2, data starts row 3)
+    const originalShotIndex = shots.findIndex(s => String(s.shot_id) === String(shot.shot_id));
+    if (originalShotIndex === -1) {
+      setSaveError("Error: Could not find the shot's row in the sheet data.");
+      setSaving(false);
+      return;
+    }
+    const sheetRowIndex = originalShotIndex + 3; // +1 for 1-based, +1 for header, +1 for UUID row
+
+    // Find the column index in the Google Sheet
+    const fieldColumnIndex = fields.findIndex(f => f.id === fieldId);
+    if (fieldColumnIndex === -1) {
+      setSaveError(`Error: Could not find column for field: ${fieldId}.`);
+      setSaving(false);
+      return;
+    }
+    const columnLetter = String.fromCharCode('A'.charCodeAt(0) + fieldColumnIndex);
+    const range = `Shots!${columnLetter}${sheetRowIndex}`;
+
+    try {
+      await updateCell(spreadsheetId, token, range, newValue);
+      setShot(prevShot => ({ ...prevShot, [fieldId]: newValue }));
+      setSaveSuccess(true);
+      // Optionally, refresh all sheets data to ensure consistency across the app
+      // if (refreshData) refreshData();
+    } catch (err) {
+      console.error('Failed to update cell:', err);
+      setSaveError(err.message || 'Failed to save data.');
+    } finally {
+      setSaving(false);
+      setTimeout(() => setSaveSuccess(false), 2000); // Hide success message after 2 seconds
+    }
+  };
+
+  if (!shot) {
     return (
-        <div className="p-4 max-w-4xl mx-auto">
-            <Link to="/" className="text-blue-500 hover:underline mb-4 inline-block">&larr; Back to Shot List</Link>
-            <h1 className="text-3xl font-bold mb-4">Shot Detail: {shot.id}</h1>
-            <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-4">
-                {fields.map(field => (
-                    <ShotDetailRow
-                        key={field.id}
-                        field={field}
-                        value={shot[field.id] || ''}
-                        onSave={handleSave}
-                    />
-                ))}
-            </div>
-        </div>
+      <Container maxWidth="md" sx={{ mt: 4, textAlign: 'center' }}>
+        <CircularProgress />
+        <Typography variant="h6" sx={{ mt: 2 }}>Loading shot details or shot not found...</Typography>
+        <Button component={Link} to="/" variant="outlined" sx={{ mt: 3 }}>
+          Back to Shot List
+        </Button>
+      </Container>
     );
+  }
+
+  return (
+    <Container maxWidth="md" sx={{ mt: 4 }}>
+      <Button component={Link} to="/" variant="outlined" sx={{ mb: 3 }}>
+        &larr; Back to Shot List
+      </Button>
+      <Typography variant="h4" component="h1" gutterBottom>
+        Shot Detail: {shot.shot_code || shot.shot_id}
+      </Typography>
+      <Box sx={{ bgcolor: 'background.paper', p: 4, borderRadius: 2, boxShadow: 3 }}>
+        {fields.map(field => (
+          <FormControl fullWidth margin="normal" key={field.id}>
+            {field.type === 'select' ? (
+              <>
+                <InputLabel id={`${field.id}-label`}>{field.label}</InputLabel>
+                <Select
+                  labelId={`${field.id}-label`}
+                  id={field.id}
+                  name={field.id}
+                  value={editValues[field.id] || ''}
+                  onChange={(e) => handleChange(field.id, e.target.value)}
+                  onBlur={() => field.editable && handleSave(field.id)}
+                  label={field.label}
+                  disabled={!field.editable || saving}
+                >
+                  {field.options && field.options.split(',').map(option => (
+                    <MenuItem key={option} value={option.trim()}>
+                      {option.trim()}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </>
+            ) : (
+              <TextField
+                label={field.label}
+                name={field.id}
+                value={editValues[field.id] || ''}
+                onChange={(e) => handleChange(field.id, e.target.value)}
+                onBlur={() => field.editable && handleSave(field.id)}
+                fullWidth
+                margin="normal"
+                type={field.type === 'number' ? 'number' : 'text'}
+                disabled={!field.editable || saving}
+                InputProps={{
+                  readOnly: !field.editable,
+                }}
+              />
+            )}
+          </FormControl>
+        ))}
+        {saving && <CircularProgress size={24} sx={{ mt: 2 }} />}
+        {saveError && <Alert severity="error" sx={{ mt: 2 }}>{saveError}</Alert>}
+        {saveSuccess && <Alert severity="success" sx={{ mt: 2 }}>Saved successfully!</Alert>}
+      </Box>
+    </Container>
+  );
 };
 
 export default ShotDetailPage;

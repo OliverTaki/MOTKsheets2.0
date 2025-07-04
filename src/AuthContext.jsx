@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }) => {
                 });
                 setTokenClient(client);
                 setIsInitialized(true);
-                console.log("Google Identity Services client initialized.");
+                console.log("Google Identity Services client initialized. isInitialized:", true);
             } catch (e) {
                 console.error("Error initializing GIS client:", e);
                 setError(e);
@@ -48,17 +48,20 @@ export const AuthProvider = ({ children }) => {
             }
         };
 
+        const script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+
         if (window.google && window.google.accounts) {
+            // If script is already loaded, initialize immediately
             initializeGis();
+        } else if (script) {
+            // If script tag exists but not loaded, wait for it
+            script.addEventListener('load', initializeGis);
+            return () => script.removeEventListener('load', initializeGis);
         } else {
-            const script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
-            if (script) {
-                script.addEventListener('load', initializeGis);
-                return () => script.removeEventListener('load', initializeGis);
-            } else {
-                setError({ message: "GSI script tag not found." });
-                setIsInitialized(true);
-            }
+            // If script tag doesn't exist, something is wrong
+            console.error("GSI script tag not found in the document.");
+            setError({ message: "Google Identity Services script tag not found. Please ensure it's included in index.html." });
+            setIsInitialized(true);
         }
     }, [CLIENT_ID, SCOPES]);
 

@@ -2,13 +2,14 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import React, { useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import useSheetsData from '../hooks/useSheetsData';
+import { useSheetsData } from '../hooks/useSheetsData';
 import usePagesData from '../hooks/usePagesData';
 import ShotTable from './ShotTable';
 import Toolbar from './Toolbar';
 import LoginButton from './LoginButton';
 import { AuthContext } from '../AuthContext';
 import ShotDetailPage from './ShotDetailPage';
+import AddShotPage from './AddShotPage'; // Import the new component
 import { appendField } from '../api/appendField';
 import { updateCell } from '../api/updateCell';
 import { updateNonUuidIds } from '../api/updateNonUuidIds';
@@ -81,8 +82,6 @@ const MainView = ({
   );
 };
 
-const NewShotPage = () => <div className="p-8"><h2>Add New Shot (WIP)</h2></div>;
-
 const theme = createTheme({
   palette: {
     mode: 'dark',
@@ -122,8 +121,13 @@ export const AppContainer = () => {
   }, [fields]);
 
   useEffect(() => {
+    console.log(`AppContainer useEffect: isInitialized=${isInitialized}, fieldsLoading=${fieldsLoading}, pagesLoading=${pagesLoading}`);
     if (isInitialized && !fieldsLoading && !pagesLoading) {
       setIsAppReady(true);
+      console.log("App is ready!");
+    } else {
+      setIsAppReady(false);
+      console.log("App is NOT ready.");
     }
   }, [isInitialized, fieldsLoading, pagesLoading]);
 
@@ -351,8 +355,9 @@ export const AppContainer = () => {
                   onColumnOrderChange={handleColumnOrderChange}
                 />
               } />
-              <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={fields} />} />
-              <Route path="/shots/new" element={<NewShotPage />} />
+              <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={orderedFields} />} />
+              <Route path="/shots/new" element={<AddShotPage />} />
+              <Route path="/shots/new" element={<AddShotPage />} />
             </Routes>
           )}
         </main>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   DndContext,
@@ -167,10 +167,14 @@ const ShotTable = ({ shots, fields, columnWidths, onColumnResize, onCellSave, on
         };
     }, [resizingFieldId, onColumnResize]);
 
+    const totalColumnWidth = useMemo(() => {
+        return fields.reduce((sum, field) => sum + (columnWidths[field.id] || 150), 0);
+    }, [fields, columnWidths]);
+
     return (
         <TableContainer component={Paper} sx={{ overflow: 'auto', margin: 0 }}>
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <Table stickyHeader sx={{ tableLayout: 'fixed' }} aria-label="shot table">
+                <Table stickyHeader sx={{ tableLayout: 'fixed', minWidth: totalColumnWidth }} aria-label="shot table">
                     <TableHead>
                         <TableRow>
                             <SortableContext items={fields.map(f => f.id)} strategy={horizontalListSortingStrategy}>
@@ -252,11 +256,7 @@ const ShotTable = ({ shots, fields, columnWidths, onColumnResize, onCellSave, on
                                                     {field.label.toLowerCase() === 'thumbnail' ? (
                                                                                                             cellValue && <img src={cellValue.replace("via.placeholder.com", "placehold.co")} alt={`Thumbnail for ${shot.shot_code}`} style={{ maxHeight: '64px', width: 'auto', objectFit: 'contain', display: 'block' }} onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/120x68/EFEFEF/AAAAAA?text=Error'; }} />
                                                     ) : field.id === 'shot_code' ? (
-                                                        <Link to={`/shot/${shot.shot_id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                                                            <Typography variant="body2" color="primary" sx={{ '&:hover': { textDecoration: 'underline' } }}>
-                                                                {cellValue}
-                                                            </Typography>
-                                                        </Link>
+                                                        <Typography variant="body2" color="text.primary" title={cellValue}>{cellValue}</Typography>
                                                     ) : (
                                                         <Typography variant="body2" color="text.primary" title={cellValue}>{cellValue}</Typography>
                                                     )}
