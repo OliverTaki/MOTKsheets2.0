@@ -44,6 +44,11 @@ Our immediate priority is to resolve the outstanding issues with the "Pages" fea
 *   **Form Fields:** The form will have fields for all the editable columns in the "Shots" sheet.
 *   **API Integration:** The form will use the `appendRow.js` API function to add a new row to the "Shots" sheet.
 *   **State Management:** The application's state will be updated to reflect the new shot, and the user will be redirected to the main shot table after the new shot is added.
+*   **Fixes Implemented:**
+    *   Corrected `appendRow` arguments in `AddShotPage.jsx`.
+    *   Hid the auto-generated "Shot ID" field from the form.
+    *   Ensured correct placement of `shot_id` in the sheet.
+    *   Resolved application freezing issue when adding shots.
 
 ### 3. Implement the "Shot Detail" Page
 
@@ -70,6 +75,10 @@ By following this plan, we will be able to complete the "Pages" feature and then
 ├── src
 │   ├── App.jsx
 │   ├── AuthContext.jsx
+│   ├── index.css
+│   ├── main.jsx
+│   ├── theme.css
+│   ├── vite-env.d.ts
 │   ├── api
 │   │   ├── appendField.js
 │   │   ├── appendPage.js
@@ -77,10 +86,12 @@ By following this plan, we will be able to complete the "Pages" feature and then
 │   │   ├── batchUpdate.js
 │   │   ├── deletePage.js
 │   │   ├── deleteRows.js
+│   │   ├── sheetUtils.js
 │   │   ├── updateCell.js
 │   │   ├── updateNonUuidIds.js
-│   │   └─�� updatePage.js
+│   │   └── updatePage.js
 │   ├── components
+│   │   ├── AddShotPage.jsx
 │   │   ├── AppContainer.jsx
 │   │   ├── FieldManager.jsx
 │   │   ├── FilterManager.jsx
@@ -90,14 +101,11 @@ By following this plan, we will be able to complete the "Pages" feature and then
 │   │   ├── PageView.jsx
 │   │   ├── SavedFilters.jsx
 │   │   ├── ShotDetailPage.jsx
-│   │   ├── ShotDetailRow.jsx
 │   │   ├── ShotTable.jsx
 │   │   └── Toolbar.jsx
 │   ├── hooks
 │   │   ├── usePagesData.js
 │   │   └── useSheetsData.js
-│   ├── index.css
-│   ├── main.jsx
 │   ├── mock
 │   │   ├── fields.json
 │   │   └── shots.json
