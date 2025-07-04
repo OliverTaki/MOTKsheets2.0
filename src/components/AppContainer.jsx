@@ -7,7 +7,7 @@ import usePagesData from '../hooks/usePagesData';
 import ShotTable from './ShotTable';
 import Toolbar from './Toolbar';
 import LoginButton from './LoginButton';
-import { AuthContext } from '../AuthContext';
+import { AuthContext, AuthProvider } from '../AuthContext';
 import ShotDetailPage from './ShotDetailPage';
 import AddShotPage from './AddShotPage'; // Import the new component
 import { appendField } from '../api/appendField';
@@ -17,12 +17,14 @@ import { appendPage } from '../api/appendPage';
 import { updatePage } from '../api/updatePage';
 import { deletePage } from '../api/deletePage';
 import { v4 as uuidv4 } from 'uuid';
+import UpdateNonUuidIdsDialog from './UpdateNonUuidIdsDialog';
 
 const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 
 const MainView = ({
   sheets,
-  fields,
+  displayedFields,
+  allAvailableFields,
   pages,
   columnWidths,
   onColumnResize,
@@ -37,7 +39,6 @@ const MainView = ({
   onAddField,
   onCellSave,
   onUpdateFieldOptions,
-  onUpdateNonUuidIds,
   idToColIndex,
   onLoadView,
   onSaveView,
@@ -45,11 +46,12 @@ const MainView = ({
   onDeleteView,
   loadedPageId,
   onColumnOrderChange,
+  onOpenUpdateNonUuidIdsDialog,
 }) => {
   return (
     <div className="flex flex-col gap-4">
       <Toolbar
-        fields={fields}
+        fields={allAvailableFields}
         pages={pages}
         activeFilters={activeFilters}
         onFilterChange={onFilterChange}
@@ -60,17 +62,17 @@ const MainView = ({
         visibleFieldIds={visibleFieldIds}
         onVisibilityChange={onVisibilityChange}
         onAddField={onAddField}
-        onUpdateNonUuidIds={onUpdateNonUuidIds}
         onLoadView={onLoadView}
         onSaveView={onSaveView}
         onSaveViewAs={onSaveViewAs}
         onDeleteView={onDeleteView}
         loadedPageId={loadedPageId}
+        onOpenUpdateNonUuidIdsDialog={onOpenUpdateNonUuidIdsDialog}
       />
       <div className="shadow-md sm:rounded-lg border border-gray-200 dark:border-gray-700">
         <ShotTable
           shots={sheets}
-          fields={fields.filter(f => visibleFieldIds.includes(f.id))}
+          fields={displayedFields.filter(f => visibleFieldIds.includes(f.id))}
           columnWidths={columnWidths}
           onColumnResize={onColumnResize}
           onCellSave={(shotId, fieldId, newValue) => onCellSave(shotId, fieldId, newValue, idToColIndex)}
@@ -103,6 +105,7 @@ export const AppContainer = () => {
   const [orderedFields, setOrderedFields] = useState([]);
   const [columnOrder, setColumnOrder] = useState([]);
   const [isInitialViewLoaded, setIsInitialViewLoaded] = useState(false);
+  const [isUpdateNonUuidIdsDialogOpen, setUpdateNonUuidIdsDialogOpen] = useState(false);
 
   const handleLoadView = useCallback((page) => {
     if (!page) return;
@@ -145,7 +148,7 @@ export const AppContainer = () => {
       }
       setIsInitialViewLoaded(true);
     }
-  }, [isAppReady, pages, fields, handleLoadView, isInitialViewLoaded]);
+  }, [isAppReady, pages, fields, handleLoadView, isInitialViewLoaded, loadedPageId]);
 
   const processedShots = useMemo(() => {
     let filtered = sheets;
@@ -196,9 +199,21 @@ export const AppContainer = () => {
   const handleAddField = useCallback(async (newFieldDetails) => {
     if (!token) { alert("Authentication required."); return; }
     try {
-      await appendField(spreadsheetId, token, newFieldDetails, fields);
-      alert(`Field "${newFieldDetails.label}" added successfully!`);
-      if (refreshData) refreshData();
+      const newField = await appendField(spreadsheetId, token, newFieldDetails, fields);
+      alert(`Field "${newField.label}" added successfully!`);
+
+      // Instead of a full refresh, which can be slow and reset the UI,
+      // we can optimistically update the local state. This makes the app feel faster.
+      const newFields = [...fields, newField];
+      setOrderedFields(newFields);
+      setVisibleFieldIds(prev => [...prev, newField.id]);
+
+      // We still need to trigger a background refresh to get the updated
+      // idToColIndex map, which is crucial for editing cells in the new column.
+      if (refreshData) {
+        refreshData();
+      }
+
     } catch (err) {
       console.error("Failed to add field:", err);
       alert(`Error: ${err.message}`);
@@ -236,21 +251,6 @@ export const AppContainer = () => {
       alert(`Error: ${err.message}`);
     }
   }, [token, sheets, setSheets]);
-
-  const handleUpdateNonUuidIds = useCallback(async () => {
-    if (!token) { alert("Authentication required."); return; }
-    if (!confirm("This will replace all non-UUID Shot and Field IDs with new UUIDs. This action is irreversible and may break external references. Are you sure?")) {
-      return;
-    }
-    try {
-      await updateNonUuidIds(spreadsheetId, token, sheets, fields);
-      alert("Non-UUID IDs updated successfully!");
-      refreshData();
-    } catch (err) {
-      console.error("Failed to update non-UUID IDs:", err);
-      alert(`Error: ${err.message}`);
-    }
-  }, [spreadsheetId, token, sheets, fields, refreshData]);
 
   const getCurrentView = () => ({
     columnWidths,
@@ -317,7 +317,8 @@ export const AppContainer = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <div className="App bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col">
+      <AuthProvider sheets={sheets} fields={fields} refreshData={refreshData}>
+        <div className="App bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col">
         <header className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 shadow z-10">
           <h1 className="text-2xl font-bold">MOTK Sheets 2.0</h1>
           <LoginButton />
@@ -330,7 +331,8 @@ export const AppContainer = () => {
               <Route path="/" element={
                 <MainView
                   sheets={processedShots}
-                  fields={orderedFields}
+                  displayedFields={orderedFields}
+                  allAvailableFields={fields}
                   pages={pages}
                   columnWidths={columnWidths}
                   onColumnResize={handleColumnResize}
@@ -345,7 +347,7 @@ export const AppContainer = () => {
                   onAddField={handleAddField}
                   onCellSave={handleCellSave}
                   onUpdateFieldOptions={updateFieldOptions}
-                  onUpdateNonUuidIds={handleUpdateNonUuidIds}
+                  onUpdateNonUuidIds={() => setUpdateNonUuidIdsDialogOpen(true)}
                   idToColIndex={idToColIndex}
                   onLoadView={handleLoadView}
                   onSaveView={handleSaveView}
@@ -353,6 +355,7 @@ export const AppContainer = () => {
                   onDeleteView={handleDeleteView}
                   loadedPageId={loadedPageId}
                   onColumnOrderChange={handleColumnOrderChange}
+                  onOpenUpdateNonUuidIdsDialog={() => setUpdateNonUuidIdsDialogOpen(true)}
                 />
               } />
               <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={orderedFields} />} />
@@ -361,7 +364,12 @@ export const AppContainer = () => {
             </Routes>
           )}
         </main>
+        <UpdateNonUuidIdsDialog
+          open={isUpdateNonUuidIdsDialogOpen}
+          onClose={() => setUpdateNonUuidIdsDialogOpen(false)}
+        />
       </div>
+      </AuthProvider>
     </ThemeProvider>
   );
 };

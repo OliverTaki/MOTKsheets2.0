@@ -48,6 +48,7 @@ const useSheetsData = (spreadsheetId) => {
             }
 
             const parsedFields = parseFields(fieldsData);
+            console.log("useSheetsData: parsedFields (from parseFields):", parsedFields);
             const shotsDataValues = data.valueRanges?.[0]?.values;
             const shotsHeader = shotsDataValues?.[0] || []; // This is the UUID row
             console.log("useSheetsData: shotsHeader (UUID row):", shotsHeader);
@@ -76,6 +77,7 @@ const useSheetsData = (spreadsheetId) => {
             console.log("useSheetsData: idToColIndex:", newIdToColIndex);
 
             setFields(finalFields);
+            console.log("useSheetsData: finalFields (set to state):", finalFields);
             setSheets(shotsWithIds);
             console.log('Successfully fetched and parsed data.');
         } catch (err) {

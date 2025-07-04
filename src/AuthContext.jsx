@@ -3,7 +3,7 @@ import React, { createContext, useState, useEffect, useCallback } from 'react';
 export const AuthContext = createContext(null);
 const TOKEN_STORAGE_KEY = 'google_auth_token';
 
-export const AuthProvider = ({ children }) => {
+export const AuthProvider = ({ children, sheets, fields, refreshData }) => {
     const [token, setToken] = useState(() => localStorage.getItem(TOKEN_STORAGE_KEY)); // 初期値としてlocalStorageから読み込む
     const [isInitialized, setIsInitialized] = useState(false);
     const [error, setError] = useState(null);
@@ -99,7 +99,7 @@ export const AuthProvider = ({ children }) => {
         console.log('Local token cleared.');
     }, []);
 
-    const value = { token, signIn, signOut, isInitialized, error, clearToken };
+    const value = { token, signIn, signOut, isInitialized, error, clearToken, sheets, fields, refreshData };
 
     return (
         <AuthContext.Provider value={value}>

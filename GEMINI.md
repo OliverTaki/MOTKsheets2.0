@@ -21,6 +21,10 @@ We have been working on implementing a "Pages" feature that allows users to save
     *   Addressed a critical issue where the application would crash if the "PAGES" sheet contained corrupted data. The application now safely handles these errors and loads with the valid pages.
     *   Fixed a conflict between column resizing and reordering, where both actions would happen at the same time.
     *   Corrected the table height so that it is determined by its content, not the window size.
+    *   Fixed a bug where newly added fields were not appearing in the "Manage Fields" menu when an old view was loaded.
+    *   Fixed a bug where adding a new field would reset the current view.
+    *   Fixed a bug where the application would not load the saved view on reload.
+    *   Fixed a bug where the `FIELDS` sheet was not being parsed correctly, causing new fields to be ignored.
 
 ## Current Status and Known Issues
 
@@ -61,8 +65,8 @@ By following this plan, we will be able to complete the "Pages" feature and then
 
 ### 4. Non-UUID ID Update Refactoring
 
-*   **Button Hidden:** The "Update Non-UUID IDs" button has been temporarily hidden from the UI.
-*   **Refactor Functionality:** The existing `updateNonUuidIds` functionality will be refactored to provide a user-controlled interface. This will allow users to review and select specific non-UUID IDs to update, rather than performing an automatic update.
+*   **Button Visible for Testing:** The "Update Non-UUID IDs" button is now visible in the UI for testing purposes.
+*   **Debugging Field Parsing:** Added `console.log` statements to `src/hooks/useSheetsData.js` to inspect `parsedFields` and `finalFields` arrays during data fetching.
 
 ## Project Structure
 

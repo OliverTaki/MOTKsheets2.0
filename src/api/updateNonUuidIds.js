@@ -30,7 +30,30 @@ const getSheetIds = async (spreadsheetId, token) => {
  * @param {Array<object>} fields フィールド定義の配列
  * @returns {Promise<object>} Google Sheets APIからのレスポ1ンス
  */
-export const updateNonUuidIds = async (spreadsheetId, token, sheets, fields) => {
+export const getNonUuidIds = async (spreadsheetId, token, sheets, fields) => {
+    console.log("getNonUuidIds: Received sheets data:", sheets);
+    console.log("getNonUuidIds: Received fields data:", fields);
+    const nonUuidShotIds = [];
+    const nonUuidFieldIds = [];
+
+    sheets.forEach((shot) => {
+        console.log(`Checking shot ID: ${shot.shot_id}, isValidUUID: ${isValidUUID(shot.shot_id)}`);
+        if (!isValidUUID(shot.shot_id) || shot.shot_id === '') {
+            nonUuidShotIds.push(shot.shot_id);
+        }
+    });
+
+    fields.forEach((field) => {
+        console.log(`Checking field ID: ${field.id}, isValidUUID: ${isValidUUID(field.id)}`);
+        if (!isValidUUID(field.id) || field.id === '') {
+            nonUuidFieldIds.push(field.id);
+        }
+    });
+
+    return { nonUuidShotIds, nonUuidFieldIds };
+};
+
+export const updateNonUuidIds = async (spreadsheetId, token, sheets, fields, idsToUpdate) => {
     const requests = [];
     const sheetIds = await getSheetIds(spreadsheetId, token);
     const shotsSheetId = sheetIds.get('SHOTS');
@@ -42,47 +65,44 @@ export const updateNonUuidIds = async (spreadsheetId, token, sheets, fields) => 
 
     // ショットIDの更新
     sheets.forEach((shot, rowIndex) => {
-        // Google Sheetsの行は1から始まるため、ヘッダー行を考慮して+2
         const sheetRowIndex = rowIndex + 2; 
-        if (!isValidUUID(shot.shot_id)) {
+        console.log(`updateNonUuidIds: Checking shot ID: ${shot.shot_id}, isValidUUID: ${isValidUUID(shot.shot_id)}, idsToUpdate includes: ${idsToUpdate.includes(shot.shot_id)}`);
+        if ((!isValidUUID(shot.shot_id) || shot.shot_id === '') && idsToUpdate.includes(shot.shot_id)) {
             const newUuid = crypto.randomUUID();
+            console.log(`updateNonUuidIds: Shot - rowIndex: ${rowIndex}, sheetRowIndex: ${sheetRowIndex}, newUuid: ${newUuid}`);
             requests.push({
                 updateCells: {
                     rows: [{ values: [{ userEnteredValue: { stringValue: newUuid } }] }],
                     fields: "userEnteredValue",
                     start: {
                         sheetId: shotsSheetId,
-                        rowIndex: sheetRowIndex - 1, // APIは0-indexed
-                        // shot_idがどの列にあるかを見つける必要がある
-                        // 現状、shot_idは常に最初の列（A列）にあると仮定
+                        rowIndex: rowIndex + 2,
                         columnIndex: 0 
                     }
                 }
             });
-            // 関連するセルも更新する必要がある場合はここに追加
-            // 例: shot_codeがshot_idに依存している場合など
+            console.log("updateNonUuidIds: Shot - Added request:", requests[requests.length - 1]);
         }
     });
 
-    // フィールドIDの更新
     fields.forEach((field, fieldIndex) => {
-        // FIELDSシートの行は1から始まるため、ヘッダー行を考慮して+2
         const fieldSheetRowIndex = fieldIndex + 2;
-        if (!isValidUUID(field.id)) {
+        console.log(`updateNonUuidIds: Checking field ID: ${field.id}, isValidUUID: ${isValidUUID(field.id)}, idsToUpdate includes: ${idsToUpdate.includes(field.id)}`);
+        if ((!isValidUUID(field.id) || field.id === '') && idsToUpdate.includes(field.id)) {
             const newUuid = crypto.randomUUID();
+            console.log(`updateNonUuidIds: Field - fieldIndex: ${fieldIndex}, fieldSheetRowIndex: ${fieldSheetRowIndex}, newUuid: ${newUuid}`);
             requests.push({
                 updateCells: {
                     rows: [{ values: [{ userEnteredValue: { stringValue: newUuid } }] }],
                     fields: "userEnteredValue",
                     start: {
                         sheetId: fieldsSheetId,
-                        rowIndex: fieldSheetRowIndex - 1, // APIは0-indexed
-                        // field.idがどの列にあるかを見つける必要がある
-                        // 現状、field.idは常に最初の列（A列）にあると仮定
+                        rowIndex: fieldIndex + 2,
                         columnIndex: 0 
                     }
                 }
             });
+            console.log("updateNonUuidIds: Field - Added request:", requests[requests.length - 1]);
         }
     });
 

@@ -26,6 +26,7 @@ const Toolbar = ({
     onSaveViewAs,
     onDeleteView,
     loadedPageId,
+    onOpenUpdateNonUuidIdsDialog,
 }) => {
     const navigate = useNavigate();
     const [isManageViewsDialogOpen, setManageViewsDialogOpen] = useState(false);
@@ -120,15 +121,13 @@ const Toolbar = ({
                     >
                         Add New Shot
                     </Button>
-                    {/*
                     <Button
                         variant="outlined"
-                        onClick={onUpdateNonUuidIds}
+                        onClick={onOpenUpdateNonUuidIdsDialog}
                         sx={{ borderColor: 'warning.main', color: 'warning.main', '&:hover': { borderColor: 'warning.dark', color: 'warning.dark' } }}
                     >
                         Update Non-UUID IDs
                     </Button>
-                    */}
                 </div>
             </div>
             <ManageViewsDialog
