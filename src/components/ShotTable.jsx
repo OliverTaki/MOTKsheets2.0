@@ -163,11 +163,27 @@ const ShotTable = ({ shots, fields, visibleFieldIds, columnWidths, onColumnResiz
     }, [fields, columnWidths]);
 
     return (
-        <TableContainer component={Paper} sx={{ overflow: 'auto', margin: 0 }}>
+        <TableContainer
+            component={Paper}
+            sx={{
+                display: 'inline-block',
+                overflowX: 'auto',
+                overflowY: 'visible',
+                flex: 'none',
+                alignSelf: 'flex-start',
+            }}
+        >
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <Table stickyHeader sx={{ tableLayout: 'fixed', minWidth: totalColumnWidth }} aria-label="shot table">
-                    <TableHead>
-                        <TableRow>
+                    <TableHead sx={{ '& th': { bgcolor: 'background.paper' } }}>
+                        <TableRow
+                            sx={{
+                                position: 'sticky',
+                                top: 0,
+                                zIndex: 3,
+                                bgcolor: 'background.paper',
+                            }}
+                        >
                             <SortableContext items={fields.map(f => f.id)} strategy={horizontalListSortingStrategy}>
                                 {fields.map((field) => (
                                     visibleFieldIds.includes(field.id) && <SortableHeaderCell key={field.id} field={field} columnWidths={columnWidths} handleColResizeMouseDown={handleColResizeMouseDown} />
