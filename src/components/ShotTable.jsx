@@ -162,7 +162,6 @@ const ShotTable = ({ shots, fields, visibleFieldIds, columnWidths, onColumnResiz
         return fields.reduce((sum, field) => sum + (columnWidths[field.id] || 150), 0);
     }, [fields, columnWidths]);
 
-    const HDR = 56;
     return (
         <TableContainer
             component={Paper}
@@ -177,32 +176,6 @@ const ShotTable = ({ shots, fields, visibleFieldIds, columnWidths, onColumnResiz
         >
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <Table stickyHeader sx={{ tableLayout: 'fixed' }} aria-label="shot table">
-                    <TableHead>
-                        <TableRow
-                            sx={{
-                                position: 'sticky',
-                                top: 0,
-                                zIndex: 3,
-                                bgcolor: 'background.paper',
-                            }}
-                        >
-                            {/* top header cells */}
-                        </TableRow>
-                        <TableRow
-                            sx={{
-                                position: 'sticky',
-                                top: `${HDR}px`,
-                                zIndex: 2,
-                                bgcolor: 'background.paper',
-                            }}
-                        >
-                            <SortableContext items={fields.map(f => f.id)} strategy={horizontalListSortingStrategy}>
-                                {fields.map((field) => (
-                                    visibleFieldIds.includes(field.id) && <SortableHeaderCell key={field.id} field={field} columnWidths={columnWidths} handleColResizeMouseDown={handleColResizeMouseDown} />
-                                ))}
-                            </SortableContext>
-                        </TableRow>
-                    </TableHead>
                     <TableBody>
                         {shots.map((shot, rowIndex) => (
                             <TableRow key={shot.shot_id || rowIndex} hover>
