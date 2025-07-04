@@ -25,6 +25,7 @@ We have been working on implementing a "Pages" feature that allows users to save
     *   Fixed a bug where adding a new field would reset the current view.
     *   Fixed a bug where the application would not load the saved view on reload.
     *   Fixed a bug where the `FIELDS` sheet was not being parsed correctly, causing new fields to be ignored.
+    *   Implemented advanced filtering with type-specific operators and inputs (checkbox lists for select fields, text input for image fields).
 
 ## Current Status and Known Issues
 

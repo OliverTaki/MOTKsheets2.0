@@ -1,53 +1,20 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import Button from '@mui/material/Button';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
-import Checkbox from '@mui/material/Checkbox';
-import FormControlLabel from '@mui/material/FormControlLabel';
 import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import Typography from '@mui/material/Typography';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Select from '@mui/material/Select';
+import TextField from '@mui/material/TextField';
+import Box from '@mui/material/Box';
 
-const FilterSection = ({ title, options, selectedValues, onFilterChange }) => {
-    const [expanded, setExpanded] = useState(true);
-
-    const handleChange = () => {
-        setExpanded(!expanded);
-    };
-
-    return (
-        <Accordion expanded={expanded} onChange={handleChange} sx={{ boxShadow: 'none', '&:before': { display: 'none' }, '&.Mui-expanded': { margin: '0' } }}>
-            <AccordionSummary
-                expandIcon={<ExpandMoreIcon />}
-                aria-controls={`${title}-content`}
-                id={`${title}-header`}
-                sx={{ minHeight: '48px', '&.Mui-expanded': { minHeight: '48px' }, '.MuiAccordionSummary-content': { margin: '12px 0' } }}
-            >
-                <Typography variant="subtitle1">{title}</Typography>
-            </AccordionSummary>
-            <AccordionDetails sx={{ padding: '0 16px 8px' }}>
-                {options.map(option => (
-                    <FormControlLabel
-                        key={option}
-                        control={
-                            <Checkbox
-                                size="small"
-                                checked={selectedValues.includes(option)}
-                                onChange={() => onFilterChange(option)}
-                            />
-                        }
-                        label={<Typography variant="body2">{option}</Typography>}
-                    />
-                ))}
-            </AccordionDetails>
-        </Accordion>
-    );
-};
-
-const FilterManager = ({ fields, allShots, activeFilters, onFilterChange }) => {
+const FilterManager = ({ fields, activeFilters, onFilterChange }) => {
     const [anchorEl, setAnchorEl] = useState(null);
     const open = Boolean(anchorEl);
 
@@ -59,30 +26,38 @@ const FilterManager = ({ fields, allShots, activeFilters, onFilterChange }) => {
         setAnchorEl(null);
     };
 
-    const filterableFields = fields.filter(f => f.type === 'select' || (f.options && f.options.trim() !== ''));
+    const filterableFields = fields.filter(f => f.id !== 'shot_id' && f.label.toLowerCase() !== 'shot id');
 
-    const getUniqueValues = (fieldId) => {
-        const field = fields.find(f => f.id === fieldId);
-        if (field && field.options) {
-            return field.options.split(',').map(s => s.trim());
+    const handleToggleFilter = (fieldId, isChecked) => {
+        if (isChecked) {
+            // Add a default filter rule when checked
+            onFilterChange(fieldId, { operator: 'is', value: '' });
+        } else {
+            // Remove the filter rule when unchecked
+            const newFilters = { ...activeFilters };
+            delete newFilters[fieldId];
+            onFilterChange(null, newFilters); // Pass null for fieldId to indicate a full filter object update
         }
-        return [...new Set(allShots.map(shot => shot[fieldId]).filter(Boolean))];
     };
 
-    const handleCheckboxChange = (fieldId, value) => {
-        const currentSelection = activeFilters[fieldId] || [];
-        const newSelection = currentSelection.includes(value)
-            ? currentSelection.filter(v => v !== value)
-            : [...currentSelection, value];
-        onFilterChange(fieldId, newSelection);
+    const handleRuleChange = (fieldId, key, value) => {
+        onFilterChange(fieldId, { ...activeFilters[fieldId], [key]: value });
     };
 
     const clearAllFilters = () => {
         onFilterChange(null, {});
-        handleClose(); // Close menu after clearing filters
+        handleClose();
     };
 
-    const activeFilterCount = Object.values(activeFilters).flat().length;
+    const activeFilterCount = Object.keys(activeFilters).length;
+
+    const getOperators = (fieldType) => {
+        if (fieldType === 'select') {
+            return ['is', 'is not'];
+        } else {
+            return ['is', 'is not', 'contains', 'does not contain'];
+        }
+    };
 
     return (
         <div>
@@ -120,9 +95,9 @@ const FilterManager = ({ fields, allShots, activeFilters, onFilterChange }) => {
                 }}
                 PaperProps={{
                     sx: {
-                        width: 280, // Fixed width for the filter menu
-                        maxHeight: 400, // Max height for scrollability
-                        bgcolor: 'background.paper', // Use MUI theme background
+                        width: 350,
+                        maxHeight: 500,
+                        bgcolor: 'background.paper',
                         border: '1px solid',
                         borderColor: 'divider',
                     },
@@ -132,15 +107,57 @@ const FilterManager = ({ fields, allShots, activeFilters, onFilterChange }) => {
                     <Typography variant="h6">Filter by</Typography>
                     <Button onClick={clearAllFilters} size="small">Clear all</Button>
                 </MenuItem>
-                <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+                <div style={{ maxHeight: 400, overflowY: 'auto' }}>
                     {filterableFields.map(field => (
-                        <FilterSection
-                            key={field.id}
-                            title={field.label}
-                            options={getUniqueValues(field.id)}
-                            selectedValues={activeFilters[field.id] || []}
-                            onFilterChange={(value) => handleCheckboxChange(field.id, value)}
-                        />
+                        <Accordion key={field.id} sx={{ boxShadow: 'none', '&:before': { display: 'none' } }}>
+                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox
+                                            checked={!!activeFilters[field.id]}
+                                            onChange={(e) => handleToggleFilter(field.id, e.target.checked)}
+                                            onClick={(e) => e.stopPropagation()} // Prevent accordion from expanding when clicking checkbox
+                                        />
+                                    }
+                                    label={<Typography variant="subtitle1">{field.label}</Typography>}
+                                    sx={{ margin: 0, '& .MuiFormControlLabel-label': { marginLeft: '4px' } }}
+                                />
+                            </AccordionSummary>
+                            <AccordionDetails>
+                                {activeFilters[field.id] && (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <Select
+                                            value={activeFilters[field.id].operator}
+                                            onChange={(e) => handleRuleChange(field.id, 'operator', e.target.value)}
+                                            size="small"
+                                        >
+                                            {getOperators(field.type).map(op => (
+                                                <MenuItem key={op} value={op}>{op}</MenuItem>
+                                            ))}
+                                        </Select>
+                                        {field.type === 'select' ? (
+                                            <Select
+                                                value={activeFilters[field.id].value}
+                                                onChange={(e) => handleRuleChange(field.id, 'value', e.target.value)}
+                                                size="small"
+                                                sx={{ flexGrow: 1 }}
+                                            >
+                                                {(field.options || '').split(',').map(opt => (
+                                                    <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                                                ))}
+                                            </Select>
+                                        ) : (
+                                            <TextField
+                                                value={activeFilters[field.id].value}
+                                                onChange={(e) => handleRuleChange(field.id, 'value', e.target.value)}
+                                                size="small"
+                                                sx={{ flexGrow: 1 }}
+                                            />
+                                        )}
+                                    </Box>
+                                )}
+                            </AccordionDetails>
+                        </Accordion>
                     ))}
                 </div>
             </Menu>

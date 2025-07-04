@@ -164,15 +164,33 @@ export const AppContainer = () => {
 
   const processedShots = useMemo(() => {
     let filtered = sheets;
-    const activeFilterKeys = Object.keys(activeFilters).filter(key => activeFilters[key] && activeFilters[key].length > 0);
+    const activeFilterKeys = Object.keys(activeFilters);
+
     if (activeFilterKeys.length > 0) {
       filtered = sheets.filter(shot => {
         return activeFilterKeys.every(fieldId => {
-          const selectedValues = activeFilters[fieldId];
-          return selectedValues.includes(shot[fieldId]);
+          const rule = activeFilters[fieldId];
+          if (!rule) return true; // If filter is unchecked, don't apply it
+
+          const shotValue = String(shot[fieldId] || '').toLowerCase();
+          const filterValue = String(rule.value || '').toLowerCase();
+
+          switch (rule.operator) {
+            case 'is':
+              return shotValue === filterValue;
+            case 'is not':
+              return shotValue !== filterValue;
+            case 'contains':
+              return shotValue.includes(filterValue);
+            case 'does not contain':
+              return !shotValue.includes(filterValue);
+            default:
+              return true;
+          }
         });
       });
     }
+
     if (!sortKey) return filtered;
     return [...filtered].sort((a, b) => {
       const valA = a[sortKey];
@@ -196,8 +214,17 @@ export const AppContainer = () => {
   };
 
   const handleFilterChange = useCallback((fieldId, value) => {
-    if (fieldId === null) setActiveFilters({});
-    else setActiveFilters(prev => ({ ...prev, [fieldId]: value }));
+    setActiveFilters(prev => {
+      if (fieldId === null) { // Clear all filters
+        return {};
+      } else if (value === null) { // Remove filter for a specific field
+        const newFilters = { ...prev };
+        delete newFilters[fieldId];
+        return newFilters;
+      } else { // Set or update filter for a specific field
+        return { ...prev, [fieldId]: value };
+      }
+    });
   }, []);
 
   const handleVisibilityChange = useCallback((fieldId) => {
