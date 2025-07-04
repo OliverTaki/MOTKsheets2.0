@@ -16,10 +16,9 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import {
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-  TextField, Select, MenuItem, FormControl, InputLabel, IconButton, Box, Typography
-} from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TextField, Select, MenuItem, FormControl, InputLabel, IconButton, Box, Typography, Checkbox } from '@mui/material';
+
+import dayjs from 'dayjs';
 import EditIcon from '@mui/icons-material/Edit';
 
 const SortableHeaderCell = ({ field, columnWidths, handleColResizeMouseDown }) => {
@@ -84,7 +83,7 @@ const ShotTable = ({ shots, fields, visibleFieldIds, columnWidths, onColumnResiz
     const startColumnWidth = useRef(0);
     
     const [editingCell, setEditingCell] = useState(null);
-    const [editValue, setEditValue] = useState('');
+    const [value, setValue] = useState('');
     const inputRef = useRef(null);
 
     const sensors = useSensors(
@@ -119,34 +118,26 @@ const ShotTable = ({ shots, fields, visibleFieldIds, columnWidths, onColumnResiz
     };
 
     const handleCellClick = (shotId, fieldId, currentValue) => {
+        console.log("handleCellClick - shotId:", shotId, "fieldId:", fieldId, "currentValue:", currentValue);
         setEditingCell({ shotId, fieldId });
-        setEditValue(currentValue);
+        setValue(currentValue);
     };
 
-    const handleSave = () => {
+    const commit = () => {
         if (editingCell) {
-            onCellSave(editingCell.shotId, editingCell.fieldId, editValue);
+            let valueToSave = value;
+            // Parse MM/DD/YYYY and format to YYYY-MM-DD
+            const parsedDate = dayjs(value, 'MM/DD/YYYY');
+            if (parsedDate.isValid()) {
+                valueToSave = parsedDate.format('YYYY-MM-DD');
+            } else {
+                valueToSave = ''; // Save empty string if invalid
+            }
+            console.log("commit called. editingCell:", editingCell, "valueToSave:", valueToSave);
+            onCellSave(editingCell.shotId, editingCell.fieldId, valueToSave);
             setEditingCell(null);
         }
     };
-
-    const handleInputBlur = () => {
-        handleSave();
-    };
-
-    const handleInputKeyDown = (e) => {
-        if (e.key === 'Enter') {
-            handleSave();
-        } else if (e.key === 'Escape') {
-            setEditingCell(null);
-        }
-    };
-    
-    useEffect(() => {
-        if (editingCell && inputRef.current) {
-            inputRef.current.focus();
-        }
-    }, [editingCell]);
 
     useEffect(() => {
         const handleMouseMove = (e) => {
@@ -213,7 +204,7 @@ const ShotTable = ({ shots, fields, visibleFieldIds, columnWidths, onColumnResiz
                                                     <FormControl fullWidth size="small">
                                                         <Select
                                                             inputRef={inputRef}
-                                                            value={editValue}
+                                                            value={value}
                                                             onChange={async (e) => {
                                                                 const newValue = e.target.value;
                                                                 if (newValue === '__ADD_NEW__') {
@@ -223,10 +214,10 @@ const ShotTable = ({ shots, fields, visibleFieldIds, columnWidths, onColumnResiz
                                                                         onCellSave(editingCell.shotId, field.id, newOption);
                                                                         setEditingCell(null); 
                                                                     } else {
-                                                                        setEditValue(editValue); 
+                                                                        setValue(value); 
                                                                     }
                                                                 } else {
-                                                                    setEditValue(newValue);
+                                                                    setValue(newValue);
                                                                 }
                                                             }}
                                                             onBlur={handleInputBlur}
@@ -239,12 +230,55 @@ const ShotTable = ({ shots, fields, visibleFieldIds, columnWidths, onColumnResiz
                                                             <MenuItem value="__ADD_NEW__">Add New...</MenuItem>
                                                         </Select>
                                                     </FormControl>
+                                                ) : field.type === 'date' ? (
+                                                    <TextField
+                                                        placeholder="MM/DD/YYYY"
+                                                        value={value}
+                                                        autoFocus
+                                                        inputProps={{ maxLength: 10 }}
+                                                        onChange={e => {
+                                                            let v = e.target.value.replace(/[^0-9]/g, ''); // Remove non-digits
+                                                            if (v.length > 2) v = v.slice(0, 2) + '/' + v.slice(2);
+                                                            if (v.length > 5) v = v.slice(0, 5) + '/' + v.slice(5);
+                                                            setValue(v);
+                                                        }}
+                                                        onBlur={commit}
+                                                        onKeyDown={e => {
+                                                            if (e.key === 'Enter') {
+                                                                commit();
+                                                                e.target.blur();
+                                                            }
+                                                        }}
+                                                        fullWidth
+                                                        size="small"
+                                                        sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'background.paper' }}
+                                                    />
+                                                ) : field.type === 'number' || field.type === 'url' || field.type === 'timecode' || field.type === 'linkToEntity' ? (
+                                                    <TextField
+                                                        inputRef={inputRef}
+                                                        type={field.type === 'number' ? 'number' : field.type === 'url' ? 'url' : 'text'}
+                                                        value={value}
+                                                        onChange={(e) => setValue(e.target.value)}
+                                                        onBlur={handleInputBlur}
+                                                        onKeyDown={handleInputKeyDown}
+                                                        fullWidth
+                                                        size="small"
+                                                        sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'background.paper' }}
+                                                    />
+                                                ) : field.type === 'checkbox' ? (
+                                                    <Checkbox
+                                                        inputRef={inputRef}
+                                                        checked={value === 'TRUE'}
+                                                        onChange={(e) => setValue(e.target.checked ? 'TRUE' : 'FALSE')}
+                                                        onBlur={handleInputBlur}
+                                                        sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, bgcolor: 'background.paper' }}
+                                                    />
                                                 ) : (
                                                     <TextField
                                                         inputRef={inputRef}
                                                         type="text"
-                                                        value={editValue}
-                                                        onChange={(e) => setEditValue(e.target.value)}
+                                                        value={value}
+                                                        onChange={(e) => setValue(e.target.value)}
                                                         onBlur={handleInputBlur}
                                                         onKeyDown={handleInputKeyDown}
                                                         fullWidth
@@ -258,10 +292,20 @@ const ShotTable = ({ shots, fields, visibleFieldIds, columnWidths, onColumnResiz
                                                                                                             cellValue && <img src={cellValue.replace("via.placeholder.com", "placehold.co")} alt={`Thumbnail for ${shot.shot_code}`} style={{ maxHeight: '64px', width: 'auto', objectFit: 'contain', display: 'block' }} onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/120x68/EFEFEF/AAAAAA?text=Error'; }} />
                                                     ) : field.id === 'shot_code' ? (
                                                         <Typography variant="body2" color="text.primary" title={cellValue}>{cellValue}</Typography>
+                                                    ) : field.type === 'date' ? (
+                                                        <Typography variant="body2" color="text.primary" title={cellValue}>{cellValue ? dayjs(cellValue).format('YYYY-MM-DD') : ''}</Typography>
+                                                    ) : field.type === 'number' || field.type === 'timecode' || field.type === 'calculated' || field.type === 'linkToEntity' ? (
+                                                        <Typography variant="body2" color="text.primary" title={cellValue}>{cellValue}</Typography>
+                                                    ) : field.type === 'url' ? (
+                                                        <a href={cellValue} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>
+                                                            <Typography variant="body2" color="text.primary" title={cellValue}>{cellValue}</Typography>
+                                                        </a>
+                                                    ) : field.type === 'checkbox' ? (
+                                                        <Checkbox checked={cellValue === 'TRUE'} disabled size="small" />
                                                     ) : (
                                                         <Typography variant="body2" color="text.primary" title={cellValue}>{cellValue}</Typography>
                                                     )}
-                                                    {field.editable && (
+                                                    {field.editable && field.type !== 'calculated' && (
                                                         <IconButton
                                                             size="small"
                                                             sx={{

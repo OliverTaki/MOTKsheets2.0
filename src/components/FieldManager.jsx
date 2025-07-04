@@ -109,9 +109,23 @@ const FieldManager = ({ allFields = [], visibleFieldIds = [], onVisibilityChange
                         <Select
                             value={newField.type}
                             label="Type"
-                            onChange={e => setNewField({...newField, type: e.target.value})}
+                            onChange={e => {
+                                const type = e.target.value;
+                                setNewField(prev => ({
+                                    ...prev,
+                                    type,
+                                    editable: type === 'calculated' ? false : prev.editable // Set editable to false if type is calculated
+                                }));
+                            }}
                         >
                             <MenuItem value="text">Text</MenuItem>
+                            <MenuItem value="number">Number</MenuItem>
+                            <MenuItem value="date">Date</MenuItem>
+                            <MenuItem value="url">URL</MenuItem>
+                            <MenuItem value="checkbox">Checkbox</MenuItem>
+                            <MenuItem value="timecode">Timecode (24fps)</MenuItem>
+                            <MenuItem value="calculated">Calculated (Read-only)</MenuItem>
+                            <MenuItem value="linkToEntity">Link to Entity</MenuItem>
                             <MenuItem value="select">Select</MenuItem>
                             <MenuItem value="image">Image</MenuItem>
                         </Select>
@@ -128,7 +142,14 @@ const FieldManager = ({ allFields = [], visibleFieldIds = [], onVisibilityChange
                         />
                     )}
                     <FormControlLabel
-                        control={<Checkbox checked={newField.editable} onChange={e => setNewField({...newField, editable: e.target.checked})} size="small" />}
+                        control={
+                            <Checkbox
+                                checked={newField.editable}
+                                onChange={e => setNewField({...newField, editable: e.target.checked})}
+                                size="small"
+                                disabled={newField.type === 'calculated'} // Disable if type is calculated
+                            />
+                        }
                         label="Editable"
                         sx={{ mb: 1 }}
                     />

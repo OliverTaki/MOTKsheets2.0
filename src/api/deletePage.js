@@ -11,7 +11,7 @@ export async function deletePage(spreadsheetId, token, pageId) {
     }
 
     const range = 'PAGES!A:A'; // Assuming page_id is in column A
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?key=${apiKey}`;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}`;
     console.log(`Fetching page IDs from: ${url}`);
 
     const getPagesResponse = await fetch(url, {
