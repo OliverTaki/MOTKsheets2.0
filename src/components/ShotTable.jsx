@@ -2,9 +2,10 @@
 import React, { useMemo, useState } from "react";
 import {
   Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Paper, TextField
+  TableHead, TableRow, Paper, TextField, Select, MenuItem
 } from "@mui/material";
 import Box from "@mui/material/Box";
+import EditIcon from '@mui/icons-material/Edit';
 import {
   DndContext, closestCenter, PointerSensor,
   useSensor, useSensors
@@ -23,7 +24,7 @@ export default function ShotTable(props) {
     showFilters = false,
     handleDragEnd,
     handleColResizeMouseDown,
-    onCellSave,
+    onCellSave, // Ensure onCellSave is destructured
   } = props;
 
   const fields = Array.isArray(rawFields) ? rawFields : Object.values(rawFields);
@@ -47,9 +48,11 @@ export default function ShotTable(props) {
   const [editingCell, setEditingCell] = useState(null); // { shotId, fieldId }
   const [cellValue, setCellValue] = useState("");
 
-  const handleCellClick = (shotId, fieldId, currentValue) => {
-    setEditingCell({ shotId, fieldId });
-    setCellValue(currentValue);
+  const handleCellClick = (shotId, fieldId, currentValue, isEditable) => {
+    if (isEditable) {
+      setEditingCell({ shotId, fieldId });
+      setCellValue(currentValue);
+    }
   };
 
   const handleCellChange = (e) => {
@@ -73,6 +76,31 @@ export default function ShotTable(props) {
       setEditingCell(null); // Cancel editing
       setCellValue("");
     }
+  };
+
+  /* Helper: returns either <img> or plain text */
+  const renderCell = (shot, field) => {
+    const value = shot[field.id];
+
+    // treat 'thumbnail' or any field with type === 'image' as an image URL
+    const isImage =
+      field.id === "thumbnail" || field.type === "image";
+
+    if (isImage) {
+      const imageUrl = value && typeof value === 'string' && value.startsWith('http') ? value : `https://via.placeholder.com/120x68?text=${encodeURIComponent(shot.shot_code || "N/A")}`;
+      return (
+        <img
+          src={imageUrl}
+          alt={field.label}
+          width={120}
+          height={68}
+          style={{ objectFit: "cover" }}
+        />
+      );
+    }
+
+    // default: render as text
+    return value;
   };
 
   return (
@@ -147,28 +175,64 @@ export default function ShotTable(props) {
                         <TableCell
                           key={f.id}
                           sx={{ ...cellSx, width: columnWidths[f.id] ?? 150 }}
-                          onClick={() => handleCellClick(shot.shot_id, f.id, shot[f.id])}
                         >
                           {editingCell?.shotId === shot.shot_id && editingCell?.fieldId === f.id ? (
-                            <TextField
-                              value={cellValue}
-                              onChange={handleCellChange}
-                              onBlur={handleCellBlur}
-                              onKeyDown={handleCellKeyDown}
-                              autoFocus
-                              fullWidth
-                              variant="standard"
-                              InputProps={{ disableUnderline: true }}
-                              sx={{ '& .MuiInputBase-input': { p: 0.5 } }}
-                            />
-                          ) : f.type === "image" || f.id === "thumbnail" ? (
-                            <img
-                              src={shot[f.id]}
-                              alt="thumbnail"
-                              style={{ width: "100%", height: "auto", display: "block" }}
-                            />
+                            f.type === "select" ? (
+                              <Select
+                                value={cellValue}
+                                onChange={handleCellChange}
+                                onBlur={handleCellBlur}
+                                autoFocus
+                                fullWidth
+                                variant="standard"
+                                InputProps={{ disableUnderline: true }}
+                                sx={{ '& .MuiInputBase-input': { p: 0.5 } }}
+                              >
+                                {f.options.map((option) => (
+                                  <MenuItem key={option} value={option}>
+                                    {option}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            ) : f.type === "date" ? (
+                              <TextField
+                                type="date"
+                                value={cellValue}
+                                onChange={handleCellChange}
+                                onBlur={handleCellBlur}
+                                onKeyDown={handleCellKeyDown}
+                                autoFocus
+                                fullWidth
+                                variant="standard"
+                                InputProps={{ disableUnderline: true }}
+                                sx={{ '& .MuiInputBase-input': { p: 0.5 } }}
+                              />
+                            ) : (
+                              <TextField
+                                value={cellValue}
+                                onChange={handleCellChange}
+                                onBlur={handleCellBlur}
+                                onKeyDown={handleCellKeyDown}
+                                autoFocus
+                                fullWidth
+                                variant="standard"
+                                InputProps={{ disableUnderline: true }}
+                                sx={{ '& .MuiInputBase-input': { p: 0.5 } }}
+                              />
+                            )
                           ) : (
-                            shot[f.id]
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              {renderCell(shot, f)}
+                              {f.editable && (
+                                <EditIcon
+                                  sx={{ fontSize: 16, cursor: 'pointer', ml: 1 }}
+                                  onClick={(e) => {
+                                    e.stopPropagation(); // Prevent triggering cell click again
+                                    handleCellClick(shot.shot_id, f.id, shot[f.id], f.editable);
+                                  }}
+                                />
+                              )}
+                            </Box>
                           )}
                         </TableCell>
                       )
