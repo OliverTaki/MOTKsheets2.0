@@ -16,6 +16,7 @@ export default function SortableHeaderCell({
     transition,
     width: columnWidths[field.id] ?? 150,
     cursor: "grab",
+    position: "relative", // Added for positioning the resize handle
   };
 
   return (
@@ -29,7 +30,14 @@ export default function SortableHeaderCell({
     >
       {field.label}
       <span
-        style={{ cursor: "col-resize", float: "right" }}
+        style={{
+          position: "absolute",
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: "10px", // Make the resize handle wider for easier clicking
+          cursor: "col-resize",
+        }}
         onMouseDown={(e) => {
           e.stopPropagation();
           handleColResizeMouseDown(e, field.id);

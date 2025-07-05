@@ -1,8 +1,8 @@
 // src/components/ShotTable.jsx
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Paper
+  TableHead, TableRow, Paper, TextField
 } from "@mui/material";
 import Box from "@mui/material/Box";
 import {
@@ -23,6 +23,7 @@ export default function ShotTable(props) {
     showFilters = false,
     handleDragEnd,
     handleColResizeMouseDown,
+    onCellSave,
   } = props;
 
   const fields = Array.isArray(rawFields) ? rawFields : Object.values(rawFields);
@@ -41,6 +42,37 @@ export default function ShotTable(props) {
 
   const cellSx = {
     border: "1px solid rgba(224, 224, 224, 1)",
+  };
+
+  const [editingCell, setEditingCell] = useState(null); // { shotId, fieldId }
+  const [cellValue, setCellValue] = useState("");
+
+  const handleCellClick = (shotId, fieldId, currentValue) => {
+    setEditingCell({ shotId, fieldId });
+    setCellValue(currentValue);
+  };
+
+  const handleCellChange = (e) => {
+    setCellValue(e.target.value);
+  };
+
+  const handleCellBlur = () => {
+    if (editingCell) {
+      const { shotId, fieldId } = editingCell;
+      onCellSave(shotId, fieldId, cellValue); // Call the prop to save
+      setEditingCell(null);
+      setCellValue("");
+    }
+  };
+
+  const handleCellKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.target.blur(); // Trigger blur to save
+    }
+    if (e.key === "Escape") {
+      setEditingCell(null); // Cancel editing
+      setCellValue("");
+    }
   };
 
   return (
@@ -115,8 +147,29 @@ export default function ShotTable(props) {
                         <TableCell
                           key={f.id}
                           sx={{ ...cellSx, width: columnWidths[f.id] ?? 150 }}
+                          onClick={() => handleCellClick(shot.shot_id, f.id, shot[f.id])}
                         >
-                          {shot[f.id]}
+                          {editingCell?.shotId === shot.shot_id && editingCell?.fieldId === f.id ? (
+                            <TextField
+                              value={cellValue}
+                              onChange={handleCellChange}
+                              onBlur={handleCellBlur}
+                              onKeyDown={handleCellKeyDown}
+                              autoFocus
+                              fullWidth
+                              variant="standard"
+                              InputProps={{ disableUnderline: true }}
+                              sx={{ '& .MuiInputBase-input': { p: 0.5 } }}
+                            />
+                          ) : f.type === "image" || f.id === "thumbnail" ? (
+                            <img
+                              src={shot[f.id]}
+                              alt="thumbnail"
+                              style={{ width: "100%", height: "auto", display: "block" }}
+                            />
+                          ) : (
+                            shot[f.id]
+                          )}
                         </TableCell>
                       )
                   )}

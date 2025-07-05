@@ -47,6 +47,7 @@ const MainView = ({
   loadedPageId,
   onColumnOrderChange,
   onOpenUpdateNonUuidIdsDialog,
+  handleColResizeMouseDown,
 }) => {
   return (
     <div className="flex flex-col gap-4">
@@ -79,7 +80,6 @@ const MainView = ({
           onCellSave={(shotId, fieldId, newValue) => onCellSave(shotId, fieldId, newValue, idToColIndex)}
           onUpdateFieldOptions={onUpdateFieldOptions}
           onColumnOrderChange={onColumnOrderChange}
-          handleColResizeMouseDown={() => {}}
           handleDragEnd={onColumnOrderChange}
           handleColResizeMouseDown={handleColResizeMouseDown}
         />
@@ -428,6 +428,7 @@ export const AppContainer = () => {
                   loadedPageId={loadedPageId}
                   onColumnOrderChange={handleColumnOrderChange}
                   onOpenUpdateNonUuidIdsDialog={() => setUpdateNonUuidIdsDialogOpen(true)}
+                  handleColResizeMouseDown={handleColResizeMouseDown}
                 />
               } />
               <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={orderedFields} />} />
