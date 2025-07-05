@@ -14,25 +14,34 @@ import {
 } from "@dnd-kit/sortable";
 import SortableHeaderCell from "./SortableHeaderCell";
 
-export default function ShotTable({
-  shots = [],
-  fields = [],
-  columnWidths = {},
-  visibleFieldIds = [],
-  showFilters = false,
-  handleDragEnd,
-  handleColResizeMouseDown,
-}) {
-  /* exact pixel width = Σ column widths */
+export default function ShotTable(props) {
+  const {
+    shots = [],
+    fields: rawFields = [],
+    columnWidths = {},
+    visibleFieldIds = [],
+    showFilters = false,
+    handleDragEnd,
+    handleColResizeMouseDown,
+  } = props;
+
+  const fields = Array.isArray(rawFields) ? rawFields : Object.values(rawFields);
+
   const tableWidth = useMemo(
-    () => fields.reduce(
-      (sum, f) => sum + (columnWidths[f.id] ?? 150), 0),
-    [fields, columnWidths]
+    () =>
+      visibleFieldIds.reduce(
+        (sum, fieldId) => sum + (columnWidths[fieldId] ?? 150),
+        0
+      ),
+    [visibleFieldIds, columnWidths]
   );
 
   const sensors = useSensors(useSensor(PointerSensor));
-  const HEAD_H = 20; // height of one header row
-  const APP_BAR_HEIGHT = 0; // Height of the main toolbar, adjust if needed
+  const HEAD_H = 56;
+
+  const cellSx = {
+    border: "1px solid rgba(224, 224, 224, 1)",
+  };
 
   return (
     <DndContext
@@ -40,28 +49,25 @@ export default function ShotTable({
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
     >
-      {/* ① bottom horizontal-scrollbar wrapper */}
       <Box sx={{ overflowX: "auto" }}>
-        {/* ② Paper must allow overflow so sticky rows can stick */}
         <TableContainer
           component={Paper}
-          sx={{
+          sx={{            
             display: "inline-block",
             overflow: "visible",
             width: `${tableWidth}px`,
           }}
         >
-          <Table stickyHeader>
+          <Table stickyHeader sx={{ borderCollapse: "collapse" }}>
             <TableHead>
-              {/* ── field row (sticky, draggable) ── */}
               <SortableContext
-                items={fields.map((f) => f.id)}
+                items={visibleFieldIds}
                 strategy={horizontalListSortingStrategy}
               >
                 <TableRow
-                  sx={{
+                  sx={{                    
                     position: "sticky",
-                    top: APP_BAR_HEIGHT, // Stick below the main toolbar
+                    top: 0, // Stick to the top of the container
                     zIndex: 2,
                     bgcolor: "background.paper",
                   }}
@@ -74,38 +80,32 @@ export default function ShotTable({
                           field={f}
                           columnWidths={columnWidths}
                           handleColResizeMouseDown={handleColResizeMouseDown}
+                          sx={cellSx}
                         />
                       )
                   )}
                 </TableRow>
               </SortableContext>
-
-              {/* ── optional filter row ── */}
               {showFilters && (
                 <TableRow
                   sx={{
                     position: "sticky",
-                    top: `${APP_BAR_HEIGHT + HEAD_H}px`, // Stick below field row
+                    top: `${HEAD_H}px`,
                     zIndex: 1,
                     bgcolor: "background.paper",
                   }}
                 >
-                  {fields.map(
-                    (f) =>
-                      visibleFieldIds.includes(f.id) && (
-                        <TableCell
-                          key={f.id}
-                          sx={{ width: columnWidths[f.id] ?? 150, p: 0.5 }}
-                        >
-                          {/* put <TextField /> etc. here */}
-                        </TableCell>
-                      )
-                  )}
+                  {visibleFieldIds.map((fieldId) => (
+                    <TableCell
+                      key={fieldId}
+                      sx={{ ...cellSx, width: columnWidths[fieldId] ?? 150, p: 0.5 }}
+                    >
+                      {/* filter input here */}
+                    </TableCell>
+                  ))}
                 </TableRow>
               )}
             </TableHead>
-
-            {/* ── data rows ── */}
             <TableBody>
               {shots.map((shot) => (
                 <TableRow key={shot.shot_id}>
@@ -114,7 +114,7 @@ export default function ShotTable({
                       visibleFieldIds.includes(f.id) && (
                         <TableCell
                           key={f.id}
-                          sx={{ width: columnWidths[f.id] ?? 150 }}
+                          sx={{ ...cellSx, width: columnWidths[f.id] ?? 150 }}
                         >
                           {shot[f.id]}
                         </TableCell>

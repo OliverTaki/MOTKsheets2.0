@@ -81,6 +81,7 @@ const MainView = ({
           onColumnOrderChange={onColumnOrderChange}
           handleColResizeMouseDown={() => {}}
           handleDragEnd={onColumnOrderChange}
+          handleColResizeMouseDown={handleColResizeMouseDown}
         />
       </div>
     </div>
@@ -339,9 +340,39 @@ export const AppContainer = () => {
     }
   }, [token, loadedPageId, refreshPages]);
 
-  const handleColumnOrderChange = (newOrder) => {
-    setOrderedFields(newOrder);
-    setColumnOrder(newOrder.map(f => f.id));
+  const handleColumnOrderChange = (event) => {
+    const { active, over } = event;
+    if (active.id !== over.id) {
+      setOrderedFields((items) => {
+        const oldIndex = items.findIndex((i) => i.id === active.id);
+        const newIndex = items.findIndex((i) => i.id === over.id);
+        const newItems = [...items];
+        const [removed] = newItems.splice(oldIndex, 1);
+        newItems.splice(newIndex, 0, removed);
+        return newItems;
+      });
+    }
+  };
+
+  const handleColResizeMouseDown = (e, fieldId) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = columnWidths[fieldId] ?? 150;
+
+    const handleMouseMove = (moveEvent) => {
+      const newWidth = startWidth + (moveEvent.clientX - startX);
+      if (newWidth > 50) { // Minimum column width
+        setColumnWidths((prev) => ({ ...prev, [fieldId]: newWidth }));
+      }
+    };
+
+    const handleMouseUp = () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
   };
 
   if (!isAppReady) {
