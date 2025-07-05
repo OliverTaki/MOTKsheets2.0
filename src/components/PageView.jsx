@@ -34,6 +34,9 @@ export default function PageView() {
       <ShotTable
         shots={view}
         fields={fields}
+        visibleFieldIds={fields.map(f => f.id)}
+        handleDragEnd={() => {}}
+        handleColResizeMouseDown={() => {}}
         sortKey="shot_id"
         ascending={true}
         onSort={() => {}}

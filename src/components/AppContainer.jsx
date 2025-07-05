@@ -79,6 +79,8 @@ const MainView = ({
           onCellSave={(shotId, fieldId, newValue) => onCellSave(shotId, fieldId, newValue, idToColIndex)}
           onUpdateFieldOptions={onUpdateFieldOptions}
           onColumnOrderChange={onColumnOrderChange}
+          handleColResizeMouseDown={() => {}}
+          handleDragEnd={onColumnOrderChange}
         />
       </div>
     </div>

@@ -1,68 +1,99 @@
 // src/components/ShotTable.jsx
 import React, { useMemo } from "react";
 import {
-  Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Paper
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
 } from "@mui/material";
 import Box from "@mui/material/Box";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  horizontalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import SortableHeaderCell from "./SortableHeaderCell";
 
 export default function ShotTable({
   shots = [],
   fields = [],
   columnWidths = {},
-  showFilters = false          // parent toggles this
+  showFilters = false,
+  handleDragEnd,
+  visibleFieldIds,
+  handleColResizeMouseDown,
 }) {
-  /* exact pixel width = Σ columnWidths; never resizes with window */
-  const tableWidth = useMemo(
-    () => fields.reduce((sum, f) => sum + (columnWidths[f.id] ?? 150), 0),
+  const totalWidth = useMemo(
+    () =>
+      fields.reduce((sum, f) => sum + (columnWidths[f.id] ?? 150), 0),
     [fields, columnWidths]
   );
 
-  /* MUI AppBar is 64 px on desktop.  Adjust if you changed it. */
-  const APP_BAR_H = 64;
-  const HEAD_H     = 56;       // height of each table-header row
+  const HEAD_H = 56; // 1行のヘッダ高さ
+  const sensors = useSensors(useSensor(PointerSensor));
 
   return (
-    /* ① outer box owns the horizontal scrollbar                            */
-    <Box sx={{ overflowX: "auto" }}>
-      {/* ② Paper must allow overflow for sticky rows                         */}
-      <TableContainer
-        component={Paper}
-        sx={{
-          display: "inline-block",
-          overflow: "visible",
-          width: `${tableWidth}px`
-        }}
-      >
-        <Table stickyHeader>
-          <TableHead>
-            {/* ─── field row (touches the toolbar) ─── */}
-            <TableRow
-              sx={{
-                position: "sticky",
-                top: `${APP_BAR_H}px`,
-                zIndex: 2,
-                bgcolor: "background.paper"
-              }}
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      {/* ① horizontal scrollbar wrapper */}
+      <Box sx={{ overflowX: "auto" }}>
+        {/* ② Paper must allow overflow so sticky works */}
+        <TableContainer
+          component={Paper}
+          sx={{
+            display: "inline-block",
+            overflow: "visible",
+            width: `${totalWidth}px`,
+          }}
+        >
+          <Table stickyHeader>
+                      <TableHead>
+            {/* ─── field row – sticks under toolbar ─── */}
+            <SortableContext
+              items={fields.map((f) => f.id)}
+              strategy={horizontalListSortingStrategy}
             >
-              {fields.map((f) => (
-                <TableCell
-                  key={f.id}
-                  sx={{ width: columnWidths[f.id] ?? 150 }}
-                >
-                  {f.label}
-                </TableCell>
-              ))}
-            </TableRow>
-
-            {/* ─── optional filter row ─── */}
+              <TableRow
+                sx={{
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 2,
+                  bgcolor: "background.paper",
+                }}
+              >
+                {fields.map(
+                  (f) =>
+                    visibleFieldIds.includes(f.id) && (
+                      <SortableHeaderCell
+                        key={f.id}
+                        field={f}
+                        columnWidths={columnWidths}
+                        handleColResizeMouseDown={handleColResizeMouseDown}
+                      />
+                    )
+                )}
+              </TableRow>
+            </SortableContext>
+             {/* ─── optional filter row ─── */}
             {showFilters && (
               <TableRow
                 sx={{
                   position: "sticky",
-                  top: `${APP_BAR_H + HEAD_H}px`,
+                  top: `${HEAD_H}px`, // フィールド行のすぐ下
                   zIndex: 1,
-                  bgcolor: "background.paper"
+                  bgcolor: "background.paper",
                 }}
               >
                 {fields.map((f) => (
@@ -70,14 +101,13 @@ export default function ShotTable({
                     key={f.id}
                     sx={{ width: columnWidths[f.id] ?? 150, p: 0.5 }}
                   >
-                    {/* put a TextField / Select etc. here */}
+                    {/* put <TextField /> or any filter UI here */}
                   </TableCell>
                 ))}
               </TableRow>
             )}
           </TableHead>
-
-          {/* ─── data rows ─── */}
+          {/* --- data rows --- */}
           <TableBody>
             {shots.map((shot) => (
               <TableRow key={shot.shot_id}>
@@ -93,7 +123,8 @@ export default function ShotTable({
             ))}
           </TableBody>
         </Table>
-      </TableContainer>
-    </Box>
+        </TableContainer>
+      </Box>
+    </DndContext>
   );
 }
