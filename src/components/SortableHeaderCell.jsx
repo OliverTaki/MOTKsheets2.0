@@ -7,19 +7,15 @@ export default function SortableHeaderCell({
   columnWidths,
   handleColResizeMouseDown,
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({ id: field.id });
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+    id: field.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     width: columnWidths[field.id] ?? 150,
-    cursor: 'grab',
+    cursor: "grab",
   };
 
   return (
