@@ -1,4 +1,3 @@
-// src/components/SortableHeaderCell.jsx
 import { TableCell } from "@mui/material";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -33,14 +32,12 @@ export default function SortableHeaderCell({
       scope="col"
     >
       {field.label}
-      {/* ▼  your resize-handle / sort icon can live inside this cell ▼ */}
       <span
         style={{ cursor: "col-resize", float: "right" }}
         onMouseDown={(e) => {
-          e.stopPropagation(); // Prevent dnd-kit's listener from firing
+          e.stopPropagation();
           handleColResizeMouseDown(e, field.id);
         }}
-        // Stop drag listeners from firing when resizing
         onClick={(e) => e.stopPropagation()}
       />
     </TableCell>
