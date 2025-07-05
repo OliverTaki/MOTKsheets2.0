@@ -127,7 +127,7 @@ export default function ShotTable(props) {
                 <TableRow
                   sx={{                    
                     position: "sticky",
-                    top: 0, // Stick to the top of the container
+                    top: 96, // Stick below the main app bar (assuming 96px height)
                     zIndex: 2,
                     bgcolor: "background.paper",
                   }}
@@ -150,7 +150,7 @@ export default function ShotTable(props) {
                 <TableRow
                   sx={{
                     position: "sticky",
-                    top: `${HEAD_H}px`,
+                    top: `${96 + HEAD_H}px`, // Stick below field row
                     zIndex: 1,
                     bgcolor: "background.paper",
                   }}
@@ -188,9 +188,9 @@ export default function ShotTable(props) {
                                 InputProps={{ disableUnderline: true }}
                                 sx={{ '& .MuiInputBase-input': { p: 0.5 } }}
                               >
-                                {f.options.map((option) => (
-                                  <MenuItem key={option} value={option}>
-                                    {option}
+                                {Array.isArray(f.options) && f.options.map((option) => (
+                                  <MenuItem key={typeof option === 'object' ? option.value : option} value={typeof option === 'object' ? option.value : option}> 
+                                    {typeof option === 'object' ? option.label : option}
                                   </MenuItem>
                                 ))}
                               </Select>
