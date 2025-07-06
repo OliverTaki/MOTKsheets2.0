@@ -38,7 +38,7 @@ export function parseFields(rawData) {
         label: row[labelIndex],
         type: row[typeIndex] || 'text',
         editable: row[editableIndex] ? row[editableIndex].toUpperCase() === 'TRUE' : false, // editable列をパース
-        options: optionsIndex !== -1 ? row[optionsIndex] : null,
+        options: optionsIndex !== -1 && row[optionsIndex] ? row[optionsIndex].split(',').map(s => s.trim()) : null,
     })).filter(field => field.id && String(field.id).trim() !== '');
 }
 

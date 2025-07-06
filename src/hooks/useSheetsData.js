@@ -59,7 +59,7 @@ const useSheetsData = (spreadsheetId) => {
             const finalFields = [
                 // Manually prepend fields that are not in the FIELDS sheet but are in the Shots sheet.
                 { id: shotIdUuid, label: 'Shot ID', type: 'text', editable: false },
-                { id: shotCodeUuid, label: 'Shot Code', type: 'text', editable: true }, // Set shot_code as editable
+                { id: shotCodeUuid, label: 'Shot Code', type: 'text', editable: false }, // Shot Code should not be editable as it's a UUID
                 ...parsedFields.filter(f => f.id !== shotIdUuid && f.id !== shotCodeUuid)
             ];
 

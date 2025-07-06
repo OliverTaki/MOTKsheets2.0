@@ -127,7 +127,7 @@ export default function ShotTable(props) {
                 <TableRow
                   sx={{                    
                     position: "sticky",
-                    top: 96, // Stick below the main app bar (assuming 96px height)
+                    top: 0, // Stick below the main app bar (assuming 96px height)
                     zIndex: 2,
                     bgcolor: "background.paper",
                   }}
