@@ -51,28 +51,26 @@ const MainView = ({
 }) => {
   return (
     <div className="flex flex-col gap-4">
-      <div className="sticky top-[77px] z-10">
-        <Toolbar
-          fields={allAvailableFields}
-          pages={pages}
-          activeFilters={activeFilters}
-          onFilterChange={onFilterChange}
-          allShots={allShots}
-          sortKey={sortKey}
-          ascending={ascending}
-          onSort={onSort}
-          visibleFieldIds={visibleFieldIds}
-          onVisibilityChange={onVisibilityChange}
-          onAddField={onAddField}
-          onLoadView={onLoadView}
-          onSaveView={onSaveView}
-          onSaveViewAs={onSaveViewAs}
-          onDeleteView={onDeleteView}
-          loadedPageId={loadedPageId}
-          onOpenUpdateNonUuidIdsDialog={onOpenUpdateNonUuidIdsDialog}
-        />
-      </div>
-      <div className="shadow-md sm:rounded-lg border border-gray-200 dark:border-gray-700">
+      <Toolbar
+        fields={allAvailableFields}
+        pages={pages}
+        activeFilters={activeFilters}
+        onFilterChange={onFilterChange}
+        allShots={allShots}
+        sortKey={sortKey}
+        ascending={ascending}
+        onSort={onSort}
+        visibleFieldIds={visibleFieldIds}
+        onVisibilityChange={onVisibilityChange}
+        onAddField={onAddField}
+        onLoadView={onLoadView}
+        onSaveView={onSaveView}
+        onSaveViewAs={onSaveViewAs}
+        onDeleteView={onDeleteView}
+        loadedPageId={loadedPageId}
+        onOpenUpdateNonUuidIdsDialog={onOpenUpdateNonUuidIdsDialog}
+      />
+      <div className="flex-grow shadow-md sm:rounded-lg border border-gray-200 dark:border-gray-700" style={{ minHeight: 0 }}>
         <ShotTable
           shots={sheets}
           fields={displayedFields}
@@ -392,16 +390,18 @@ export const AppContainer = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider sheets={sheets} fields={fields} refreshData={refreshData}>
-        <div className="App bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col h-screen">
+        <div className="App bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col h-screen">">
         <header className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 shadow z-20 flex-shrink-0 sticky top-0" style={{ height: '39px' }}>
           <h1 className="text-2xl font-bold">MOTK Sheets 2.0</h1>
           <LoginButton />
         </header>
-        <div className="sticky top-[39px] bg-gray-200 dark:bg-gray-700 z-20" style={{ height: '38px' }}>
-          {/* Project Navigation Bar */}
+        <div className="sticky top-[39px] bg-gray-200 dark:bg-gray-700 z-20 flex items-center px-4" style={{ height: '38px', backgroundColor: 'var(--mui-palette-background-paper)' }}>
+          <span className="text-lg font-semibold">Project: Oliver01</span>
+        </div>
+          <span className="text-lg font-semibold">Project: Oliver01</span>
         </div>
 
-        <main className="p-4 flex-grow overflow-auto">
+        <main className="p-4 flex-grow overflow-y-auto">
           {(fieldsError || pagesError) && <p className="text-red-500 text-center">Error: {fieldsError?.message || pagesError?.message}</p>}
           {!fieldsError && !pagesError && (
             <Routes>

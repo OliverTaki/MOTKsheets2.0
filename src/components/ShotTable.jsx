@@ -112,14 +112,13 @@ export default function ShotTable(props) {
       <Box sx={{ overflowX: "auto" }}>
         <TableContainer
           component={Paper}
-          sx={{            
-            display: "inline-block",
-            overflow: "visible",
+          sx={{
+            display: "block",
             width: `${tableWidth}px`,
           }}
         >
           <Table stickyHeader sx={{ borderCollapse: "collapse" }}>
-            <TableHead>
+            <TableHead sx={{ position: "sticky", top: 0, bgcolor: "background.paper", zIndex: 15 }}>
               <SortableContext
                 items={visibleFieldIds}
                 strategy={horizontalListSortingStrategy}
@@ -150,8 +149,8 @@ export default function ShotTable(props) {
                 <TableRow
                   sx={{
                     position: "sticky",
-                    top: "193px", // Stick below field row
-                    zIndex: 1,
+                    top: `${HEAD_H}px`, // Stick below field row
+                    zIndex: 10,
                     bgcolor: "background.paper",
                   }}
                 >

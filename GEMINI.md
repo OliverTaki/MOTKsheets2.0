@@ -35,6 +35,9 @@ The application is in a partially stable state. While the core functionality of 
 *   **Page Deletion:** The page deletion functionality has been improved by trimming whitespace from `pageId`s during comparison in `deletePage.js`. However, the "PAGES sheet not found" error might still persist if the sheet itself is missing or due to other data corruption.
 *   **Data Corruption:** The root cause of the page deletion issue is often corrupted data in the "PAGES" sheet. This data needs to be manually removed from the Google Sheet to fully resolve the issue.
 *   **Toolbar.jsx Syntax Error:** Resolved by removing a redundant fragment.
+*   **Toolbar Freezing:** Addressed by memoizing `fields` and `pages` in `AppContainer.jsx` to prevent unnecessary re-renders.
+*   **Table Scrollbar:** Implemented a dedicated scrollable container for the `ShotTable` in `AppContainer.jsx` to ensure the scrollbar applies only to the table content, not the toolbar or other fixed elements.
+*   **Fixed Headers & Backgrounds:** Refactored `ShotTable.jsx` to ensure the table header (field row) and filter row remain fixed while the table body scrolls, and explicitly set backgrounds for fixed elements in `AppContainer.jsx` and `ShotTable.jsx`. Restored `overflow-auto` to the `ShotTable` container in `AppContainer.jsx`. Simplified `Toolbar` sticky positioning in `AppContainer.jsx`. Removed manual `position: sticky` from `TableRow` elements in `ShotTable.jsx` and relied on `stickyHeader` prop of `Table`. Fixed `AppContainer.jsx` syntax error by removing extra `>`.
 
 ## Next Steps
 
