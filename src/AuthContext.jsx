@@ -28,6 +28,9 @@ export const AuthProvider = ({ children, sheets, fields, refreshData }) => {
                             localStorage.setItem(TOKEN_STORAGE_KEY, accessToken); // トークンをlocalStorageに保存
                             setError(null);
                             console.log("Token obtained successfully.");
+                            if (refreshData) {
+                                refreshData(); // Reload data after successful sign-in
+                            }
                         } else {
                             console.error("Token response error", tokenResponse);
                             setError({ message: 'Failed to get access token from Google.' });

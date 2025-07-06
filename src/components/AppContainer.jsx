@@ -51,25 +51,27 @@ const MainView = ({
 }) => {
   return (
     <div className="flex flex-col gap-4">
-      <Toolbar
-        fields={allAvailableFields}
-        pages={pages}
-        activeFilters={activeFilters}
-        onFilterChange={onFilterChange}
-        allShots={allShots}
-        sortKey={sortKey}
-        ascending={ascending}
-        onSort={onSort}
-        visibleFieldIds={visibleFieldIds}
-        onVisibilityChange={onVisibilityChange}
-        onAddField={onAddField}
-        onLoadView={onLoadView}
-        onSaveView={onSaveView}
-        onSaveViewAs={onSaveViewAs}
-        onDeleteView={onDeleteView}
-        loadedPageId={loadedPageId}
-        onOpenUpdateNonUuidIdsDialog={onOpenUpdateNonUuidIdsDialog}
-      />
+      <div className="sticky top-[77px] z-10">
+        <Toolbar
+          fields={allAvailableFields}
+          pages={pages}
+          activeFilters={activeFilters}
+          onFilterChange={onFilterChange}
+          allShots={allShots}
+          sortKey={sortKey}
+          ascending={ascending}
+          onSort={onSort}
+          visibleFieldIds={visibleFieldIds}
+          onVisibilityChange={onVisibilityChange}
+          onAddField={onAddField}
+          onLoadView={onLoadView}
+          onSaveView={onSaveView}
+          onSaveViewAs={onSaveViewAs}
+          onDeleteView={onDeleteView}
+          loadedPageId={loadedPageId}
+          onOpenUpdateNonUuidIdsDialog={onOpenUpdateNonUuidIdsDialog}
+        />
+      </div>
       <div className="shadow-md sm:rounded-lg border border-gray-200 dark:border-gray-700">
         <ShotTable
           shots={sheets}
@@ -391,10 +393,13 @@ export const AppContainer = () => {
       <CssBaseline />
       <AuthProvider sheets={sheets} fields={fields} refreshData={refreshData}>
         <div className="App bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col h-screen">
-        <header className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 shadow z-10 flex-shrink-0">
+        <header className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 shadow z-20 flex-shrink-0 sticky top-0" style={{ height: '39px' }}>
           <h1 className="text-2xl font-bold">MOTK Sheets 2.0</h1>
           <LoginButton />
         </header>
+        <div className="sticky top-[39px] bg-gray-200 dark:bg-gray-700 z-20" style={{ height: '38px' }}>
+          {/* Project Navigation Bar */}
+        </div>
 
         <main className="p-4 flex-grow overflow-auto">
           {(fieldsError || pagesError) && <p className="text-red-500 text-center">Error: {fieldsError?.message || pagesError?.message}</p>}
@@ -433,10 +438,12 @@ export const AppContainer = () => {
               } />
               <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={orderedFields} />} />
               <Route path="/shots/new" element={<AddShotPage />} />
-              <Route path="/shots/new" element={<AddShotPage />} />
             </Routes>
           )}
         </main>
+        <footer className="sticky bottom-0 bg-gray-200 dark:bg-gray-700 z-10 flex-shrink-0" style={{ height: '24px' }}>
+          {/* Status Bar */}
+        </footer>
         <UpdateNonUuidIdsDialog
           open={isUpdateNonUuidIdsDialogOpen}
           onClose={() => setUpdateNonUuidIdsDialogOpen(false)}

@@ -2,7 +2,7 @@
 
 **Project:** `motksheets2-frontend`
 
-**Last Session Date:** 2025-07-04
+**Last Session Date:** 2025-07-06
 
 ## Summary of Progress
 
@@ -32,16 +32,17 @@ We have been working on implementing a "Pages" feature that allows users to save
 
 The application is in a partially stable state. While the core functionality of the "Pages" feature is in place, there are still some critical issues that need to be addressed:
 
-*   **Page Deletion:** The page deletion functionality is still not working correctly. The application fails to delete pages, and the "PAGES sheet not found" error persists.
-*   **Data Corruption:** The root cause of the page deletion issue is corrupted data in the "PAGES" sheet. This data needs to be manually removed from the Google Sheet to fully resolve the issue.
+*   **Page Deletion:** The page deletion functionality has been improved by trimming whitespace from `pageId`s during comparison in `deletePage.js`. However, the "PAGES sheet not found" error might still persist if the sheet itself is missing or due to other data corruption.
+*   **Data Corruption:** The root cause of the page deletion issue is often corrupted data in the "PAGES" sheet. This data needs to be manually removed from the Google Sheet to fully resolve the issue.
+*   **Toolbar.jsx Syntax Error:** Resolved by removing a redundant fragment.
 
 ## Next Steps
 
-Our immediate priority is to resolve the outstanding issues with the "Pages" feature. After that, we will move on to implementing the "Add Shot" and "Shot Detail" pages.
+Our immediate priority is to ensure the "Pages" feature is fully stable. After that, we will move on to implementing the "Add Shot" and "Shot Detail" pages.
 
 ### 1. Finalize the "Pages" Feature
 
-*   **Fix Page Deletion:** The `deletePage.js` file needs to be corrected to ensure that it can reliably delete pages from the "PAGES" sheet. This will likely involve a more robust implementation of the `ensureSheetExists` function and a more careful handling of the Google Sheets API.
+*   **Verify Page Deletion:** Confirm that the `deletePage.js` fix (whitespace trimming) has resolved all page deletion issues. If not, further investigation into data consistency or API interactions will be required.
 *   **Manual Data Cleanup:** The corrupted data in the "PAGES" sheet needs to be manually removed from the Google Sheet. This is a one-time action that will unblock the development process.
 
 ### 2. Implement the "Add Shot" Page
@@ -113,7 +114,9 @@ By following this plan, we will be able to complete the "Pages" feature and then
 │   │   ├── SavedFilters.jsx
 │   │   ├── ShotDetailPage.jsx
 │   │   ├── ShotTable.jsx
-│   │   └── Toolbar.jsx
+│   │   ├── SortableHeaderCell.jsx
+│   │   ├── Toolbar.jsx
+│   │   └── UpdateNonUuidIdsDialog.jsx
 │   ├── hooks
 │   │   ├── usePagesData.js
 │   │   └── useSheetsData.js
@@ -133,4 +136,3 @@ By following this plan, we will be able to complete the "Pages" feature and then
 ├── tsconfig.json
 ├── tsconfig.node.json
 └── vite.config.ts
-```

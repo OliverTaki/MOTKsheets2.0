@@ -125,9 +125,9 @@ export default function ShotTable(props) {
                 strategy={horizontalListSortingStrategy}
               >
                 <TableRow
-                  sx={{                    
+                  sx={{
                     position: "sticky",
-                    top: 0, // Stick below the main app bar (assuming 96px height)
+                    top: "0px",
                     zIndex: 2,
                     bgcolor: "background.paper",
                   }}
@@ -150,7 +150,7 @@ export default function ShotTable(props) {
                 <TableRow
                   sx={{
                     position: "sticky",
-                    top: `${96 + HEAD_H}px`, // Stick below field row
+                    top: "193px", // Stick below field row
                     zIndex: 1,
                     bgcolor: "background.paper",
                   }}

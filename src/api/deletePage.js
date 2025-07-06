@@ -37,7 +37,8 @@ export async function deletePage(spreadsheetId, token, pageId) {
 
     const rowsToDelete = [];
     for (let i = 0; i < rows.length; i++) {
-      if (rows[i][0] === pageId) {
+      // Trim whitespace from the pageId read from the sheet before comparison
+      if (rows[i][0] && rows[i][0].trim() === pageId) {
         rowsToDelete.push(i); // Store the 0-based index
       }
     }
