@@ -358,10 +358,10 @@ export const AppContainer = () => {
             <h1 className="text-2xl font-bold">MOTK Sheets 2.0</h1>
             <LoginButton />
           </header>
-          <div className="sticky top-[39px] bg-gray-200 dark:bg-gray-700 z-30 flex items-center px-4" style={{ height: '38px', backgroundColor: 'var(--mui-palette-background-paper)' }}>
+          <div className="sticky top-[39px] bg-gray-800 z-30 flex items-center px-4" style={{ height: '38px' }}>
             <span className="text-lg font-semibold">Project: Oliver01</span>
           </div>
-          <div className="sticky top-[77px] z-20 bg-white dark:bg-gray-800">
+          <div className="sticky top-[77px] z-20 bg-gray-800">
             <Toolbar
               fields={fields}
               pages={pages}
@@ -382,7 +382,7 @@ export const AppContainer = () => {
               onOpenUpdateNonUuidIdsDialog={() => setUpdateNonUuidIdsDialogOpen(true)}
             />
           </div>
-          <main className="flex-grow overflow-y-auto">
+          <main className="flex-grow overflow-y-auto bg-gray-800 pt-4">
             {(fieldsError || pagesError) && <p className="text-red-500 text-center">Error: {fieldsError?.message || pagesError?.message}</p>}
             {!fieldsError && !pagesError && (
               <Routes>
@@ -400,7 +400,7 @@ export const AppContainer = () => {
                     handleColResizeMouseDown={handleColResizeMouseDown}
                   />
                 } />
-                <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={orderedFields} />} />
+                <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={orderedFields} idToColIndex={idToColIndex} />} />
                 <Route path="/shots/new" element={<AddShotPage />} />
               </Routes>
             )}

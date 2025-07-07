@@ -68,7 +68,7 @@ const ShotDetailPage = ({ shots, fields }) => {
     const sheetRowIndex = originalShotIndex + 3; // +1 for 1-based, +1 for header, +1 for UUID row
 
     // Find the column index in the Google Sheet
-    const fieldColumnIndex = fields.findIndex(f => f.id === fieldId);
+    const fieldColumnIndex = idToColIndex[fieldId];
     if (fieldColumnIndex === -1) {
       setSaveError(`Error: Could not find column for field: ${fieldId}.`);
       setSaving(false);

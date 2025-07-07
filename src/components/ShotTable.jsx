@@ -41,9 +41,7 @@ export default function ShotTable(props) {
   const sensors = useSensors(useSensor(PointerSensor));
   const HEAD_H = 56;
 
-  const cellSx = {
-    border: "1px solid rgba(224, 224, 224, 1)",
-  };
+  
 
   const [editingCell, setEditingCell] = useState(null); // { shotId, fieldId }
   const [cellValue, setCellValue] = useState("");
@@ -109,8 +107,8 @@ export default function ShotTable(props) {
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
     >
-      <TableContainer component={Paper} sx={{ height: '100%', overflow: 'auto' }}>
-        <Table stickyHeader sx={{ borderCollapse: "collapse", width: tableWidth }}>
+      <TableContainer component={Paper} sx={{ height: 'calc(100vh - 133px)', overflow: 'auto' }}>
+        <Table stickyHeader sx={{ borderCollapse: "separate", borderSpacing: "0", width: tableWidth }}>
           <TableHead sx={{ position: "sticky", top: 0, bgcolor: "background.paper", zIndex: 15 }}>
             <SortableContext
               items={visibleFieldIds}
@@ -129,7 +127,11 @@ export default function ShotTable(props) {
                         field={f}
                         columnWidths={columnWidths}
                         handleColResizeMouseDown={handleColResizeMouseDown}
-                        sx={cellSx}
+                        isLast={visibleFieldIds.indexOf(f.id) === visibleFieldIds.length - 1}
+                        sx={{
+                          borderRight: '1px solid rgba(224, 224, 224, 1)',
+                          borderBottom: '1px solid rgba(224, 224, 224, 1)',
+                        }}
                       />
                     )
                 )}
@@ -144,7 +146,11 @@ export default function ShotTable(props) {
                 {visibleFieldIds.map((fieldId) => (
                   <TableCell
                     key={fieldId}
-                    sx={{ ...cellSx, width: columnWidths[fieldId] ?? 150, p: 0.5 }}
+                    sx={{
+                      width: columnWidths[fieldId] ?? 150,
+                      borderRight: '1px solid rgba(224, 224, 224, 1)',
+                      borderBottom: '1px solid rgba(224, 224, 224, 1)',
+                    }}
                   >
                     {/* filter input here */}
                   </TableCell>
@@ -160,7 +166,11 @@ export default function ShotTable(props) {
                     visibleFieldIds.includes(f.id) && (
                       <TableCell
                         key={f.id}
-                        sx={{ ...cellSx, width: columnWidths[f.id] ?? 150 }}
+                        sx={{
+                          width: columnWidths[f.id] ?? 150,
+                          borderRight: '1px solid rgba(224, 224, 224, 1)',
+                          borderBottom: '1px solid rgba(224, 224, 224, 1)',
+                        }}
                       >
                         {editingCell?.shotId === shot.shot_id && editingCell?.fieldId === f.id ? (
                           f.type === "select" ? (

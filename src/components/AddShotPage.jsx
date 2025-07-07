@@ -110,15 +110,43 @@ const AddShotPage = () => {
             <label htmlFor={field.id} className="mb-1 text-sm font-medium capitalize">
               {field.label}:
             </label>
-            <input
-              type="text"
-              id={field.id}
-              name={field.id}
-              value={formData[field.id] || ''}
-              onChange={handleChange}
-              className="p-2 rounded bg-gray-700 border border-gray-600 focus:outline-none focus:border-blue-500"
-              disabled={loading}
-            />
+            {field.type === "select" ? (
+              <select
+                id={field.id}
+                name={field.id}
+                value={formData[field.id] || ''}
+                onChange={handleChange}
+                className="p-2 rounded bg-gray-700 border border-gray-600 focus:outline-none focus:border-blue-500"
+                disabled={loading}
+              >
+                <option value="">Select an option</option>
+                {Array.isArray(field.options) && field.options.map((option) => (
+                  <option key={typeof option === 'object' ? option.value : option} value={typeof option === 'object' ? option.value : option}>
+                    {typeof option === 'object' ? option.label : option}
+                  </option>
+                ))}
+              </select>
+            ) : field.type === "date" ? (
+              <input
+                type="date"
+                id={field.id}
+                name={field.id}
+                value={formData[field.id] || ''}
+                onChange={handleChange}
+                className="p-2 rounded bg-gray-700 border border-gray-600 focus:outline-none focus:border-blue-500"
+                disabled={loading}
+              />
+            ) : (
+              <input
+                type="text"
+                id={field.id}
+                name={field.id}
+                value={formData[field.id] || ''}
+                onChange={handleChange}
+                className="p-2 rounded bg-gray-700 border border-gray-600 focus:outline-none focus:border-blue-500"
+                disabled={loading}
+              />
+            )}
           </div>
         ))}
         {error && <p className="text-red-500 text-sm">{error}</p>}

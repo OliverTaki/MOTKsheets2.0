@@ -47,7 +47,7 @@ const Toolbar = ({
 
     return (
         <>
-            <div className="flex flex-wrap items-center justify-between gap-4 p-4 shadow rounded-lg bg-white dark:bg-gray-800 z-20">
+            <div className="flex flex-wrap items-center justify-between gap-4 p-4 shadow rounded-lg z-20 bg-gray-800">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     {/* Page Selector */}
                     <FormControl variant="outlined" size="small" sx={{ minWidth: 150 }}>
