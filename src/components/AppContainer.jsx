@@ -24,66 +24,29 @@ const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 const MainView = ({
   sheets,
   displayedFields,
-  allAvailableFields,
-  pages,
+  visibleFieldIds,
   columnWidths,
   onColumnResize,
-  activeFilters,
-  onFilterChange,
-  allShots,
-  sortKey,
-  ascending,
-  onSort,
-  visibleFieldIds,
-  onVisibilityChange,
-  onAddField,
   onCellSave,
   onUpdateFieldOptions,
   idToColIndex,
-  onLoadView,
-  onSaveView,
-  onSaveViewAs,
-  onDeleteView,
-  loadedPageId,
   onColumnOrderChange,
-  onOpenUpdateNonUuidIdsDialog,
   handleColResizeMouseDown,
 }) => {
   return (
-    <div className="flex flex-col gap-4">
-      <Toolbar
-        fields={allAvailableFields}
-        pages={pages}
-        activeFilters={activeFilters}
-        onFilterChange={onFilterChange}
-        allShots={allShots}
-        sortKey={sortKey}
-        ascending={ascending}
-        onSort={onSort}
+    <div style={{ height: '100%' }}>
+      <ShotTable
+        shots={sheets}
+        fields={displayedFields}
         visibleFieldIds={visibleFieldIds}
-        onVisibilityChange={onVisibilityChange}
-        onAddField={onAddField}
-        onLoadView={onLoadView}
-        onSaveView={onSaveView}
-        onSaveViewAs={onSaveViewAs}
-        onDeleteView={onDeleteView}
-        loadedPageId={loadedPageId}
-        onOpenUpdateNonUuidIdsDialog={onOpenUpdateNonUuidIdsDialog}
+        columnWidths={columnWidths}
+        onColumnResize={onColumnResize}
+        onCellSave={(shotId, fieldId, newValue) => onCellSave(shotId, fieldId, newValue, idToColIndex)}
+        onUpdateFieldOptions={onUpdateFieldOptions}
+        onColumnOrderChange={onColumnOrderChange}
+        handleDragEnd={onColumnOrderChange}
+        handleColResizeMouseDown={handleColResizeMouseDown}
       />
-      <div className="flex-grow shadow-md sm:rounded-lg border border-gray-200 dark:border-gray-700" style={{ minHeight: 0 }}>
-        <ShotTable
-          shots={sheets}
-          fields={displayedFields}
-          visibleFieldIds={visibleFieldIds}
-          columnWidths={columnWidths}
-          onColumnResize={onColumnResize}
-          onCellSave={(shotId, fieldId, newValue) => onCellSave(shotId, fieldId, newValue, idToColIndex)}
-          onUpdateFieldOptions={onUpdateFieldOptions}
-          onColumnOrderChange={onColumnOrderChange}
-          handleDragEnd={onColumnOrderChange}
-          handleColResizeMouseDown={handleColResizeMouseDown}
-        />
-      </div>
     </div>
   );
 };
@@ -390,65 +353,66 @@ export const AppContainer = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider sheets={sheets} fields={fields} refreshData={refreshData}>
-        <div className="App bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col h-screen">">
-        <header className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 shadow z-20 flex-shrink-0 sticky top-0" style={{ height: '39px' }}>
-          <h1 className="text-2xl font-bold">MOTK Sheets 2.0</h1>
-          <LoginButton />
-        </header>
-        <div className="sticky top-[39px] bg-gray-200 dark:bg-gray-700 z-20 flex items-center px-4" style={{ height: '38px', backgroundColor: 'var(--mui-palette-background-paper)' }}>
-          <span className="text-lg font-semibold">Project: Oliver01</span>
+        <div className="App bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col h-screen">
+          <header className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 shadow z-30 flex-shrink-0 sticky top-0" style={{ height: '39px' }}>
+            <h1 className="text-2xl font-bold">MOTK Sheets 2.0</h1>
+            <LoginButton />
+          </header>
+          <div className="sticky top-[39px] bg-gray-200 dark:bg-gray-700 z-30 flex items-center px-4" style={{ height: '38px', backgroundColor: 'var(--mui-palette-background-paper)' }}>
+            <span className="text-lg font-semibold">Project: Oliver01</span>
+          </div>
+          <div className="sticky top-[77px] z-20 bg-white dark:bg-gray-800">
+            <Toolbar
+              fields={fields}
+              pages={pages}
+              activeFilters={activeFilters}
+              onFilterChange={handleFilterChange}
+              allShots={sheets}
+              sortKey={sortKey}
+              ascending={ascending}
+              onSort={handleSort}
+              visibleFieldIds={visibleFieldIds}
+              onVisibilityChange={handleVisibilityChange}
+              onAddField={handleAddField}
+              onLoadView={handleLoadView}
+              onSaveView={handleSaveView}
+              onSaveViewAs={handleSaveViewAs}
+              onDeleteView={handleDeleteView}
+              loadedPageId={loadedPageId}
+              onOpenUpdateNonUuidIdsDialog={() => setUpdateNonUuidIdsDialogOpen(true)}
+            />
+          </div>
+          <main className="flex-grow overflow-y-auto">
+            {(fieldsError || pagesError) && <p className="text-red-500 text-center">Error: {fieldsError?.message || pagesError?.message}</p>}
+            {!fieldsError && !pagesError && (
+              <Routes>
+                <Route path="/" element={
+                  <MainView
+                    sheets={processedShots}
+                    displayedFields={orderedFields}
+                    visibleFieldIds={visibleFieldIds}
+                    columnWidths={columnWidths}
+                    onColumnResize={handleColumnResize}
+                    onCellSave={handleCellSave}
+                    onUpdateFieldOptions={updateFieldOptions}
+                    idToColIndex={idToColIndex}
+                    onColumnOrderChange={handleColumnOrderChange}
+                    handleColResizeMouseDown={handleColResizeMouseDown}
+                  />
+                } />
+                <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={orderedFields} />} />
+                <Route path="/shots/new" element={<AddShotPage />} />
+              </Routes>
+            )}
+          </main>
+          <footer className="sticky bottom-0 bg-gray-200 dark:bg-gray-700 z-10 flex-shrink-0" style={{ height: '24px' }}>
+            {/* Status Bar */}
+          </footer>
+          <UpdateNonUuidIdsDialog
+            open={isUpdateNonUuidIdsDialogOpen}
+            onClose={() => setUpdateNonUuidIdsDialogOpen(false)}
+          />
         </div>
-          <span className="text-lg font-semibold">Project: Oliver01</span>
-        </div>
-
-        <main className="p-4 flex-grow overflow-y-auto">
-          {(fieldsError || pagesError) && <p className="text-red-500 text-center">Error: {fieldsError?.message || pagesError?.message}</p>}
-          {!fieldsError && !pagesError && (
-            <Routes>
-              <Route path="/" element={
-                <MainView
-                  sheets={processedShots}
-                  displayedFields={orderedFields}
-                  allAvailableFields={fields}
-                  pages={pages}
-                  columnWidths={columnWidths}
-                  onColumnResize={handleColumnResize}
-                  activeFilters={activeFilters}
-                  onFilterChange={handleFilterChange}
-                  allShots={sheets}
-                  sortKey={sortKey}
-                  ascending={ascending}
-                  onSort={handleSort}
-                  visibleFieldIds={visibleFieldIds}
-                  onVisibilityChange={handleVisibilityChange}
-                  onAddField={handleAddField}
-                  onCellSave={handleCellSave}
-                  onUpdateFieldOptions={updateFieldOptions}
-                  onUpdateNonUuidIds={() => setUpdateNonUuidIdsDialogOpen(true)}
-                  idToColIndex={idToColIndex}
-                  onLoadView={handleLoadView}
-                  onSaveView={handleSaveView}
-                  onSaveViewAs={handleSaveViewAs}
-                  onDeleteView={handleDeleteView}
-                  loadedPageId={loadedPageId}
-                  onColumnOrderChange={handleColumnOrderChange}
-                  onOpenUpdateNonUuidIdsDialog={() => setUpdateNonUuidIdsDialogOpen(true)}
-                  handleColResizeMouseDown={handleColResizeMouseDown}
-                />
-              } />
-              <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={orderedFields} />} />
-              <Route path="/shots/new" element={<AddShotPage />} />
-            </Routes>
-          )}
-        </main>
-        <footer className="sticky bottom-0 bg-gray-200 dark:bg-gray-700 z-10 flex-shrink-0" style={{ height: '24px' }}>
-          {/* Status Bar */}
-        </footer>
-        <UpdateNonUuidIdsDialog
-          open={isUpdateNonUuidIdsDialogOpen}
-          onClose={() => setUpdateNonUuidIdsDialogOpen(false)}
-        />
-      </div>
       </AuthProvider>
     </ThemeProvider>
   );

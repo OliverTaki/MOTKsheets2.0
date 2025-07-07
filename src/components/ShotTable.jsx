@@ -109,139 +109,125 @@ export default function ShotTable(props) {
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
     >
-      <Box sx={{ overflowX: "auto" }}>
-        <TableContainer
-          component={Paper}
-          sx={{
-            display: "block",
-            width: `${tableWidth}px`,
-          }}
-        >
-          <Table stickyHeader sx={{ borderCollapse: "collapse" }}>
-            <TableHead sx={{ position: "sticky", top: 0, bgcolor: "background.paper", zIndex: 15 }}>
-              <SortableContext
-                items={visibleFieldIds}
-                strategy={horizontalListSortingStrategy}
+      <TableContainer component={Paper} sx={{ height: '100%', overflow: 'auto' }}>
+        <Table stickyHeader sx={{ borderCollapse: "collapse", width: tableWidth }}>
+          <TableHead sx={{ position: "sticky", top: 0, bgcolor: "background.paper", zIndex: 15 }}>
+            <SortableContext
+              items={visibleFieldIds}
+              strategy={horizontalListSortingStrategy}
+            >
+              <TableRow
+                sx={{
+                  bgcolor: "background.paper",
+                }}
               >
-                <TableRow
-                  sx={{
-                    position: "sticky",
-                    top: "0px",
-                    zIndex: 2,
-                    bgcolor: "background.paper",
-                  }}
-                >
-                  {fields.map(
-                    (f) =>
-                      visibleFieldIds.includes(f.id) && (
-                        <SortableHeaderCell
-                          key={f.id}
-                          field={f}
-                          columnWidths={columnWidths}
-                          handleColResizeMouseDown={handleColResizeMouseDown}
-                          sx={cellSx}
-                        />
-                      )
-                  )}
-                </TableRow>
-              </SortableContext>
-              {showFilters && (
-                <TableRow
-                  sx={{
-                    position: "sticky",
-                    top: `${HEAD_H}px`, // Stick below field row
-                    zIndex: 10,
-                    bgcolor: "background.paper",
-                  }}
-                >
-                  {visibleFieldIds.map((fieldId) => (
-                    <TableCell
-                      key={fieldId}
-                      sx={{ ...cellSx, width: columnWidths[fieldId] ?? 150, p: 0.5 }}
-                    >
-                      {/* filter input here */}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              )}
-            </TableHead>
-            <TableBody>
-              {shots.map((shot) => (
-                <TableRow key={shot.shot_id}>
-                  {fields.map(
-                    (f) =>
-                      visibleFieldIds.includes(f.id) && (
-                        <TableCell
-                          key={f.id}
-                          sx={{ ...cellSx, width: columnWidths[f.id] ?? 150 }}
-                        >
-                          {editingCell?.shotId === shot.shot_id && editingCell?.fieldId === f.id ? (
-                            f.type === "select" ? (
-                              <Select
-                                value={cellValue}
-                                onChange={handleCellChange}
-                                onBlur={handleCellBlur}
-                                autoFocus
-                                fullWidth
-                                variant="standard"
-                                InputProps={{ disableUnderline: true }}
-                                sx={{ '& .MuiInputBase-input': { p: 0.5 } }}
-                              >
-                                {Array.isArray(f.options) && f.options.map((option) => (
-                                  <MenuItem key={typeof option === 'object' ? option.value : option} value={typeof option === 'object' ? option.value : option}> 
-                                    {typeof option === 'object' ? option.label : option}
-                                  </MenuItem>
-                                ))}
-                              </Select>
-                            ) : f.type === "date" ? (
-                              <TextField
-                                type="date"
-                                value={cellValue}
-                                onChange={handleCellChange}
-                                onBlur={handleCellBlur}
-                                onKeyDown={handleCellKeyDown}
-                                autoFocus
-                                fullWidth
-                                variant="standard"
-                                InputProps={{ disableUnderline: true }}
-                                sx={{ '& .MuiInputBase-input': { p: 0.5 } }}
-                              />
-                            ) : (
-                              <TextField
-                                value={cellValue}
-                                onChange={handleCellChange}
-                                onBlur={handleCellBlur}
-                                onKeyDown={handleCellKeyDown}
-                                autoFocus
-                                fullWidth
-                                variant="standard"
-                                InputProps={{ disableUnderline: true }}
-                                sx={{ '& .MuiInputBase-input': { p: 0.5 } }}
-                              />
-                            )
+                {fields.map(
+                  (f) =>
+                    visibleFieldIds.includes(f.id) && (
+                      <SortableHeaderCell
+                        key={f.id}
+                        field={f}
+                        columnWidths={columnWidths}
+                        handleColResizeMouseDown={handleColResizeMouseDown}
+                        sx={cellSx}
+                      />
+                    )
+                )}
+              </TableRow>
+            </SortableContext>
+            {showFilters && (
+              <TableRow
+                sx={{
+                  bgcolor: "background.paper",
+                }}
+              >
+                {visibleFieldIds.map((fieldId) => (
+                  <TableCell
+                    key={fieldId}
+                    sx={{ ...cellSx, width: columnWidths[fieldId] ?? 150, p: 0.5 }}
+                  >
+                    {/* filter input here */}
+                  </TableCell>
+                ))}
+              </TableRow>
+            )}
+          </TableHead>
+          <TableBody>
+            {shots.map((shot) => (
+              <TableRow key={shot.shot_id}>
+                {fields.map(
+                  (f) =>
+                    visibleFieldIds.includes(f.id) && (
+                      <TableCell
+                        key={f.id}
+                        sx={{ ...cellSx, width: columnWidths[f.id] ?? 150 }}
+                      >
+                        {editingCell?.shotId === shot.shot_id && editingCell?.fieldId === f.id ? (
+                          f.type === "select" ? (
+                            <Select
+                              value={cellValue}
+                              onChange={handleCellChange}
+                              onBlur={handleCellBlur}
+                              autoFocus
+                              fullWidth
+                              variant="standard"
+                              InputProps={{ disableUnderline: true }}
+                              sx={{ '& .MuiInputBase-input': { p: 0.5 } }}
+                            >
+                              {Array.isArray(f.options) && f.options.map((option) => (
+                                <MenuItem key={typeof option === 'object' ? option.value : option} value={typeof option === 'object' ? option.value : option}> 
+                                  {typeof option === 'object' ? option.label : option}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          ) : f.type === "date" ? (
+                            <TextField
+                              type="date"
+                              value={cellValue}
+                              onChange={handleCellChange}
+                              onBlur={handleCellBlur}
+                              onKeyDown={handleCellKeyDown}
+                              autoFocus
+                              fullWidth
+                              variant="standard"
+                              InputProps={{ disableUnderline: true }}
+                              sx={{ '& .MuiInputBase-input': { p: 0.5 } }}
+                            />
                           ) : (
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                              {renderCell(shot, f)}
-                              {f.editable && (
-                                <EditIcon
-                                  sx={{ fontSize: 16, cursor: 'pointer', ml: 1 }}
-                                  onClick={(e) => {
-                                    e.stopPropagation(); // Prevent triggering cell click again
-                                    handleCellClick(shot.shot_id, f.id, shot[f.id], f.editable);
-                                  }}
-                                />
-                              )}
-                            </Box>
-                          )}
-                        </TableCell>
-                      )
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Box>
+                            <TextField
+                              value={cellValue}
+                              onChange={handleCellChange}
+                              onBlur={handleCellBlur}
+                              onKeyDown={handleCellKeyDown}
+                              autoFocus
+                              fullWidth
+                              variant="standard"
+                              InputProps={{ disableUnderline: true }}
+                              sx={{ '& .MuiInputBase-input': { p: 0.5 } }}
+                            />
+                          )
+                        ) : (
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            {renderCell(shot, f)}
+                            {f.editable && (
+                              <EditIcon
+                                sx={{ fontSize: 16, cursor: 'pointer', ml: 1 }}
+                                onClick={(e) => {
+                                  e.stopPropagation(); // Prevent triggering cell click again
+                                  handleCellClick(shot.shot_id, f.id, shot[f.id], f.editable);
+                                }}
+                              />
+                            )}
+                          </Box>
+                        )}
+                      </TableCell>
+                    )
+                )}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
     </DndContext>
   );
 }
