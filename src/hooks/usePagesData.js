@@ -11,15 +11,14 @@ const safeJsonParse = (jsonString, defaultValue) => {
   }
 };
 
-const usePagesData = () => {
+const usePagesData = (sheetId) => {
   const [pages, setPages] = useState([]);
   const [loading, setLoading] = useState(false); // Initial state should be false or true based on initial fetch
   const [error, setError] = useState(null);
-  const { token, isGapiClientReady, sheetId: ctxSheetId } = useContext(AuthContext);
-  const SHEET_ID = ctxSheetId || import.meta.env.VITE_SHEETS_ID;
+  const { token, isGapiClientReady } = useContext(AuthContext);
 
   const refreshPages = useCallback(async () => {
-    if (!token || !isGapiClientReady || !SHEET_ID || !window.gapi || !window.gapi.client || !window.gapi.client.sheets) {
+    if (!token || !isGapiClientReady || !sheetId || !window.gapi || !window.gapi.client || !window.gapi.client.sheets) {
       setLoading(false);
       return;
     }
@@ -27,7 +26,7 @@ const usePagesData = () => {
     setError(null); // Clear previous errors
     try {
       const res = await window.gapi.client.sheets.spreadsheets.values.get({
-        spreadsheetId: SHEET_ID,
+        spreadsheetId: sheetId,
         range: 'PAGES!A:H',
       });
 
@@ -80,12 +79,12 @@ const usePagesData = () => {
     } finally {
       setLoading(false);
     }
-  }, [token, isGapiClientReady, SHEET_ID]);
+  }, [token, isGapiClientReady, sheetId]);
 
   useEffect(() => {
     setPages([]); // Clear cache on sheetId switch
     refreshPages();
-  }, [refreshPages]);
+  }, [refreshPages, sheetId]);
 
   return { pages, loading, error, refreshPages };
 };

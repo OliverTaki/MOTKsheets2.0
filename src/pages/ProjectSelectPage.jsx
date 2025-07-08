@@ -1,13 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDriveSheets } from '../hooks/useDriveSheets';
-import { AuthContext } from '../AuthContext';
-import { useContext } from 'react';
 import { toProjectName } from '../utils/id';
 
-export default function ProjectSelectPage() {
+export default function ProjectSelectPage({ setSheetId }) {
   const { sheets, loading, error } = useDriveSheets();
-  const { setSheetId } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleSelect = (id) => {

@@ -1,7 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SheetsDataContext } from '../contexts/SheetsDataContext';
-import usePagesData from '../hooks/usePagesData'; // Import usePagesData
 import FilterManager from './FilterManager';
 import FieldManager from './FieldManager';
 import ManageViewsDialog from './ManageViewsDialog';
@@ -27,10 +26,12 @@ const Toolbar = ({
     onDeleteView,
     loadedPageId,
     onOpenUpdateNonUuidIdsDialog,
+    pages = [], // Add pages to props with default empty array
+    pagesLoading, // Add pagesLoading to props
+    pagesError, // Add pagesError to props
+    fields = [],
 }) => {
     const navigate = useNavigate();
-    const { fields } = useContext(SheetsDataContext);
-    const { pages, loading: pagesLoading, error: pagesError } = usePagesData(); // Get pages from hook
     const [isManageViewsDialogOpen, setManageViewsDialogOpen] = useState(false);
 
     const handleAddNew = () => {
@@ -63,10 +64,10 @@ const Toolbar = ({
                         >
                             {pagesLoading && <MenuItem disabled>Loading views...</MenuItem>}
                             {pagesError && <MenuItem disabled className="text-red-400">Error loading views</MenuItem>}
-                            {!pagesLoading && !pagesError && pages.length === 0 && (
+                            {!pagesLoading && !pagesError && (!Array.isArray(pages) || pages.length === 0) && (
                                 <MenuItem disabled>No views found</MenuItem>
                             )}
-                            {!pagesLoading && !pagesError && pages.length > 0 && (
+                            {Array.isArray(pages) && pages.length > 0 && (
                                 pages.map(page => (
                                     <MenuItem key={page.page_id} value={page.page_id}>{page.title}</MenuItem>
                                 ))

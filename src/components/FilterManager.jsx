@@ -15,8 +15,7 @@ import Select from '@mui/material/Select';
 import TextField from '@mui/material/TextField';
 import Box from '@mui/material/Box';
 
-const FilterManager = ({ activeFilters, onFilterChange }) => {
-    const { fields } = useContext(SheetsDataContext);
+const FilterManager = ({ activeFilters, onFilterChange, fields = [] }) => {
     const [anchorEl, setAnchorEl] = useState(null);
     const open = Boolean(anchorEl);
 

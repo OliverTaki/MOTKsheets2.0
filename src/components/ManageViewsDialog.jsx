@@ -56,10 +56,10 @@ const ManageViewsDialog = ({
         </Box>
         {loading && <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}><CircularProgress /></Box>}
         {error && <Typography color="error" sx={{ my: 2 }}>Error loading views: {error.message}</Typography>}
-        {!loading && !error && pages.length === 0 && (
+        {!loading && !error && Array.isArray(pages) && pages.length === 0 && (
           <Typography variant="body2" color="text.secondary" sx={{ my: 2 }}>No saved views found.</Typography>
         )}
-        {!loading && !error && pages.length > 0 && (
+        {!loading && !error && Array.isArray(pages) && pages.length > 0 && (
           <List>
             {pages.map((page) => (
               <ListItem

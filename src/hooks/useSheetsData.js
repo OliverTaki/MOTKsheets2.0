@@ -1,13 +1,11 @@
-import { useState, useEffect, useContext, useCallback } from 'react';
+import { useState, useEffect, useCallback, useContext } from 'react';
 import { AuthContext } from '../AuthContext';
 import { parseShots, parseFields } from '../utils/parse';
 import { missingIdHandler } from '../utils/missingIdHandler';
 import { updateCell } from '../api/updateCell';
-import { SheetsDataContext } from '../contexts/SheetsDataContext'; // Import SheetsDataContext
 
-export const useSheetsData = () => {
-  const { sheetId: ctxSheetId, token, isGapiClientReady } = useContext(AuthContext);
-  const SHEET_ID = ctxSheetId || import.meta.env.VITE_SHEETS_ID;
+export const useSheetsData = (sheetId) => {
+  const { token, isGapiClientReady } = useContext(AuthContext);
   const [shots, setShots] = useState([]);
   const [fields, setFields] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -15,7 +13,7 @@ export const useSheetsData = () => {
   const [idToColIndex, setIdToColIndex] = useState({});
 
   const refreshData = useCallback(async () => {
-    if (!SHEET_ID || !token || !isGapiClientReady || !window.gapi || !window.gapi.client || !window.gapi.client.sheets) {
+    if (!sheetId || !token || !isGapiClientReady || !window.gapi || !window.gapi.client || !window.gapi.client.sheets) {
       setLoading(false);
       return;
     }
@@ -23,7 +21,7 @@ export const useSheetsData = () => {
     setError(null);
     try {
       const res = await window.gapi.client.sheets.spreadsheets.values.batchGet({
-        spreadsheetId: SHEET_ID,
+        spreadsheetId: sheetId,
         ranges: ['Shots!A:AZ', 'FIELDS!A:F'],
       });
       const { valueRanges } = res.result;
@@ -66,7 +64,7 @@ export const useSheetsData = () => {
     } finally {
       setLoading(false);
     }
-  }, [SHEET_ID, token, isGapiClientReady]);
+  }, [sheetId, token, isGapiClientReady]);
 
   const updateFieldOptions = useCallback(async (fieldId, newOption) => {
     if (!token) {
@@ -89,7 +87,7 @@ export const useSheetsData = () => {
       const optionsColumnLetter = 'F';
       const range = `FIELDS!${optionsColumnLetter}${fieldRowIndex}`;
 
-      await updateCell(SHEET_ID, token, range, updatedOptionsString);
+      await updateCell(sheetId, token, range, updatedOptionsString);
 
       setFields(prevFields => prevFields.map(f =>
         f.id === fieldId ? { ...f, options: updatedOptionsString } : f
@@ -99,14 +97,14 @@ export const useSheetsData = () => {
       console.error('Error updating field options:', err);
       alert(`Error updating field options: ${err.message}`);
     }
-  }, [SHEET_ID, token, fields]);
+  }, [sheetId, token, fields]);
 
   useEffect(() => {
     setShots([]); // Clear cache on sheetId switch
     setFields([]); // Clear cache on sheetId switch
     setIdToColIndex({}); // Clear idToColIndex on sheetId switch
     refreshData();
-  }, [refreshData, SHEET_ID]); // Added SHEET_ID to dependencies
+  }, [refreshData, sheetId]); // Added sheetId to dependencies
 
   return {
     sheets: shots, // Renamed shots to sheets for consistency with AuthContext

@@ -21,9 +21,9 @@ import { getNonUuidIds, updateNonUuidIds } from '../api/updateNonUuidIds';
 
 const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 
-const UpdateNonUuidIdsDialog = ({ open, onClose }) => {
+const UpdateNonUuidIdsDialog = ({ open, onClose, sheets = [], fields = [] }) => {
   const { token, sheetId } = useContext(AuthContext);
-  const { sheets, fields, refreshData } = useContext(SheetsDataContext);
+  const { refreshData } = useContext(SheetsDataContext);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [nonUuidShotIds, setNonUuidShotIds] = useState([]);

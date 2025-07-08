@@ -16,8 +16,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import AddIcon from '@mui/icons-material/Add';
 
-const FieldManager = ({ visibleFieldIds = [], onVisibilityChange, onAddField }) => {
-    const { fields: allFields } = useContext(SheetsDataContext);
+const FieldManager = ({ allFields = [], visibleFieldIds = [], onVisibilityChange, onAddField }) => {
     const [anchorEl, setAnchorEl] = useState(null);
     const open = Boolean(anchorEl);
     const [newField, setNewField] = useState({

@@ -3,10 +3,9 @@ import CssBaseline from '@mui/material/CssBaseline';
 import React, { useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import ProtectedRoutes from '../routes/ProtectedRoutes';
-import ProjectSelectPage from '../pages/ProjectSelectPage';
+import Home from './Home';
 import { useSheetsData } from '../hooks/useSheetsData';
-import usePagesData from '../hooks/usePagesData';
-import ShotTable from './ShotTable';
+import { usePagesData } from '../hooks/usePagesData';
 import GlobalNav from './GlobalNav';
 import Toolbar from './Toolbar';
 import LoginButton from './LoginButton';
@@ -25,35 +24,7 @@ import UpdateNonUuidIdsDialog from './UpdateNonUuidIdsDialog';
 
 const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 
-const MainView = ({
-  sheets,
-  displayedFields,
-  visibleFieldIds,
-  columnWidths,
-  onColumnResize,
-  onCellSave,
-  onUpdateFieldOptions,
-  idToColIndex,
-  onColumnOrderChange,
-  handleColResizeMouseDown,
-}) => {
-  return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-      <ShotTable
-        shots={sheets}
-        fields={displayedFields}
-        visibleFieldIds={visibleFieldIds}
-        columnWidths={columnWidths}
-        onColumnResize={onColumnResize}
-        onCellSave={(shotId, fieldId, newValue) => onCellSave(shotId, fieldId, newValue, idToColIndex)}
-        onUpdateFieldOptions={onUpdateFieldOptions}
-        onColumnOrderChange={onColumnOrderChange}
-        handleDragEnd={onColumnOrderChange}
-        handleColResizeMouseDown={handleColResizeMouseDown}
-      />
-    </div>
-  );
-};
+
 
 const theme = createTheme({
   palette: {
@@ -62,11 +33,15 @@ const theme = createTheme({
 });
 
 export const AppContainer = () => {
-  const { token, user, isInitialized, sheetId } = useContext(AuthContext);
+  const { token, user, isInitialized } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  const { sheets, fields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex } = useSheetsData();
-  const { pages, loading: pagesLoading, error: pagesError, refreshPages } = usePagesData();
+  const [sheetId, setSheetId] = useState(() => {
+    return localStorage.getItem('motk:lastSheetId') || null;
+  });
+
+  const { sheets, fields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex } = useSheetsData(sheetId);
+  const { pages, loading: pagesLoading, error: pagesError, refreshPages } = usePagesData(sheetId);
 
   const [columnWidths, setColumnWidths] = useState({});
   const [activeFilters, setActiveFilters] = useState({});
@@ -358,7 +333,7 @@ export const AppContainer = () => {
       <CssBaseline />
       <AuthProvider refreshData={refreshData}>
         <div className="App bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col" style={{ height: '100dvh', overflow: 'hidden' }}>
-          <GlobalNav />
+          <GlobalNav sheetId={sheetId} setSheetId={setSheetId} />
           {token && sheetId && ( // Only show project navigation and toolbar if token and sheetId exist
             <>
               <div className="sticky top-[48px] z-20 bg-gray-800">
@@ -390,26 +365,31 @@ export const AppContainer = () => {
               <SheetsDataContext.Provider value={{ sheets, fields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex }}>
                 <Routes>
                   <Route path="/signin" element={<LoginButton />} />
-                  <Route path="/select" element={<ProjectSelectPage />} />
-                  <Route element={<ProtectedRoutes />}>
-                    <Route path="/" element={
-                      token && sheetId ? (
-                        <MainView
-                          sheets={processedShots}
-                          displayedFields={orderedFields}
-                          visibleFieldIds={visibleFieldIds}
-                          columnWidths={columnWidths}
-                          onColumnResize={handleColumnResize}
-                          onCellSave={handleCellSave}
-                          onUpdateFieldOptions={updateFieldOptions}
-                          onColumnOrderChange={handleColumnOrderChange}
-                          handleColResizeMouseDown={handleColResizeMouseDown}
-                        />
-                      ) : null
-                    } />
-                    <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={orderedFields} idToColIndex={idToColIndex} />} />
-                    <Route path="/shots/new" element={<AddShotPage />} />
-                  </Route>
+                  {!sheetId ? (
+                    <Route path="/" element={<ProjectSelectPage setSheetId={setSheetId} />} />
+                  ) : (
+                    <Route element={<ProtectedRoutes />}>
+                      <Route path="/" element={
+                    <Home
+                      sheetId={sheetId}
+                      setSheetId={setSheetId}
+                      processedShots={processedShots}
+                      orderedFields={orderedFields}
+                      visibleFieldIds={visibleFieldIds}
+                      columnWidths={columnWidths}
+                      onColumnResize={handleColumnResize}
+                      onCellSave={handleCellSave}
+                      onUpdateFieldOptions={updateFieldOptions}
+                      onColumnOrderChange={handleColumnOrderChange}
+                      handleColResizeMouseDown={handleColResizeMouseDown}
+                      sheets={sheets}
+                      fields={fields}
+                    />
+                  } />
+                      <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={orderedFields} idToColIndex={idToColIndex} />} />
+                      <Route path="/shots/new" element={<AddShotPage />} />
+                    </Route>
+                  )}
                 </Routes>
               </SheetsDataContext.Provider>
             )}
@@ -420,6 +400,8 @@ export const AppContainer = () => {
           <UpdateNonUuidIdsDialog
             open={isUpdateNonUuidIdsDialogOpen}
             onClose={() => setUpdateNonUuidIdsDialogOpen(false)}
+            sheets={sheets}
+            fields={fields}
           />
         </div>
       </AuthProvider>

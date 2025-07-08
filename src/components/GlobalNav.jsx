@@ -1,14 +1,12 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AuthContext } from '../AuthContext';
 import { useDriveSheets } from '../hooks/useDriveSheets';
 import { toProjectName } from '../utils/id';
 import { AppBar, Toolbar, Typography, Button, Box, Menu, MenuItem } from '@mui/material';
 import LoginButton from './LoginButton'; // Assuming LoginButton is in the same directory
 
-export default function GlobalNav() {
+export default function GlobalNav({ sheetId, setSheetId }) {
   const navigate = useNavigate();
-  const { sheetId, setSheetId } = useContext(AuthContext);
   const { sheets, loading, error } = useDriveSheets();
   const [currentProjectDisplayName, setCurrentProjectDisplayName] = useState('Select Project');
   const [anchorEl, setAnchorEl] = useState(null);
