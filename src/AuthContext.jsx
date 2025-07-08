@@ -11,6 +11,7 @@ export const AuthProvider = ({ children, sheets, fields, refreshData }) => {
     const [error, setError] = useState(null);
     const [tokenClient, setTokenClient] = useState(null);
     const [sheetId, setSheetId] = useState(() => localStorage.getItem(LAST_SHEET_ID_STORAGE_KEY));
+    const [displayName, setDisplayName] = useState(null);
 
     const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     const SCOPES = 'https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/drive.metadata.readonly';
@@ -143,7 +144,20 @@ export const AuthProvider = ({ children, sheets, fields, refreshData }) => {
         console.log('Local token cleared.');
     }, []);
 
-    const value = { token, signIn, signOut, isInitialized, error, clearToken, sheets, fields, refreshData, sheetId, setSheetId, isGapiClientReady, setIsGapiClientReady };
+    useEffect(() => {
+        if (sheetId && sheets.length > 0) {
+            const currentSheet = sheets.find(sheet => sheet.id === sheetId);
+            if (currentSheet) {
+                setDisplayName(currentSheet.appProperties?.projectName || currentSheet.name.replace(/^MOTK\s*/i, ''));
+            } else {
+                setDisplayName(null);
+            }
+        } else {
+            setDisplayName(null);
+        }
+    }, [sheetId, sheets]);
+
+    const value = { token, signIn, signOut, isInitialized, error, clearToken, sheets, fields, refreshData, sheetId, setSheetId, isGapiClientReady, setIsGapiClientReady, displayName };
 
     return (
         <AuthContext.Provider value={value}>

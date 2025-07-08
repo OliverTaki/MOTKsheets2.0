@@ -1,6 +1,9 @@
 import { useEffect, useState, useContext } from 'react';
 import { AuthContext } from '../AuthContext';
 
+export const toDisplayName = (file) =>
+  file.appProperties?.projectName ?? file.name.replace(/^MOTK\s*/i, '');
+
 /**
  * Returns Drive spreadsheets the signed-in user can at least read.
  * Drive scope: drive.metadata.readonly
@@ -20,9 +23,10 @@ export function useDriveSheets() {
       try {
         const res = await window.gapi.client.drive.files.list({
           pageSize: 100,
-          fields: 'files(id,name,owners(displayName))',
+          fields: 'files(id,name,appProperties,owners(displayName))',
           q:
-            "mimeType='application/vnd.google-apps.spreadsheet' " + // Sheets only
+            "mimeType='application/vnd.google-apps.spreadsheet' " +
+            "and appProperties has { key='motk' and value='true' } " +
             "and ('me' in owners or 'me' in readers or 'me' in writers)",
         });
 
