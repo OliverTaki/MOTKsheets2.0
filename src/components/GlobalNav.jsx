@@ -46,7 +46,11 @@ export default function GlobalNav() {
     <AppBar position="static" className="bg-zinc-800 text-white shadow-none">
       <Toolbar className="flex items-center h-12 px-4">
         {/* LOGO -> /select */}
-        <Button color="inherit" onClick={() => navigate('/select')} className="font-bold mr-8 normal-case text-lg">
+        <Button color="inherit" onClick={() => {
+          setSheetId(null);
+          localStorage.removeItem('motk:lastSheetId');
+          navigate('/select');
+        }} className="font-bold mr-8 normal-case text-lg">
           MOTK
         </Button>
 

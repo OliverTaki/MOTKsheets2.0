@@ -2,6 +2,7 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import React, { useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
+import ProtectedRoutes from '../routes/ProtectedRoutes';
 import ProjectSelectPage from '../pages/ProjectSelectPage';
 import { useSheetsData } from '../hooks/useSheetsData';
 import usePagesData from '../hooks/usePagesData';
@@ -342,15 +343,7 @@ export const AppContainer = () => {
     window.addEventListener("mouseup", handleMouseUp);
   };
 
-  useEffect(() => {
-    if (isInitialized) {
-      if (token && !sheetId) {
-        navigate('/select');
-      } else if (token && sheetId) {
-        navigate('/');
-      }
-    }
-  }, [token, sheetId, isInitialized, navigate]);
+  
 
   if (!isAppReady && token && sheetId) { // Only show loading if token and sheetId exist
     return (
@@ -398,25 +391,28 @@ export const AppContainer = () => {
             {(fieldsError || pagesError) && <p className="text-red-500 text-center">Error: {fieldsError?.message || pagesError?.message}</p>}
             {!fieldsError && !pagesError && (
               <Routes>
-                <Route path="/" element={
-                  token && sheetId ? (
-                    <MainView
-                      sheets={processedShots}
-                      displayedFields={orderedFields}
-                      visibleFieldIds={visibleFieldIds}
-                      columnWidths={columnWidths}
-                      onColumnResize={handleColumnResize}
-                      onCellSave={handleCellSave}
-                      onUpdateFieldOptions={updateFieldOptions}
-                      idToColIndex={idToColIndex}
-                      onColumnOrderChange={handleColumnOrderChange}
-                      handleColResizeMouseDown={handleColResizeMouseDown}
-                    />
-                  ) : null
-                } />
+                <Route path="/signin" element={<LoginButton />} />
                 <Route path="/select" element={<ProjectSelectPage />} />
-                <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={orderedFields} idToColIndex={idToColIndex} />} />
-                <Route path="/shots/new" element={<AddShotPage />} />
+                <Route element={<ProtectedRoutes />}>
+                  <Route path="/" element={
+                    token && sheetId ? (
+                      <MainView
+                        sheets={processedShots}
+                        displayedFields={orderedFields}
+                        visibleFieldIds={visibleFieldIds}
+                        columnWidths={columnWidths}
+                        onColumnResize={handleColumnResize}
+                        onCellSave={handleCellSave}
+                        onUpdateFieldOptions={updateFieldOptions}
+                        idToColIndex={idToColIndex}
+                        onColumnOrderChange={handleColumnOrderChange}
+                        handleColResizeMouseDown={handleColResizeMouseDown}
+                      />
+                    ) : null
+                  } />
+                  <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={orderedFields} idToColIndex={idToColIndex} />} />
+                  <Route path="/shots/new" element={<AddShotPage />} />
+                </Route>
               </Routes>
             )}
           </main>
