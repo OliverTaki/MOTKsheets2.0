@@ -1,15 +1,14 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../AuthContext';
+import { SheetsDataContext } from '../contexts/SheetsDataContext';
 import { appendRow } from '../api/appendRow';
 import { useNavigate } from 'react-router-dom';
-import { useSheetsData } from '../hooks/useSheetsData';
 import { v4 as uuidv4 } from 'uuid';
 
 const AddShotPage = () => {
-  const { token } = useContext(AuthContext);
+  const { token, sheetId } = useContext(AuthContext);
   const navigate = useNavigate();
-  const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
-  const { fields, idToColIndex, loading: sheetsLoading, error: sheetsError } = useSheetsData(spreadsheetId);
+  const { fields, idToColIndex, loading: sheetsLoading, error: sheetsError } = useContext(SheetsDataContext);
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -77,7 +76,7 @@ const AddShotPage = () => {
 
       console.log("AddShotPage: Calling appendRow.");
       await appendRow({
-        sheetId: import.meta.env.VITE_SHEETS_ID,
+        sheetId,
         token,
         tabName: 'Shots',
         values: orderedValues,

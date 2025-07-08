@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
+import { SheetsDataContext } from '../contexts/SheetsDataContext';
 import Button from '@mui/material/Button';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
@@ -15,7 +16,8 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import AddIcon from '@mui/icons-material/Add';
 
-const FieldManager = ({ allFields = [], visibleFieldIds = [], onVisibilityChange, onAddField }) => {
+const FieldManager = ({ visibleFieldIds = [], onVisibilityChange, onAddField }) => {
+    const { fields: allFields } = useContext(SheetsDataContext);
     const [anchorEl, setAnchorEl] = useState(null);
     const open = Boolean(anchorEl);
     const [newField, setNewField] = useState({

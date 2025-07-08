@@ -16,12 +16,14 @@ import {
   Box,
 } from '@mui/material';
 import { AuthContext } from '../AuthContext';
+import { SheetsDataContext } from '../contexts/SheetsDataContext';
 import { getNonUuidIds, updateNonUuidIds } from '../api/updateNonUuidIds';
 
 const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 
 const UpdateNonUuidIdsDialog = ({ open, onClose }) => {
-  const { token, sheets, fields, refreshData } = useContext(AuthContext);
+  const { token, sheetId } = useContext(AuthContext);
+  const { sheets, fields, refreshData } = useContext(SheetsDataContext);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [nonUuidShotIds, setNonUuidShotIds] = useState([]);
@@ -42,7 +44,7 @@ const UpdateNonUuidIdsDialog = ({ open, onClose }) => {
     console.log("UpdateNonUuidIdsDialog: useEffect triggered.");
     const fetchIds = async () => {
       console.log("UpdateNonUuidIdsDialog: fetchIds called. open:", open, "token:", token ? "present" : "missing", "sheets:", sheets ? "present" : "missing", "fields:", fields ? "present" : "missing");
-      if (!open || !token || !sheets || !fields) {
+      if (!open || !token || !sheets || !fields || !sheetId) {
         console.log("UpdateNonUuidIdsDialog: fetchIds returning early due to missing dependencies.");
         return;
       }
@@ -51,7 +53,7 @@ const UpdateNonUuidIdsDialog = ({ open, onClose }) => {
       setLoading(true);
       setError(null);
       try {
-        const { nonUuidShotIds, nonUuidFieldIds } = await getNonUuidIds(spreadsheetId, token, sheets, fields);
+        const { nonUuidShotIds, nonUuidFieldIds } = await getNonUuidIds(sheetId, token, sheets, fields);
         setNonUuidShotIds(nonUuidShotIds);
         setNonUuidFieldIds(nonUuidFieldIds);
         setSelectedIds(new Set([...nonUuidShotIds, ...nonUuidFieldIds])); // Select all by default
@@ -94,7 +96,8 @@ const UpdateNonUuidIdsDialog = ({ open, onClose }) => {
     setUpdateError(null);
     setUpdateSuccess(false);
     try {
-      await updateNonUuidIds(spreadsheetId, token, sheets, fields, Array.from(selectedIds));
+      try {
+      await updateNonUuidIds(sheetId, token, sheets, fields, Array.from(selectedIds));
       setUpdateSuccess(true);
       // Refresh data in AppContainer after successful update
       if (refreshData) refreshData();

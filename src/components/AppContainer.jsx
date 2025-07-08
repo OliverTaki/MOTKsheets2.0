@@ -11,6 +11,7 @@ import GlobalNav from './GlobalNav';
 import Toolbar from './Toolbar';
 import LoginButton from './LoginButton';
 import { AuthContext, AuthProvider } from '../AuthContext';
+import { SheetsDataContext } from '../contexts/SheetsDataContext';
 import ShotDetailPage from './ShotDetailPage';
 import AddShotPage from './AddShotPage'; // Import the new component
 import { appendField } from '../api/appendField';
@@ -64,7 +65,7 @@ export const AppContainer = () => {
   const { token, user, isInitialized, sheetId } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  const { sheets, setSheets, fields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex } = useSheetsData(sheetId);
+  const { sheets, fields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex } = useSheetsData();
   const { pages, loading: pagesLoading, error: pagesError, refreshPages } = usePagesData();
 
   const [columnWidths, setColumnWidths] = useState({});
@@ -230,7 +231,7 @@ export const AppContainer = () => {
     }
   }, [token, fields, refreshData, sheetId]);
 
-  const handleCellSave = useCallback(async (shotId, fieldId, newValue, idToColIndex) => {
+  const handleCellSave = useCallback(async (shotId, fieldId, newValue) => {
     if (!token) { alert("Authentication required."); return; }
 
     const originalRowIndex = sheets.findIndex(s => s.shot_id === shotId);
@@ -250,17 +251,13 @@ export const AppContainer = () => {
 
     try {
       await updateCell(sheetId, token, range, newValue);
-      setSheets(prevSheets =>
-        prevSheets.map(shot =>
-          shot.shot_id === shotId ? { ...shot, [fieldId]: newValue } : shot
-        )
-      );
+      refreshData(); // Refresh data after successful save
       console.log(`Cell ${range} updated successfully.`);
     } catch (err) {
       console.error("Failed to update cell:", err);
       alert(`Error: ${err.message}`);
     }
-  }, [token, sheets, setSheets, sheetId]);
+  }, [token, sheets, sheetId, idToColIndex, refreshData]);
 
   const getCurrentView = () => ({
     columnWidths,
@@ -359,7 +356,7 @@ export const AppContainer = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AuthProvider sheets={sheets} fields={fields} refreshData={refreshData}>
+      <AuthProvider refreshData={refreshData}>
         <div className="App bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col" style={{ height: '100dvh', overflow: 'hidden' }}>
           <GlobalNav />
           {token && sheetId && ( // Only show project navigation and toolbar if token and sheetId exist
@@ -390,30 +387,31 @@ export const AppContainer = () => {
           <main className="flex-grow bg-gray-800" style={{ flex: 1 }}>
             {(fieldsError || pagesError) && <p className="text-red-500 text-center">Error: {fieldsError?.message || pagesError?.message}</p>}
             {!fieldsError && !pagesError && (
-              <Routes>
-                <Route path="/signin" element={<LoginButton />} />
-                <Route path="/select" element={<ProjectSelectPage />} />
-                <Route element={<ProtectedRoutes />}>
-                  <Route path="/" element={
-                    token && sheetId ? (
-                      <MainView
-                        sheets={processedShots}
-                        displayedFields={orderedFields}
-                        visibleFieldIds={visibleFieldIds}
-                        columnWidths={columnWidths}
-                        onColumnResize={handleColumnResize}
-                        onCellSave={handleCellSave}
-                        onUpdateFieldOptions={updateFieldOptions}
-                        idToColIndex={idToColIndex}
-                        onColumnOrderChange={handleColumnOrderChange}
-                        handleColResizeMouseDown={handleColResizeMouseDown}
-                      />
-                    ) : null
-                  } />
-                  <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={orderedFields} idToColIndex={idToColIndex} />} />
-                  <Route path="/shots/new" element={<AddShotPage />} />
-                </Route>
-              </Routes>
+              <SheetsDataContext.Provider value={{ sheets, fields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex }}>
+                <Routes>
+                  <Route path="/signin" element={<LoginButton />} />
+                  <Route path="/select" element={<ProjectSelectPage />} />
+                  <Route element={<ProtectedRoutes />}>
+                    <Route path="/" element={
+                      token && sheetId ? (
+                        <MainView
+                          sheets={processedShots}
+                          displayedFields={orderedFields}
+                          visibleFieldIds={visibleFieldIds}
+                          columnWidths={columnWidths}
+                          onColumnResize={handleColumnResize}
+                          onCellSave={handleCellSave}
+                          onUpdateFieldOptions={updateFieldOptions}
+                          onColumnOrderChange={handleColumnOrderChange}
+                          handleColResizeMouseDown={handleColResizeMouseDown}
+                        />
+                      ) : null
+                    } />
+                    <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={orderedFields} idToColIndex={idToColIndex} />} />
+                    <Route path="/shots/new" element={<AddShotPage />} />
+                  </Route>
+                </Routes>
+              </SheetsDataContext.Provider>
             )}
           </main>
           <footer className="sticky bottom-0 bg-gray-200 dark:bg-gray-700 z-10 flex-shrink-0" style={{ height: '24px' }}>

@@ -3,6 +3,7 @@ import { AuthContext } from '../AuthContext';
 import { parseShots, parseFields } from '../utils/parse';
 import { missingIdHandler } from '../utils/missingIdHandler';
 import { updateCell } from '../api/updateCell';
+import { SheetsDataContext } from '../contexts/SheetsDataContext'; // Import SheetsDataContext
 
 export const useSheetsData = () => {
   const { sheetId: ctxSheetId, token, isGapiClientReady } = useContext(AuthContext);
@@ -103,8 +104,17 @@ export const useSheetsData = () => {
   useEffect(() => {
     setShots([]); // Clear cache on sheetId switch
     setFields([]); // Clear cache on sheetId switch
+    setIdToColIndex({}); // Clear idToColIndex on sheetId switch
     refreshData();
-  }, [refreshData]);
+  }, [refreshData, SHEET_ID]); // Added SHEET_ID to dependencies
 
-  return { sheets: shots, fields, loading, error, refreshData, updateFieldOptions, idToColIndex };
+  return {
+    sheets: shots, // Renamed shots to sheets for consistency with AuthContext
+    fields,
+    loading,
+    error,
+    refreshData,
+    updateFieldOptions,
+    idToColIndex,
+  };
 };

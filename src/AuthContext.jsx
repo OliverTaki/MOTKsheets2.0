@@ -6,7 +6,7 @@ export const AuthContext = createContext(null);
 const TOKEN_STORAGE_KEY = 'google_auth_token';
 const LAST_SHEET_ID_STORAGE_KEY = 'motk:lastSheetId';
 
-export const AuthProvider = ({ children, sheets = [], fields = [], refreshData }) => {
+export const AuthProvider = ({ children, refreshData }) => {
     const [token, setToken] = useState(() => localStorage.getItem(TOKEN_STORAGE_KEY));
     const [isInitialized, setIsInitialized] = useState(false);
     const [isGapiClientReady, setIsGapiClientReady] = useState(false);
@@ -160,7 +160,7 @@ export const AuthProvider = ({ children, sheets = [], fields = [], refreshData }
         }
     }, [sheetId, sheets]);
 
-    const value = { token, signIn, signOut, isInitialized, error, clearToken, sheets, fields, refreshData, sheetId, setSheetId, isGapiClientReady, setIsGapiClientReady, displayName };
+    const value = { token, signIn, signOut, isInitialized, error, clearToken, refreshData, sheetId, setSheetId, isGapiClientReady, setIsGapiClientReady, displayName };
 
     return (
         <AuthContext.Provider value={value}>

@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { SheetsDataContext } from '../contexts/SheetsDataContext';
+import usePagesData from '../hooks/usePagesData'; // Import usePagesData
 import FilterManager from './FilterManager';
 import FieldManager from './FieldManager';
 import ManageViewsDialog from './ManageViewsDialog';
@@ -9,8 +11,6 @@ import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import AddIcon from '@mui/icons-material/Add';
 
 const Toolbar = ({
-    fields,
-    pages,
     activeFilters,
     onFilterChange,
     allShots,
@@ -29,6 +29,8 @@ const Toolbar = ({
     onOpenUpdateNonUuidIdsDialog,
 }) => {
     const navigate = useNavigate();
+    const { fields } = useContext(SheetsDataContext);
+    const { pages, loading: pagesLoading, error: pagesError } = usePagesData(); // Get pages from hook
     const [isManageViewsDialogOpen, setManageViewsDialogOpen] = useState(false);
 
     const handleAddNew = () => {
@@ -59,9 +61,16 @@ const Toolbar = ({
                             onChange={handlePageChange}
                             label="View"
                         >
-                            {pages.map(page => (
-                                <MenuItem key={page.page_id} value={page.page_id}>{page.title}</MenuItem>
-                            ))}
+                            {pagesLoading && <MenuItem disabled>Loading views...</MenuItem>}
+                            {pagesError && <MenuItem disabled className="text-red-400">Error loading views</MenuItem>}
+                            {!pagesLoading && !pagesError && pages.length === 0 && (
+                                <MenuItem disabled>No views found</MenuItem>
+                            )}
+                            {!pagesLoading && !pagesError && pages.length > 0 && (
+                                pages.map(page => (
+                                    <MenuItem key={page.page_id} value={page.page_id}>{page.title}</MenuItem>
+                                ))
+                            )}
                         </Select>
                     </FormControl>
 

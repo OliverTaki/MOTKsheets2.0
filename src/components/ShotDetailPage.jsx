@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { AuthContext } from '../AuthContext';
+import { SheetsDataContext } from '../contexts/SheetsDataContext';
 import { updateCell } from '../api/updateCell';
 import {
   Box,
@@ -18,9 +19,10 @@ import {
 
 const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 
-const ShotDetailPage = ({ shots, fields }) => {
+const ShotDetailPage = () => {
   const { shotId } = useParams();
-  const { token, refreshData } = useContext(AuthContext); // Assuming refreshData is available from AuthContext or passed down
+  const { token } } = useContext(AuthContext);
+  const { sheets, fields, idToColIndex, refreshData } = useContext(SheetsDataContext);
   const [shot, setShot] = useState(null);
   const [editValues, setEditValues] = useState({});
   const [saving, setSaving] = useState(false);
@@ -59,7 +61,7 @@ const ShotDetailPage = ({ shots, fields }) => {
     const newValue = editValues[fieldId];
 
     // Find the row index in the Google Sheet (assuming header is row 1, UUIDs are row 2, data starts row 3)
-    const originalShotIndex = shots.findIndex(s => String(s.shot_id) === String(shot.shot_id));
+    const originalShotIndex = sheets.findIndex(s => String(s.shot_id) === String(shot.shot_id));
     if (originalShotIndex === -1) {
       setSaveError("Error: Could not find the shot's row in the sheet data.");
       setSaving(false);
@@ -69,7 +71,7 @@ const ShotDetailPage = ({ shots, fields }) => {
 
     // Find the column index in the Google Sheet
     const fieldColumnIndex = idToColIndex[fieldId];
-    if (fieldColumnIndex === -1) {
+    if (fieldColumnIndex === undefined) {
       setSaveError(`Error: Could not find column for field: ${fieldId}.`);
       setSaving(false);
       return;
@@ -81,8 +83,7 @@ const ShotDetailPage = ({ shots, fields }) => {
       await updateCell(spreadsheetId, token, range, newValue);
       setShot(prevShot => ({ ...prevShot, [fieldId]: newValue }));
       setSaveSuccess(true);
-      // Optionally, refresh all sheets data to ensure consistency across the app
-      // if (refreshData) refreshData();
+      if (refreshData) refreshData();
     } catch (err) {
       console.error('Failed to update cell:', err);
       setSaveError(err.message || 'Failed to save data.');
