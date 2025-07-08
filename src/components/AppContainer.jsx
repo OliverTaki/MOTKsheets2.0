@@ -1,7 +1,8 @@
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import React, { useState, useEffect, useContext, useCallback, useMemo } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useNavigate } from 'react-router-dom';
+import ProjectSelectPage from '../pages/ProjectSelectPage';
 import { useSheetsData } from '../hooks/useSheetsData';
 import usePagesData from '../hooks/usePagesData';
 import ShotTable from './ShotTable';
@@ -58,8 +59,10 @@ const theme = createTheme({
 });
 
 export const AppContainer = () => {
-  const { token, user, isInitialized } = useContext(AuthContext);
-  const { sheets, setSheets, fields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex } = useSheetsData(spreadsheetId);
+  const { token, user, isInitialized, sheetId } = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  const { sheets, setSheets, fields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex } = useSheetsData(sheetId);
   const { pages, loading: pagesLoading, error: pagesError, refreshPages } = usePagesData();
 
   const [columnWidths, setColumnWidths] = useState({});
@@ -204,7 +207,7 @@ export const AppContainer = () => {
   const handleAddField = useCallback(async (newFieldDetails) => {
     if (!token) { alert("Authentication required."); return; }
     try {
-      const newField = await appendField(spreadsheetId, token, newFieldDetails, fields);
+      const newField = await appendField(sheetId, token, newFieldDetails, fields);
       alert(`Field "${newField.label}" added successfully!`);
 
       // Instead of a full refresh, which can be slow and reset the UI,
@@ -223,7 +226,7 @@ export const AppContainer = () => {
       console.error("Failed to add field:", err);
       alert(`Error: ${err.message}`);
     }
-  }, [token, fields, refreshData]);
+  }, [token, fields, refreshData, sheetId]);
 
   const handleCellSave = useCallback(async (shotId, fieldId, newValue, idToColIndex) => {
     if (!token) { alert("Authentication required."); return; }
@@ -244,7 +247,7 @@ export const AppContainer = () => {
     const range = `Shots!${columnLetter}${sheetRowIndex}`;
 
     try {
-      await updateCell(spreadsheetId, token, range, newValue);
+      await updateCell(sheetId, token, range, newValue);
       setSheets(prevSheets =>
         prevSheets.map(shot =>
           shot.shot_id === shotId ? { ...shot, [fieldId]: newValue } : shot
@@ -255,7 +258,7 @@ export const AppContainer = () => {
       console.error("Failed to update cell:", err);
       alert(`Error: ${err.message}`);
     }
-  }, [token, sheets, setSheets]);
+  }, [token, sheets, setSheets, sheetId]);
 
   const getCurrentView = () => ({
     columnWidths,
@@ -273,19 +276,19 @@ export const AppContainer = () => {
     }
     const currentView = getCurrentView();
     const existingPage = pages.find(p => p.page_id === loadedPageId);
-    await updatePage(spreadsheetId, token, loadedPageId, { ...existingPage, ...currentView });
+    await updatePage(sheetId, token, loadedPageId, { ...existingPage, ...currentView });
     alert('View saved successfully!');
     refreshPages();
-  }, [loadedPageId, token, pages, getCurrentView, refreshPages]);
+  }, [loadedPageId, token, pages, getCurrentView, refreshPages, sheetId]);
 
   const handleSaveViewAs = useCallback(async (title) => {
     const page_id = uuidv4();
     const currentView = { ...getCurrentView(), page_id, title };
-    await appendPage(spreadsheetId, token, currentView);
+    await appendPage(sheetId, token, currentView);
     setLoadedPageId(page_id);
     alert(`View "${title}" saved successfully!`);
     refreshPages();
-  }, [token, getCurrentView, refreshPages]);
+  }, [token, getCurrentView, refreshPages, sheetId]);
 
   const handleDeleteView = useCallback(async (pageId) => {
     if (pageId === 'default') {
@@ -293,7 +296,7 @@ export const AppContainer = () => {
       return;
     }
     if (window.confirm('Are you sure you want to delete this view?')) {
-      await deletePage(spreadsheetId, token, pageId);
+      await deletePage(sheetId, token, pageId);
       if (loadedPageId === pageId) {
         setLoadedPageId(null);
         localStorage.removeItem('loadedPageId');
@@ -301,7 +304,7 @@ export const AppContainer = () => {
       alert('View deleted successfully!');
       refreshPages();
     }
-  }, [token, loadedPageId, refreshPages]);
+  }, [token, loadedPageId, refreshPages, sheetId]);
 
   const handleColumnOrderChange = (event) => {
     const { active, over } = event;
@@ -325,7 +328,7 @@ export const AppContainer = () => {
     const handleMouseMove = (moveEvent) => {
       const newWidth = startWidth + (moveEvent.clientX - startX);
       if (newWidth > 50) { // Minimum column width
-        setColumnWidths((prev) => ({ ...prev, [fieldId]: newWidth }));
+        setColumnWidths((prev) => ({ ...prevWidths, [fieldId]: newWidth }));
       }
     };
 
@@ -338,7 +341,17 @@ export const AppContainer = () => {
     window.addEventListener("mouseup", handleMouseUp);
   };
 
-  if (!isAppReady) {
+  useEffect(() => {
+    if (isInitialized) {
+      if (token && !sheetId) {
+        navigate('/select');
+      } else if (token && sheetId) {
+        navigate('/');
+      }
+    }
+  }, [token, sheetId, isInitialized, navigate]);
+
+  if (!isAppReady && token && sheetId) { // Only show loading if token and sheetId exist
     return (
       <div className="flex justify-center items-center h-screen bg-gray-100 dark:bg-gray-900">
         <div className="text-center">
@@ -358,48 +371,55 @@ export const AppContainer = () => {
             <h1 className="text-lg font-bold">MOTK Sheets 2.0</h1>
             <LoginButton />
           </header>
-          <div className="sticky top-[39px] bg-gray-800 z-30 flex items-center px-4" style={{ height: '38px' }}>
-            <span className="text-lg font-semibold">Project: Oliver01</span>
-          </div>
-          <div className="sticky top-[77px] z-20 bg-gray-800">
-            <Toolbar
-              fields={fields}
-              pages={pages}
-              activeFilters={activeFilters}
-              onFilterChange={handleFilterChange}
-              allShots={sheets}
-              sortKey={sortKey}
-              ascending={ascending}
-              onSort={handleSort}
-              visibleFieldIds={visibleFieldIds}
-              onVisibilityChange={handleVisibilityChange}
-              onAddField={handleAddField}
-              onLoadView={handleLoadView}
-              onSaveView={handleSaveView}
-              onSaveViewAs={handleSaveViewAs}
-              onDeleteView={handleDeleteView}
-              loadedPageId={loadedPageId}
-              onOpenUpdateNonUuidIdsDialog={() => setUpdateNonUuidIdsDialogOpen(true)}
-            />
-          </div>
+          {token && sheetId && ( // Only show project navigation and toolbar if token and sheetId exist
+            <>
+              <div className="sticky top-[39px] bg-gray-800 z-30 flex items-center px-4" style={{ height: '38px' }}>
+                <span className="text-lg font-semibold">Project: Oliver01</span>
+              </div>
+              <div className="sticky top-[77px] z-20 bg-gray-800">
+                <Toolbar
+                  fields={fields}
+                  pages={pages}
+                  activeFilters={activeFilters}
+                  onFilterChange={handleFilterChange}
+                  allShots={sheets}
+                  sortKey={sortKey}
+                  ascending={ascending}
+                  onSort={handleSort}
+                  visibleFieldIds={visibleFieldIds}
+                  onVisibilityChange={handleVisibilityChange}
+                  onAddField={handleAddField}
+                  onLoadView={handleLoadView}
+                  onSaveView={handleSaveView}
+                  onSaveViewAs={handleSaveViewAs}
+                  onDeleteView={handleDeleteView}
+                  loadedPageId={loadedPageId}
+                  onOpenUpdateNonUuidIdsDialog={() => setUpdateNonUuidIdsDialogOpen(true)}
+                />
+              </div>
+            </>
+          )}
           <main className="flex-grow bg-gray-800" style={{ flex: 1 }}>
             {(fieldsError || pagesError) && <p className="text-red-500 text-center">Error: {fieldsError?.message || pagesError?.message}</p>}
             {!fieldsError && !pagesError && (
               <Routes>
                 <Route path="/" element={
-                  <MainView
-                    sheets={processedShots}
-                    displayedFields={orderedFields}
-                    visibleFieldIds={visibleFieldIds}
-                    columnWidths={columnWidths}
-                    onColumnResize={handleColumnResize}
-                    onCellSave={handleCellSave}
-                    onUpdateFieldOptions={updateFieldOptions}
-                    idToColIndex={idToColIndex}
-                    onColumnOrderChange={handleColumnOrderChange}
-                    handleColResizeMouseDown={handleColResizeMouseDown}
-                  />
+                  token && sheetId ? (
+                    <MainView
+                      sheets={processedShots}
+                      displayedFields={orderedFields}
+                      visibleFieldIds={visibleFieldIds}
+                      columnWidths={columnWidths}
+                      onColumnResize={handleColumnResize}
+                      onCellSave={handleCellSave}
+                      onUpdateFieldOptions={updateFieldOptions}
+                      idToColIndex={idToColIndex}
+                      onColumnOrderChange={handleColumnOrderChange}
+                      handleColResizeMouseDown={handleColResizeMouseDown}
+                    />
+                  ) : null
                 } />
+                <Route path="/select" element={<ProjectSelectPage />} />
                 <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={orderedFields} idToColIndex={idToColIndex} />} />
                 <Route path="/shots/new" element={<AddShotPage />} />
               </Routes>

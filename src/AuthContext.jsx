@@ -2,15 +2,17 @@ import React, { createContext, useState, useEffect, useCallback } from 'react';
 
 export const AuthContext = createContext(null);
 const TOKEN_STORAGE_KEY = 'google_auth_token';
+const LAST_SHEET_ID_STORAGE_KEY = 'motk:lastSheetId';
 
 export const AuthProvider = ({ children, sheets, fields, refreshData }) => {
-    const [token, setToken] = useState(() => localStorage.getItem(TOKEN_STORAGE_KEY)); // 初期値としてlocalStorageから読み込む
+    const [token, setToken] = useState(() => localStorage.getItem(TOKEN_STORAGE_KEY));
     const [isInitialized, setIsInitialized] = useState(false);
     const [error, setError] = useState(null);
     const [tokenClient, setTokenClient] = useState(null);
+    const [sheetId, setSheetId] = useState(() => localStorage.getItem(LAST_SHEET_ID_STORAGE_KEY));
 
     const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
+    const SCOPES = 'https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/drive.metadata.readonly';
 
     useEffect(() => {
         const initializeGis = () => {
@@ -102,7 +104,7 @@ export const AuthProvider = ({ children, sheets, fields, refreshData }) => {
         console.log('Local token cleared.');
     }, []);
 
-    const value = { token, signIn, signOut, isInitialized, error, clearToken, sheets, fields, refreshData };
+    const value = { token, signIn, signOut, isInitialized, error, clearToken, sheets, fields, refreshData, sheetId, setSheetId };
 
     return (
         <AuthContext.Provider value={value}>
