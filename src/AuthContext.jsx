@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 
-export const AuthContext = createContext(null);
+export const AuthContext = createContext({});
 const TOKEN_STORAGE_KEY = 'google_auth_token';
 
 export const AuthProvider = ({ children, refreshData }) => {
@@ -36,6 +36,7 @@ export const AuthProvider = ({ children, refreshData }) => {
 
     let refreshing = false;
     const waiters = [];
+    const PROMPT_REQUIRED = Symbol('PROMPT_REQUIRED');
 
     const ensureValidToken = useCallback(async () => {
         const now = Date.now();
@@ -111,6 +112,29 @@ export const AuthProvider = ({ children, refreshData }) => {
             attemptSilent();
         });
     }, [tokenInfo, tokenClient]);
+
+    const interactiveSignIn = useCallback(() => {
+        if (!tokenClient) {
+            setError({ message: 'Authentication service is not ready. Please try again in a moment.' });
+            return;
+        }
+        tokenClient.requestAccessToken({
+            prompt: 'consent',
+            callback: (resp) => {
+                if (resp.error) {
+                    console.error(resp);
+                    setError({ message: resp.error.message || 'An unknown authentication error occurred during interactive sign-in.' });
+                } else {
+                    const exp = Date.now() + resp.expires_in * 1000;
+                    setTokenInfo({ access_token: resp.access_token, expires_at: exp });
+                    window.gapi.client.setToken({ access_token: resp.access_token });
+                    setNeedsReAuth(false);
+                    setError(null);
+                    if (refreshData) refreshData();
+                }
+            },
+        });
+    }, [tokenClient, refreshData]);
 
     useEffect(() => {
         const gisScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
@@ -220,7 +244,7 @@ export const AuthProvider = ({ children, refreshData }) => {
         }
     }, []);
 
-    const value = { token, signIn, signOut, isInitialized, error, isGapiClientReady, refreshData, ensureValidToken, needsReAuth, setNeedsReAuth };
+    const value = { token, signIn, signOut, isInitialized, error, isGapiClientReady, refreshData, ensureValidToken, needsReAuth, setNeedsReAuth, interactiveSignIn };
 
     return (
         <AuthContext.Provider value={value}>

@@ -15,7 +15,7 @@ const usePagesData = (sheetId) => {
   const [pages, setPages] = useState([]);
   const [loading, setLoading] = useState(false); // Initial state should be false or true based on initial fetch
   const [error, setError] = useState(null);
-  const { isGapiClientReady, ensureValidToken } = useContext(AuthContext);
+  const { isGapiClientReady, ensureValidToken, setNeedsReAuth } = useContext(AuthContext);
 
   const refreshPages = useCallback(async (retried = false) => {
     if (!isGapiClientReady || !sheetId || !window.gapi || !window.gapi.client || !window.gapi.client.sheets) {
@@ -74,22 +74,15 @@ const usePagesData = (sheetId) => {
       }
     } catch (e) {
       console.error('refreshPages: Caught error:', e);
-      if (e.status === 401 && !retried) {
-        console.warn("401 Unauthorized, attempting to refresh token and retry...");
-        try {
-          await ensureValidToken(); // Attempt to get a new token
-          return refreshPages(true); // Retry the fetch
-        } catch (refreshError) {
-          console.error("Failed to refresh token during retry:", refreshError);
-          setError(refreshError);
-        }
-      } else {
-        setError(e);
+      if (e === PROMPT_REQUIRED || (e.status === 401 && !retried)) {
+        setNeedsReAuth(true); // show dialog
+        return;
       }
+      setError(e);
     } finally {
       setLoading(false);
     }
-  }, [isGapiClientReady, sheetId, ensureValidToken]);
+  }, [isGapiClientReady, sheetId, ensureValidToken, setNeedsReAuth]);
 
   useEffect(() => {
     if (isGapiClientReady) {

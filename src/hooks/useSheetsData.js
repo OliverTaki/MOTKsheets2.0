@@ -5,7 +5,7 @@ import { missingIdHandler } from '../utils/missingIdHandler';
 import { updateCell } from '../api/updateCell';
 
 export const useSheetsData = (sheetId) => {
-  const { isGapiClientReady, ensureValidToken } = useContext(AuthContext);
+  const { isGapiClientReady, ensureValidToken, setNeedsReAuth } = useContext(AuthContext);
   const [shots, setShots] = useState([]);
   const [fields, setFields] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -62,22 +62,15 @@ export const useSheetsData = (sheetId) => {
 
     } catch (e) {
       console.error("Error fetching sheets data:", e);
-      if (e.status === 401 && !retried) {
-        console.warn("401 Unauthorized, attempting to refresh token and retry...");
-        try {
-          await ensureValidToken(); // Attempt to get a new token
-          return refreshData(true); // Retry the fetch
-        } catch (refreshError) {
-          console.error("Failed to refresh token during retry:", refreshError);
-          setError(refreshError);
-        }
-      } else {
-        setError(e);
+      if (e === PROMPT_REQUIRED || (e.status === 401 && !retried)) {
+        setNeedsReAuth(true); // show dialog
+        return;
       }
+      setError(e);
     } finally {
       setLoading(false);
     }
-  }, [sheetId, isGapiClientReady, ensureValidToken]);
+  }, [sheetId, isGapiClientReady, ensureValidToken, setNeedsReAuth]);
 
   const updateFieldOptions = useCallback(async (fieldId, newOption, retried = false) => {
     try {

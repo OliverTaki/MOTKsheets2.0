@@ -1,20 +1,19 @@
 import React from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, Button } from '@mui/material';
+import { useContext } from 'react';
+import { AuthContext } from '../AuthContext';
 
-const ReAuthDialog = ({ open, onConfirm }) => {
+export default function ReAuthDialog() {
+  const { needsReAuth, interactiveSignIn } = useContext(AuthContext);
+
   return (
-    <Dialog open={open} disableEscapeKeyDown>
-      <DialogTitle>Session Expired</DialogTitle>
+    <Dialog open={needsReAuth} disableEscapeKeyDown>
+      <DialogTitle>Session expired</DialogTitle>
       <DialogContent>
-        <Typography>Your session has expired. Please sign in to Google again to continue.</Typography>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onConfirm} color="primary" variant="contained">
-          Sign in to Google
+        <Button variant="contained" onClick={interactiveSignIn}>
+          Sign in with Google
         </Button>
-      </DialogActions>
+      </DialogContent>
     </Dialog>
   );
-};
-
-export default ReAuthDialog;
+}
