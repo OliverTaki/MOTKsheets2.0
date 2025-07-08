@@ -17,6 +17,8 @@ export const AuthProvider = ({ children, refreshData }) => {
     const [error, setError] = useState(null);
     const [tokenClient, setTokenClient] = useState(null);
     const [needsReAuth, setNeedsReAuth] = useState(false);
+    // 何度も silent を叩かないためのフラグ
+    const attemptedSilent = useRef(false);
     const authError = useRef(null); // UI 用
 
     const handleTokenResponse = useCallback((tokenResponse) => {
@@ -104,28 +106,29 @@ export const AuthProvider = ({ children, refreshData }) => {
         }
     }, []);
 
-    const interactiveSignIn = useCallback(() => {
+    // ↓1 回だけ silent 取得を試みる
+    useEffect(() => {
+        if (!tokenClient || attemptedSilent.current) return;
+        attemptedSilent.current = true;
+        tokenClient
+            .requestAccessToken({ prompt: '' })
+            .catch(() => setNeedsReAuth(true));
+    }, [tokenClient]);
+
+    /**
+     * ── ユーザ操作で呼ぶ再ログイン用
+     *    （prompt:'consent' で確実にポップアップ許可を得る）
+     */
+    const interactiveLogin = useCallback(() => {
         if (!tokenClient) {
             setError({ message: 'Authentication service is not ready. Please try again in a moment.' });
             return;
         }
-        tokenClient.requestAccessToken({
-            prompt: 'consent',
-            callback: (resp) => {
-                if (resp.error) {
-                    console.error(resp);
-                    setError({ message: resp.error.message || 'An unknown authentication error occurred during interactive sign-in.' });
-                } else {
-                    const exp = Date.now() + resp.expires_in * 1000;
-                    setTokenInfo({ access_token: resp.access_token, expires_at: exp });
-                    window.gapi.client.setToken({ access_token: resp.access_token });
-                    setNeedsReAuth(false);
-                    setError(null);
-                    if (refreshData) refreshData();
-                }
-            },
-        });
-    }, [tokenClient, refreshData]);
+        tokenClient
+            .requestAccessToken({ prompt: 'consent' })
+            .then(() => setNeedsReAuth(false))
+            .catch(() => setNeedsReAuth(true));
+    }, [tokenClient]);
 
     useEffect(() => {
         const gisScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
@@ -235,7 +238,7 @@ export const AuthProvider = ({ children, refreshData }) => {
         }
     }, []);
 
-    const value = { token, signIn, signOut, isInitialized, error, isGapiClientReady, refreshData, ensureValidToken, needsReAuth, setNeedsReAuth, interactiveSignIn, authError };
+    const value = { token, signIn, signOut, isInitialized, error, isGapiClientReady, refreshData, ensureValidToken, needsReAuth, setNeedsReAuth, interactiveLogin, authError };
 
     return (
         <AuthContext.Provider value={value}>
