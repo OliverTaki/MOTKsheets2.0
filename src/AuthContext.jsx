@@ -15,7 +15,7 @@ export const AuthProvider = ({ children, refreshData }) => {
     const [isInitialized, setIsInitialized] = useState(false);
     const [isGapiClientReady, setIsGapiClientReady] = useState(false);
     const [error, setError] = useState(null);
-    const [tokenClient, setTokenClient] = useState(null);
+    const tokenClientRef = useRef(null);
     const [needsReAuth, setNeedsReAuth] = useState(false);
     // 何度も silent を叩かないためのフラグ
     const attemptedSilent = useRef(false);
@@ -63,7 +63,7 @@ export const AuthProvider = ({ children, refreshData }) => {
             };
             const timer = setTimeout(() => fail('timeout'), SILENT_TIMEOUT_MS);
             try {
-                tokenClient.requestAccessToken({
+                tokenClientRef.current.requestAccessToken({
                     prompt: '',
                     callback: (resp) => {
                         clearTimeout(timer);
@@ -92,7 +92,7 @@ export const AuthProvider = ({ children, refreshData }) => {
                 fail(syncErr);
             }
         });
-    }, [tokenInfo, tokenClient, needsReAuth]);
+    }, [tokenInfo, tokenClientRef, needsReAuth]);
 
     useEffect(() => {
         const interceptor = (response) => {
@@ -108,27 +108,36 @@ export const AuthProvider = ({ children, refreshData }) => {
 
     // ↓1 回だけ silent 取得を試みる
     useEffect(() => {
-        if (!tokenClient || attemptedSilent.current) return;
+        if (!tokenClientRef.current || attemptedSilent.current) return;
         attemptedSilent.current = true;
-        tokenClient
-            .requestAccessToken({ prompt: '' })
-            .catch(() => setNeedsReAuth(true));
-    }, [tokenClient]);
+        const tc = tokenClientRef.current;
+        tc.callback = (resp) =>
+            resp && resp.access_token ? setNeedsReAuth(false) : setNeedsReAuth(true);
+        try {
+            tc.requestAccessToken({ prompt: '' }); // silent
+        } catch {
+            setNeedsReAuth(true);
+        }
+    }, [tokenClientRef.current]);
 
     /**
      * ── ユーザ操作で呼ぶ再ログイン用
      *    （prompt:'consent' で確実にポップアップ許可を得る）
      */
     const interactiveLogin = useCallback(() => {
-        if (!tokenClient) {
+        const tc = tokenClientRef.current;
+        if (!tc) {
             setError({ message: 'Authentication service is not ready. Please try again in a moment.' });
             return;
         }
-        tokenClient
-            .requestAccessToken({ prompt: 'consent' })
-            .then(() => setNeedsReAuth(false))
-            .catch(() => setNeedsReAuth(true));
-    }, [tokenClient]);
+        tc.callback = (resp) =>
+            resp && resp.access_token ? setNeedsReAuth(false) : setNeedsReAuth(true);
+        try {
+            tc.requestAccessToken({ prompt: 'consent' });
+        } catch {
+            setNeedsReAuth(true);
+        }
+    }, [tokenClientRef]);
 
     useEffect(() => {
         const gisScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
@@ -164,7 +173,7 @@ export const AuthProvider = ({ children, refreshData }) => {
                             setError({ message: err.type || 'An unknown authentication error occurred.' });
                         }
                     });
-                    setTokenClient(client);
+                    tokenClientRef.current = client;
                     setIsGapiClientReady(true);
 
                     // 3. Set token if it exists
@@ -216,12 +225,12 @@ export const AuthProvider = ({ children, refreshData }) => {
 
 
     const signIn = useCallback(() => {
-        if (tokenClient) {
-            tokenClient.requestAccessToken({ prompt: 'consent' });
+        if (tokenClientRef.current) {
+            tokenClientRef.current.requestAccessToken({ prompt: 'consent' });
         } else {
             setError({ message: 'Authentication service is not ready. Please try again in a moment.' });
         }
-    }, [tokenClient]);
+    }, [tokenClientRef]);
 
     const signOut = useCallback(() => {
         const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
