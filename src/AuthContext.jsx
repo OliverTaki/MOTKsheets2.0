@@ -56,7 +56,7 @@ export const PROMPT_REQUIRED = Symbol('PROMPT_REQUIRED');
 
 export const AuthProvider = ({ children, refreshData }) => {
     const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
+    const API_KEY = import.meta.env.VITE_SHEETS_API_KEY;
     const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.metadata.readonly';
 
     const [token, setToken] = useState(() => localStorage.getItem(TOKEN_STORAGE_KEY));
@@ -106,34 +106,23 @@ export const AuthProvider = ({ children, refreshData }) => {
     const PROMPT_REQUIRED = Symbol('PROMPT_REQUIRED');
     const SILENT_TIMEOUT_MS = 1000;
 
-    const ensureValidToken = useCallback(async () => {
-        if (!isReady) throw new Error('GSI not ready');
+    const ensureValidToken = useCallback(() => {
+        if (!isReady) {
+            setError({ message: 'Google Sign-in is not ready.' });
+            setNeedsReAuth(true);
+            throw new Error('GSI not ready');
+        }
 
-        // ポップアップはユーザ操作トリガ必須
-        return new Promise((resolve, reject) => {
-            const tc = tokenClientRef.current;
-            if (!tc) {
-                setError({ message: 'Authentication service is not ready. Please try again in a moment.' });
-                return reject(new Error('PROMPT_REQUIRED'));
-            }
-
-            tc.callback = (resp) => {
-                if (resp?.error) {
-                    console.error(resp);
-                    setNeedsReAuth(true);
-                    reject(resp);
-                } else {
-                    lastTokenRef.current = resp.access_token;
-                    tokenIssuedAtRef.current = Date.now();
-                    setNeedsReAuth(false);
-                    resolve(resp.access_token);
-                }
-            };
-
-            // ★ ここではまだ popup を開かず、戻り値としてトリガ関数を返す
-            tc.requestAccessToken();
-        });
-    }, [isReady]);
+        if (token && tokenInfo && tokenInfo.expires_at > Date.now()) {
+            // Token is valid and not expired
+            return token;
+        } else {
+            // Token is missing or expired
+            setNeedsReAuth(true);
+            setError({ message: 'Authentication required. Please sign in again.' });
+            throw new Error('PROMPT_REQUIRED');
+        }
+    }, [isReady, token, tokenInfo]);
 
     useEffect(() => {
         const interceptor = (response) => {
@@ -149,123 +138,36 @@ export const AuthProvider = ({ children, refreshData }) => {
 
     
 
-    /**
-     * ── ユーザ操作で呼ぶ再ログイン用
-     *    （prompt:'consent' で確実にポップアップ許可を得る）
-     */
-    const interactiveLogin = useCallback(() => {
+    const signIn = useCallback(() => {
         const tc = tokenClientRef.current;
         if (!tc) {
             setError({ message: 'Authentication service is not ready. Please try again in a moment.' });
             return;
         }
-        tc.callback = (resp) =>
-            resp && resp.access_token
-                ? (() => {
-                    lastTokenRef.current     = resp.access_token;
-                    tokenIssuedAtRef.current = Date.now();
-                    setNeedsReAuth(false);
-                })()
-                : setNeedsReAuth(true);
-        try {
-            tc.requestAccessToken({ prompt: 'consent' });
-        } catch {
-            setNeedsReAuth(true);
-        }
-    }, [tokenClientRef]);
 
-    useEffect(() => {
-        const gisScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
-        const gapiScript = document.querySelector('script[src="https://apis.google.com/js/api.js"]');
-
-        if (!gisScript || !gapiScript) {
-            setError({ message: "Required Google API script tags not found in index.html." });
-            setIsInitialized(true);
-            return;
-        }
-
-        let gapiLoaded = false;
-        let gisLoaded = false;
-
-        const initialize = () => {
-            if (!gapiLoaded || !gisLoaded) return;
-
-            try {
-                // 1. Initialize GAPI client
-                window.gapi.client.init({
-                    apiKey: API_KEY,
-                    discoveryDocs: [
-                        'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
-                        'https://sheets.googleapis.com/$discovery/rest?version=v4'
-                    ],
-                }).then(() => {
-                    // 2. Initialize GIS token client
-                    const client = window.google.accounts.oauth2.initTokenClient({
-                        client_id: CLIENT_ID,
-                        scope: SCOPES,
-                        callback: handleTokenResponse,
-                        error_callback: (err) => {
-                            setError({ message: err.type || 'An unknown authentication error occurred.' });
-                        }
-                    });
-                    tokenClientRef.current = client;
-                    setIsGapiClientReady(true);
-
-                    // 3. Set token if it exists
-                    const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
-                    if (storedToken) {
-                        window.gapi.client.setToken({ access_token: storedToken });
-                    }
-                }).catch((err) => {
-                    console.error("Error initializing gapi client:", err);
-                    setError(err);
-                }).finally(() => {
-                    setIsInitialized(true);
-                });
-            } catch (e) {
-                console.error("Error during API initialization:", e);
-                setError(e);
-                setIsInitialized(true);
+        tc.callback = (resp) => {
+            if (resp?.error) {
+                console.error(resp);
+                setNeedsReAuth(true);
+                // Fallback to redirect if popup is blocked
+                if (resp.type === 'popup_blocked' || resp.error === 'popup_closed_by_user') {
+                    window.location.assign(tc.generateAuthUrl());
+                }
+            } else {
+                lastTokenRef.current = resp.access_token;
+                tokenIssuedAtRef.current = Date.now();
+                setNeedsReAuth(false);
+                handleTokenResponse(resp);
             }
         };
 
-        // GAPI load handler
-        const handleGapiLoad = () => {
-            window.gapi.load('client', () => {
-                gapiLoaded = true;
-                initialize();
-            });
-        };
-
-        // GIS load handler
-        const handleGisLoad = () => {
-            gisLoaded = true;
-            initialize();
-        };
-
-        // Attach listeners or run handlers if already loaded
-        if (window.gapi && window.gapi.load) {
-            handleGapiLoad();
-        } else {
-            gapiScript.onload = handleGapiLoad;
+        try {
+            tc.requestAccessToken({ prompt: 'consent' });
+        } catch (e) {
+            console.error("Error requesting access token:", e);
+            setNeedsReAuth(true);
         }
-
-        if (window.google && window.google.accounts) {
-            handleGisLoad();
-        } else {
-            gisScript.onload = handleGisLoad;
-        }
-
-    }, [CLIENT_ID, API_KEY, SCOPES, handleTokenResponse]);
-
-
-    const signIn = useCallback(() => {
-        if (tokenClientRef.current) {
-            tokenClientRef.current.requestAccessToken({ prompt: 'consent' });
-        } else {
-            setError({ message: 'Authentication service is not ready. Please try again in a moment.' });
-        }
-    }, [tokenClientRef]);
+    }, [tokenClientRef, handleTokenResponse]);
 
     const signOut = useCallback(() => {
         const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
@@ -282,7 +184,7 @@ export const AuthProvider = ({ children, refreshData }) => {
         }
     }, []);
 
-    const value = { token, signIn, signOut, isInitialized, error, isGapiClientReady, refreshData, ensureValidToken, needsReAuth, setNeedsReAuth, interactiveLogin, authError };
+    const value = { token, signIn, signOut, isInitialized, error, isGapiClientReady, refreshData, ensureValidToken, needsReAuth, setNeedsReAuth };
 
     return (
         <AuthContext.Provider value={value}>

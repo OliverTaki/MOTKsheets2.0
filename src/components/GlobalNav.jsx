@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDriveSheets } from '../hooks/useDriveSheets';
 import { toProjectName } from '../utils/id';
 import { AppBar, Toolbar, Typography, Button, Box, Menu, MenuItem } from '@mui/material';
 import LoginButton from './LoginButton'; // Assuming LoginButton is in the same directory
+import { AuthContext } from '../AuthContext';
 
 export default function GlobalNav({ sheetId, setSheetId }) {
   const navigate = useNavigate();
@@ -11,6 +12,7 @@ export default function GlobalNav({ sheetId, setSheetId }) {
   const [currentProjectDisplayName, setCurrentProjectDisplayName] = useState('Select Project');
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
+  const { needsReAuth, signIn } = useContext(AuthContext);
 
   useEffect(() => {
     if (sheetId && sheets.length > 0) {
@@ -95,6 +97,11 @@ export default function GlobalNav({ sheetId, setSheetId }) {
 
         {/* Sign-out 等は右端 */}
         <Box sx={{ ml: 'auto' }}>
+          {needsReAuth && (
+            <Button onClick={signIn} variant="contained" color="warning" sx={{ mr: 1 }}>
+              Re-login
+            </Button>
+          )}
           <LoginButton />
         </Box>
       </Toolbar>

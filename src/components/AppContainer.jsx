@@ -35,7 +35,7 @@ const theme = createTheme({
 });
 
 export const AppContainer = () => {
-  const { token, user, isInitialized, needsReAuth, signIn, ensureValidToken } = useContext(AuthContext);
+  const { token, user, isInitialized, needsReAuth, signIn, ensureValidToken, error: authError } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const [sheetId, setSheetId] = useState(() => {
@@ -357,7 +357,7 @@ export const AppContainer = () => {
             </>
           )}
           <main className="flex-grow bg-gray-800" style={{ flex: 1 }}>
-            {(fieldsError || pagesError) && <p className="text-red-500 text-center">Error: {fieldsError?.message || pagesError?.message}</p>}
+            {(fieldsError || pagesError || authError) && <p className="text-red-500 text-center">Error: {fieldsError?.message || pagesError?.message || authError?.message}</p>}}
             {!fieldsError && !pagesError && (
               <SheetsDataContext.Provider value={{ sheets, fields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex }}>
                 <Routes>
