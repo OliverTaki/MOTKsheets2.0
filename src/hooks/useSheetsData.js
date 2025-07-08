@@ -4,36 +4,37 @@ import { parseShots, parseFields } from '../utils/parse';
 import { missingIdHandler } from '../utils/missingIdHandler';
 import { updateCell } from '../api/updateCell';
 
-const useSheetsData = (spreadsheetId) => {
-    const { token, isInitialized, clearToken } = useContext(AuthContext);
+import { useState, useEffect, useContext, useCallback } from 'react';
+import { AuthContext } from '../AuthContext';
+import { parseShots, parseFields } from '../utils/parse';
+import { missingIdHandler } from '../utils/missingIdHandler';
+import { updateCell } from '../api/updateCell';
+
+const useSheetsData = () => {
+    const { token, isInitialized, clearToken, sheetId: ctxSheetId } = useContext(AuthContext);
+    const SHEET_ID = ctxSheetId || import.meta.env.VITE_SHEETS_ID;
     const [sheets, setSheets] = useState([]);
     const [fields, setFields] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [idToColIndex, setIdToColIndex] = useState({});
 
-    // If no spreadsheetId is provided, we don't fetch any data.
-    if (!spreadsheetId) {
-        return { sheets: [], setSheets, fields: [], shotsHeader: [], loading: false, error: null, refreshData: () => {}, updateFieldOptions: () => {}, idToColIndex: {} };
-    }
-
     const fetchSheetsData = useCallback(async (currentToken) => {
-        if (!currentToken || !spreadsheetId) {
+        if (!currentToken || !SHEET_ID) {
             setLoading(false);
             return;
         }
         setLoading(true);
         setError(null);
         try {
-            // APIリクエストのrangesパラメータの書式を修正
             const params = new URLSearchParams({
                 valueRenderOption: 'FORMATTED_VALUE',
                 dateTimeRenderOption: 'SERIAL_NUMBER',
             });
             params.append('ranges', 'Shots!A:AZ');
-            params.append('ranges', 'FIELDS!A:F'); // options列まで取得
+            params.append('ranges', 'FIELDS!A:F');
             
-            const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchGet?${params.toString()}`;
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values:batchGet?${params.toString()}`;
             
             const response = await fetch(url, { headers: { 'Authorization': `Bearer ${currentToken}` } });
 
@@ -55,23 +56,21 @@ const useSheetsData = (spreadsheetId) => {
             const parsedFields = parseFields(fieldsData);
             console.log("useSheetsData: parsedFields (from parseFields):", parsedFields);
             const shotsDataValues = data.valueRanges?.[0]?.values;
-            const shotsHeader = shotsDataValues?.[0] || []; // This is the UUID row
+            const shotsHeader = shotsDataValues?.[0] || [];
             console.log("useSheetsData: shotsHeader (UUID row):", shotsHeader);
             const shotIdUuid = shotsHeader?.[0];
             const shotCodeUuid = shotsHeader?.[1];
             console.log("useSheetsData: shotIdUuid:", shotIdUuid, "shotCodeUuid:", shotCodeUuid);
 
             const finalFields = [
-                // Manually prepend fields that are not in the FIELDS sheet but are in the Shots sheet.
                 { id: shotIdUuid, label: 'Shot ID', type: 'text', editable: false },
-                { id: shotCodeUuid, label: 'Shot Code', type: 'text', editable: false }, // Shot Code should not be editable as it's a UUID
+                { id: shotCodeUuid, label: 'Shot Code', type: 'text', editable: false },
                 ...parsedFields.filter(f => f.id !== shotIdUuid && f.id !== shotCodeUuid)
             ];
 
             const parsedShots = parseShots(shotsDataValues, finalFields, shotIdUuid);
             const { shotsWithIds } = missingIdHandler(parsedShots);
 
-            // Create the idToColIndex map from the actual sheet header (UUIDs)
             const newIdToColIndex = shotsHeader.reduce((acc, id, index) => {
                 if (id) {
                     acc[id.trim()] = index;
@@ -98,7 +97,7 @@ const useSheetsData = (spreadsheetId) => {
         } finally {
             setLoading(false);
         }
-    }, [spreadsheetId, clearToken]);
+    }, [SHEET_ID, clearToken]);
 
     const updateFieldOptions = useCallback(async (fieldId, newOption) => {
         if (!token) {
@@ -106,36 +105,25 @@ const useSheetsData = (spreadsheetId) => {
             return;
         }
         try {
-            // Find the field in the current fields state
             const fieldToUpdate = fields.find(f => f.id === fieldId);
             if (!fieldToUpdate) {
                 throw new Error(`Field with ID ${fieldId} not found.`);
             }
 
-            // Get the current options and append the new one
             const currentOptions = fieldToUpdate.options ? fieldToUpdate.options.split(',') : [];
             if (!currentOptions.includes(newOption)) {
                 currentOptions.push(newOption);
             }
             const updatedOptionsString = currentOptions.join(',');
 
-            // Determine the row index for the field in the FIELDS sheet
-            // Assuming FIELDS sheet starts from row 1 (header) and data starts from row 2
-            // And assuming field.id corresponds to the first column (A)
-            const fieldRowIndex = fields.findIndex(f => f.id === fieldId) + 2; // +1 for 0-based to 1-based, +1 for header row
+            const fieldRowIndex = fields.findIndex(f => f.id === fieldId) + 2;
 
-            // Determine the column index for 'options' in the FIELDS sheet
-            // This is a bit brittle, ideally we'd get this from the parsed header
-            // For now, let's assume 'options' is column F (index 5, 0-based)
-            // Based on parse.js, it's the 5th column (0-indexed) if it exists.
-            // A=0, B=1, C=2, D=3, E=4, F=5
-            const optionsColumnLetter = 'F'; // Assuming 'options' is in column F
+            const optionsColumnLetter = 'F';
 
             const range = `FIELDS!${optionsColumnLetter}${fieldRowIndex}`;
 
-            await updateCell(spreadsheetId, token, range, updatedOptionsString);
+            await updateCell(SHEET_ID, token, range, updatedOptionsString);
 
-            // Optimistically update the local state
             setFields(prevFields => prevFields.map(f =>
                 f.id === fieldId ? { ...f, options: updatedOptionsString } : f
             ));
@@ -149,22 +137,23 @@ const useSheetsData = (spreadsheetId) => {
                 }
             }
         }
-    }, [spreadsheetId, token, fields]);
+    }, [SHEET_ID, token, fields]);
 
     useEffect(() => {
-        if (!spreadsheetId) {
+        if (!SHEET_ID) {
             setError(new Error("Configuration Error: VITE_SHEETS_ID is not set."));
             setLoading(false);
             return;
         }
         if (isInitialized && token) {
+            setSheets([]); // Clear cache on sheetId switch
+            setFields([]); // Clear cache on sheetId switch
             fetchSheetsData(token);
         } else if (isInitialized) {
             setLoading(false);
         }
-    }, [spreadsheetId, token, isInitialized, fetchSheetsData]);
+    }, [SHEET_ID, token, isInitialized, fetchSheetsData]);
 
-    // データを再読み込みするための関数を返す
     const shotsHeader = sheets.length > 0 ? Object.keys(sheets[0]) : [];
     return { sheets, setSheets, fields, shotsHeader, loading, error, refreshData: () => fetchSheetsData(token), updateFieldOptions, idToColIndex };
 };

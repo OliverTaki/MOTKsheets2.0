@@ -12,7 +12,8 @@ export const AuthProvider = ({ children, sheets = [], fields = [], refreshData }
     const [isGapiClientReady, setIsGapiClientReady] = useState(false);
     const [error, setError] = useState(null);
     const [tokenClient, setTokenClient] = useState(null);
-    const [sheetId, setSheetId] = useState(() => localStorage.getItem(LAST_SHEET_ID_STORAGE_KEY));
+    const defaultSheet = localStorage.getItem(LAST_SHEET_ID_STORAGE_KEY) || import.meta.env.VITE_SHEETS_ID || null;
+    const [sheetId, setSheetId] = useState(defaultSheet);
     const [displayName, setDisplayName] = useState(null);
 
     const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;

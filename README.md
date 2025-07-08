@@ -195,3 +195,10 @@ MIT © 2025 **Oliver Taki** & contributors
     **MOTK[Project:<任意のプロジェクト名>]**
     としてください（例: MOTK[Project:Oliver02]）。
 - 中括弧 [] 内の <ProjectName> が UI に表示されます。
+
+#### シート ID の優先順位
+1. ユーザーが /select で選択したシート
+2. `localStorage["motk:lastSheetId:<googleSub>"]`
+3. `.env` で設定した `VITE_SHEETS_ID`（初期値 / デモ用）
+
+切替後は全データフックが自動で再読込されます。
