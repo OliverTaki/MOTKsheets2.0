@@ -19,6 +19,8 @@ export default tseslint.config(
     },
     rules: {
       'no-undef': 'error',
+      'import/no-commonjs': 'error',
+      'no-top-level-await': 'error',
       'no-dupe-imports': 'error',
       'no-redeclare': 'error',
       'no-unexpected-multiline': 'error',

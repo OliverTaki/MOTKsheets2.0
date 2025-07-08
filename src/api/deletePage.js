@@ -9,25 +9,21 @@ export async function deletePage(spreadsheetId, ensureValidToken, pageId, retrie
       return; // Exit gracefully if sheet doesn't exist
     }
 
-    const range = 'PAGES!A:A'; // Assuming page_id is in column A
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}`;
-    console.log(`Fetching page IDs from: ${url}`);
-
-    const getPagesResponse = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+    // Fetch page IDs using gapi.client
+    const getPagesRes = await window.gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: 'PAGES!A:A',
     });
 
-    const pagesData = await getPagesResponse.json();
-    if (!getPagesResponse.ok) {
-      if (getPagesResponse.status === 401 && !retried) {
+    const pagesData = getPagesRes.result;
+    if (!getPagesRes.result) {
+      if (getPagesRes.status === 401 && !retried) {
         console.warn("401 Unauthorized fetching pages for deletion, attempting to refresh token and retry...");
         await ensureValidToken();
         return deletePage(spreadsheetId, ensureValidToken, pageId, true);
       }
-      console.error("Error fetching page data:", pagesData);
-      throw new Error(`Failed to fetch page data: ${pagesData.error.message}`);
+      console.error("Error fetching page data:", getPagesRes);
+      throw new Error(getPagesRes.error?.message || `Failed to fetch page data: ${getPagesRes.status}`);
     }
 
     const rows = pagesData.values;
@@ -67,31 +63,25 @@ export async function deletePage(spreadsheetId, ensureValidToken, pageId, retrie
       },
     }));
 
-    const batchUpdateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`;
     console.log("Sending batch update request to delete rows:", requests);
 
-    const response = await fetch(batchUpdateUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ requests: requests }), // requests should be wrapped in an object
+    const batchUpdateRes = await window.gapi.client.sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      resource: { requests: requests },
     });
 
-    const data = await response.json();
-    if (!response.ok) {
-      if (response.status === 401 && !retried) {
+    if (!batchUpdateRes.result) {
+      if (batchUpdateRes.status === 401 && !retried) {
         console.warn("401 Unauthorized during batch update for deletion, attempting to refresh token and retry...");
         await ensureValidToken();
         return deletePage(spreadsheetId, ensureValidToken, pageId, true);
       }
-      console.error("Batch update failed:", data);
-      throw new Error(data.error.message || 'Failed to delete the page from the sheet.');
+      console.error("Batch update failed:", batchUpdateRes);
+      throw new Error(batchUpdateRes.error?.message || 'Failed to delete the page from the sheet.');
     }
 
-    console.log("Page(s) deleted successfully. Response:", data);
-    return data;
+    console.log("Page(s) deleted successfully. Response:", batchUpdateRes.result);
+    return batchUpdateRes.result;
   } catch (err) {
     console.error('Caught error in deletePage:', err);
     throw new Error(`Failed to delete the page from the sheet: ${err.message}`);

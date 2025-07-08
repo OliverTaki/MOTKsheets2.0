@@ -13,30 +13,23 @@ export async function batchUpdate({ requests, sheetId, ensureValidToken }, retri
   if (!requests?.length) return;
 
   try {
-    const token = await ensureValidToken();
+    await ensureValidToken();
 
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values:batchUpdate`;
-
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ data: requests, valueInputOption: 'USER_ENTERED' }),
+    const res = await window.gapi.client.sheets.spreadsheets.batchUpdate({
+      spreadsheetId: sheetId,
+      resource: { requests: requests },
     });
 
-    if (!res.ok) {
-      const errorData = await res.json();
+    if (!res.result) {
       if (res.status === 401 && !retried) {
         console.warn("401 Unauthorized in batchUpdate, attempting to refresh token and retry...");
         await ensureValidToken(); // Attempt to get a new token
         return batchUpdate({ requests, sheetId, ensureValidToken }, true); // Retry the batchUpdate
       }
-      throw new Error(errorData.error?.message || `batchUpdate failed: ${res.status} ${errorData.error?.message}`);
+      throw new Error(res.error?.message || `batchUpdate failed: ${res.status} ${res.error?.message}`);
     }
 
-    return res.json();
+    return res.result;
   } catch (e) {
     console.error("Error in batchUpdate:", e);
     throw e;

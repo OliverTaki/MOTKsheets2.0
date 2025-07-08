@@ -1,27 +1,19 @@
 export async function ensureSheetExists(spreadsheetId, ensureValidToken, retried = false) {
   try {
-    const token = await ensureValidToken();
-    const sheetsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`;
-    const response = await fetch(sheetsUrl, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+    await ensureValidToken();
+    const getSpreadsheetRes = await window.gapi.client.sheets.spreadsheets.get({
+      spreadsheetId,
+      fields: 'sheets.properties',
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      if (response.status === 401 && !retried) {
+    const spreadsheet = getSpreadsheetRes.result;
+    if (!getSpreadsheetRes.result) {
+      if (getSpreadsheetRes.status === 401 && !retried) {
         console.warn("401 Unauthorized in ensureSheetExists, attempting to refresh token and retry...");
         await ensureValidToken();
         return ensureSheetExists(spreadsheetId, ensureValidToken, true);
       }
-      throw new Error(errorData.error?.message || `Failed to fetch spreadsheet details: ${response.status}`);
-    }
-    const spreadsheet = await response.json();
-
-    if (spreadsheet.error) {
-      console.error("Error fetching spreadsheet details:", spreadsheet.error);
-      throw new Error(`Failed to fetch spreadsheet details: ${spreadsheet.error.message}`);
+      throw new Error(getSpreadsheetRes.error?.message || `Failed to fetch spreadsheet details: ${getSpreadsheetRes.status}`);
     }
 
     console.log("All sheets in spreadsheet:");
@@ -38,7 +30,6 @@ export async function ensureSheetExists(spreadsheetId, ensureValidToken, retried
 
     console.warn("PAGES sheet not found. Current sheets:", spreadsheet.sheets);
     console.log("Attempting to create PAGES sheet...");
-    const batchUpdateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`;
     const addSheetRequest = {
       requests: [
         {
@@ -51,24 +42,19 @@ export async function ensureSheetExists(spreadsheetId, ensureValidToken, retried
       ],
     };
 
-    const addSheetResponse = await fetch(batchUpdateUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(addSheetRequest),
+    const addSheetRes = await window.gapi.client.sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      resource: addSheetRequest,
     });
-    const addSheetData = await addSheetResponse.json();
+    const addSheetData = addSheetRes.result;
 
-    if (!addSheetResponse.ok) {
-      if (addSheetResponse.status === 401 && !retried) {
+    if (!addSheetRes.result) {
+      if (addSheetRes.status === 401 && !retried) {
         console.warn("401 Unauthorized during sheet creation, attempting to refresh token and retry...");
         await ensureValidToken();
         return ensureSheetExists(spreadsheetId, ensureValidToken, true);
       }
-      console.error("Error creating PAGES sheet:", addSheetData.error);
-      throw new Error(`Failed to create PAGES sheet: ${addSheetData.error.message}`);
+      throw new Error(addSheetRes.error?.message || `Failed to create PAGES sheet: ${addSheetRes.status}`);
     }
 
     const newSheetId = addSheetData.replies[0].addSheet.properties.sheetId;

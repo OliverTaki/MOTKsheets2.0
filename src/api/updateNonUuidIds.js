@@ -45,26 +45,37 @@ const getSheetIds = async (spreadsheetId, ensureValidToken, retried = false) => 
  * @returns {Promise<object>} Google Sheets APIからのレスポ1ンス
  */
 export const getNonUuidIds = async (spreadsheetId, ensureValidToken, sheets, fields, retried = false) => {
-    console.log("getNonUuidIds: Received sheets data:", sheets);
-    console.log("getNonUuidIds: Received fields data:", fields);
-    const nonUuidShotIds = [];
-    const nonUuidFieldIds = [];
+    try {
+        await ensureValidToken();
+        console.log("getNonUuidIds: Received sheets data:", sheets);
+        console.log("getNonUuidIds: Received fields data:", fields);
+        const nonUuidShotIds = [];
+        const nonUuidFieldIds = [];
 
-    sheets.forEach((shot) => {
-        console.log(`Checking shot ID: ${shot.shot_id}, isValidUUID: ${isValidUUID(shot.shot_id)}`);
-        if (!isValidUUID(shot.shot_id) || shot.shot_id === '') {
-            nonUuidShotIds.push(shot.shot_id);
+        sheets.forEach((shot) => {
+            console.log(`Checking shot ID: ${shot.shot_id}, isValidUUID: ${isValidUUID(shot.shot_id)}`);
+            if (!isValidUUID(shot.shot_id) || shot.shot_id === '') {
+                nonUuidShotIds.push(shot.shot_id);
+            }
+        });
+
+        fields.forEach((field) => {
+            console.log(`Checking field ID: ${field.id}, isValidUUID: ${isValidUUID(field.id)}`);
+            if (!isValidUUID(field.id) || field.id === '') {
+                nonUuidFieldIds.push(field.id);
+            }
+        });
+
+        return { nonUuidShotIds, nonUuidFieldIds };
+    } catch (e) {
+        if (e.status === 401 && !retried) {
+            console.warn("401 Unauthorized in getNonUuidIds, attempting to refresh token and retry...");
+            await ensureValidToken();
+            return getNonUuidIds(spreadsheetId, ensureValidToken, sheets, fields, true);
         }
-    });
-
-    fields.forEach((field) => {
-        console.log(`Checking field ID: ${field.id}, isValidUUID: ${isValidUUID(field.id)}`);
-        if (!isValidUUID(field.id) || field.id === '') {
-            nonUuidFieldIds.push(field.id);
-        }
-    });
-
-    return { nonUuidShotIds, nonUuidFieldIds };
+        console.error("Error in getNonUuidIds:", e);
+        throw e;
+    }
 };
 
 export const updateNonUuidIds = async (spreadsheetId, ensureValidToken, sheets, fields, idsToUpdate, retried = false) => {
@@ -126,28 +137,34 @@ export const updateNonUuidIds = async (spreadsheetId, ensureValidToken, sheets, 
     }
 
     const body = { requests };
-    const response = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`,
-        {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(body)
-        }
-    );
+    try {
+        await ensureValidToken();
+        const response = await fetch(
+            `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(body)
+            }
+        );
 
-    if (!response.ok) {
-        const errorData = await response.json();
-        if (response.status === 401 && !retried) {
-            console.warn("401 Unauthorized in updateNonUuidIds, attempting to refresh token and retry...");
-            await ensureValidToken();
-            return updateNonUuidIds(spreadsheetId, ensureValidToken, sheets, fields, idsToUpdate, true);
+        if (!response.ok) {
+            const errorData = await response.json();
+            if (response.status === 401 && !retried) {
+                console.warn("401 Unauthorized in updateNonUuidIds, attempting to refresh token and retry...");
+                await ensureValidToken();
+                return updateNonUuidIds(spreadsheetId, ensureValidToken, sheets, fields, idsToUpdate, true);
+            }
+            console.error('Google Sheets API Error:', errorData);
+            throw new Error(errorData.error?.message || 'Failed to update non-UUID IDs.');
         }
-        console.error('Google Sheets API Error:', errorData);
-        throw new Error(errorData.error?.message || 'Failed to update non-UUID IDs.');
+
+        return response.json();
+    } catch (e) {
+        console.error("Error in updateNonUuidIds:", e);
+        throw e;
     }
-
-    return response.json();
 };

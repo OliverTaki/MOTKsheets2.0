@@ -207,7 +207,7 @@ export const AppContainer = () => {
       console.error("Failed to add field:", err);
       alert(`Error: ${err.message}`);
     }
-  }, [token, fields, refreshData, sheetId]);
+  }, [fields, refreshData, sheetId, ensureValidToken]);
 
   const handleCellSave = useCallback(async (shotId, fieldId, newValue) => {
     const originalRowIndex = sheets.findIndex(s => s.shot_id === shotId);

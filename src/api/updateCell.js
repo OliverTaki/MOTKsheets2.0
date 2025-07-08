@@ -1,35 +1,27 @@
-/**
- * Googleスプレッドシートの単一セルを更新します。
- * @param {string} spreadsheetId スプレッドシートのID
- * @param {string} token 認証トークン
- * @param {string} range 更新するセルの範囲 (例: "Shots!C5")
- * @param {string} value 設定する新しい値
- * @returns {Promise<object>} Google Sheets APIからのレスポンス
- */
-export const updateCell = async (spreadsheetId, token, range, value) => {
-    const params = new URLSearchParams({
-        valueInputOption: 'USER_ENTERED'
-    });
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?${params}`;
+export const updateCell = async (spreadsheetId, ensureValidToken, range, value, retried = false) => {
+    try {
+        await ensureValidToken();
 
-    const body = {
-        values: [[value]]
-    };
+        const res = await window.gapi.client.sheets.spreadsheets.values.update({
+            spreadsheetId,
+            range,
+            valueInputOption: 'USER_ENTERED',
+            resource: { values: [[value]] },
+        });
 
-    const response = await fetch(url, {
-        method: 'PUT',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
-    });
+        if (!res.result) {
+            if (res.status === 401 && !retried) {
+                console.warn("401 Unauthorized in updateCell, attempting to refresh token and retry...");
+                await ensureValidToken();
+                return updateCell(spreadsheetId, ensureValidToken, range, value, true); // Retry the update
+            }
+            console.error('Google Sheets API Error:', res);
+            throw new Error(res.error?.message || 'Failed to update cell.');
+        }
 
-    if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Google Sheets API Error:', errorData);
-        throw new Error(errorData.error.message || 'Failed to update cell.');
+        return res.result;
+    } catch (e) {
+        console.error("Error in updateCell:", e);
+        throw e;
     }
-
-    return response.json();
 };
