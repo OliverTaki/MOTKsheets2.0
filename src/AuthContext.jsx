@@ -2,88 +2,44 @@ import { createContext, useCallback, useEffect, useRef, useState } from 'react';
 
 // --- local in-memory access-token cache --------------------------
 const lastTokenRef      = { current: null };
-const tokenIssuedAtRef  = { current: 0   };  // epoch (ms);
-const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
-
-// --- local in-memory access-token cache --------------------------
-const lastTokenRef      = { current: null };
 const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
 const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
 
-// --- local in-memory access-token cache --------------------------
-const lastTokenRef      = { current: null };
-const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
-const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
 
-// --- local in-memory access-token cache --------------------------
-const lastTokenRef      = { current: null };
-const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
-const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
 
-// --- local in-memory access-token cache --------------------------
-const lastTokenRef      = { current: null };
-const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
-const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
 
-// --- local in-memory access-token cache --------------------------
-const lastTokenRef      = { current: null };
-const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
-const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
 
-// --- local in-memory access-token cache --------------------------
-const lastTokenRef      = { current: null };
-const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
-const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
 
-// --- local in-memory access-token cache --------------------------
-const lastTokenRef      = { current: null };
-const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
-const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
 
-// --- local in-memory access-token cache --------------------------
-const lastTokenRef      = { current: null };
-const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
-const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
 
-// --- local in-memory access-token cache --------------------------
-const lastTokenRef      = { current: null };
-const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
-const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
 
-// --- local in-memory access-token cache --------------------------
-const lastTokenRef      = { current: null };
-const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
-const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
 
-// --- local in-memory access-token cache --------------------------
-const lastTokenRef      = { current: null };
-const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
-const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
 
-// --- local in-memory access-token cache --------------------------
-const lastTokenRef      = { current: null };
-const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
-const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
 
-// --- local in-memory access-token cache --------------------------
-const lastTokenRef      = { current: null };
-const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
-const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
 
-// --- local in-memory access-token cache --------------------------
-const lastTokenRef      = { current: null };
-const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
-const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
 
-// --- local in-memory access-token cache --------------------------
-const lastTokenRef      = { current: null };
-const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
-const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
 
-// --- local in-memory access-token cache --------------------------
-const lastTokenRef      = { current: null };
-const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
-const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -137,6 +93,14 @@ export const AuthProvider = ({ children, refreshData }) => {
 
             
 
+            // ① 自前キャッシュが生きていれば即返す
+            if (
+                lastTokenRef.current &&
+                Date.now() - tokenIssuedAtRef.current < TOKEN_LIFETIME_MS
+            ) {
+                return resolve(lastTokenRef.current);
+            }
+
             const tc = tokenClientRef.current;
             if (!tc) return reject(new Error('PROMPT_REQUIRED'));
 
@@ -181,7 +145,13 @@ export const AuthProvider = ({ children, refreshData }) => {
             return;
         }
         tc.callback = (resp) =>
-            resp && resp.access_token ? setNeedsReAuth(false) : setNeedsReAuth(true);
+            resp && resp.access_token
+                ? (() => {
+                    lastTokenRef.current     = resp.access_token;
+                    tokenIssuedAtRef.current = Date.now();
+                    setNeedsReAuth(false);
+                })()
+                : setNeedsReAuth(true);
         try {
             tc.requestAccessToken({ prompt: 'consent' });
         } catch {
