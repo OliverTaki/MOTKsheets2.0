@@ -23,10 +23,10 @@ export function useDriveSheets() {
       try {
         const res = await window.gapi.client.drive.files.list({
           pageSize: 100,
-          fields: 'files(id,name,appProperties,owners(displayName))',
+          fields: 'files(id,name,owners(displayName))',
           q:
             "mimeType='application/vnd.google-apps.spreadsheet' " +
-            "and appProperties has { key='motk' and value='true' } " +
+            "and name contains 'MOTK[Project:' " +
             "and ('me' in owners or 'me' in readers or 'me' in writers)",
         });
 

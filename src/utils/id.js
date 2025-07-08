@@ -12,6 +12,7 @@ export function isValidUUID(uuid) {
   return uuidRegex.test(uuid);
 }
 
-export const toProjectName = (file) =>
-  file.appProperties?.projectName ??
-  file.name.replace(/^MOTK\s*\[?|\]?$/gi, '');
+export const toProjectName = (file) => {
+  const m = file.name.match(/^MOTK\[Project:([^\]]+)\]/i);
+  return m ? m[1].trim() : file.name;
+};

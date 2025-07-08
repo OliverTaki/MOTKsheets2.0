@@ -1,41 +1,18 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../AuthContext';
-import { useDriveSheets } from '../hooks/useDriveSheets'; // useDriveSheets をインポート
-import { toProjectName } from '../utils/id'; // toProjectName をインポート
-
-// shadcn/ui の DropdownMenu コンポーネントを想定
-// 実際のプロジェクトに合わせてインポートパスを調整してください
-// import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from './ui/dropdown-menu';
-
-// 仮の DropdownMenu コンポーネント (shadcn/ui が設定されていない場合)
-const DropdownMenu = ({ children }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const toggleOpen = () => setIsOpen(!isOpen);
-
-  return (
-    <div className="relative">
-      {React.Children.map(children, child => {
-        if (child.type === DropdownMenuTrigger) {
-          return React.cloneElement(child, { onClick: toggleOpen });
-        } else if (child.type === DropdownMenuContent) {
-          return isOpen ? child : null;
-        }
-        return child;
-      })}
-    </div>
-  );
-};
-const DropdownMenuTrigger = ({ children, onClick }) => <button onClick={onClick} className="px-2 py-1 bg-zinc-700 rounded">{children}</button>;
-const DropdownMenuContent = ({ children }) => <div className="absolute top-full left-0 bg-zinc-800 border border-zinc-700 rounded shadow-lg z-10">{children}</div>;
-const DropdownMenuItem = ({ children, onSelect }) => <div onClick={onSelect} className="px-4 py-2 hover:bg-zinc-600 cursor-pointer">{children}</div>;
-
+import { useDriveSheets } from '../hooks/useDriveSheets';
+import { toProjectName } from '../utils/id';
+import { AppBar, Toolbar, Typography, Button, Box, Menu, MenuItem } from '@mui/material';
+import LoginButton from './LoginButton'; // Assuming LoginButton is in the same directory
 
 export default function GlobalNav() {
   const navigate = useNavigate();
   const { sheetId, setSheetId } = useContext(AuthContext);
-  const { sheets, loading, error } = useDriveSheets(); // useDriveSheets を内部で呼び出す
+  const { sheets, loading, error } = useDriveSheets();
   const [currentProjectDisplayName, setCurrentProjectDisplayName] = useState('Select Project');
+  const [anchorEl, setAnchorEl] = useState(null);
+  const open = Boolean(anchorEl);
 
   useEffect(() => {
     if (sheetId && sheets.length > 0) {
@@ -54,44 +31,71 @@ export default function GlobalNav() {
     setSheetId(id);
     localStorage.setItem('motk:lastSheetId', id);
     navigate('/');
+    setAnchorEl(null); // Close dropdown after selection
+  };
+
+  const handleMenuClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
   };
 
   return (
-    <header className="flex items-center h-12 bg-zinc-800 text-white px-4">
-      {/* LOGO -> /select */}
-      <button onClick={() => navigate('/select')} className="font-bold mr-8">
-        MOTK
-      </button>
+    <AppBar position="static" className="bg-zinc-800 text-white shadow-none">
+      <Toolbar className="flex items-center h-12 px-4">
+        {/* LOGO -> /select */}
+        <Button color="inherit" onClick={() => navigate('/select')} className="font-bold mr-8 normal-case text-lg">
+          MOTK
+        </Button>
 
-      {/* Project Dropdown */}
-      <DropdownMenu>
-        <DropdownMenuTrigger>
-          {currentProjectDisplayName}
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          {loading && <DropdownMenuItem onSelect={() => {}}>Loading projects...</DropdownMenuItem>}
-          {error && <DropdownMenuItem onSelect={() => {}} className="text-red-400">Error loading projects</DropdownMenuItem>}
-          {!loading && !error && sheets.length === 0 && (
-            <DropdownMenuItem onSelect={() => {}}>
-              No projects found
-            </DropdownMenuItem>
-          )}
-          {!loading && !error && sheets.length > 0 && (
-            sheets
-              .sort((a, b) => toProjectName(a).localeCompare(toProjectName(b)))
-              .map((f) => (
-                <DropdownMenuItem key={f.id} onSelect={() => changeProject(f.id)}>
-                  {toProjectName(f)}
-                </DropdownMenuItem>
-              ))
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+        {/* Project Dropdown */}
+        <Box>
+          <Button
+            id="project-dropdown-button"
+            aria-controls={open ? 'project-dropdown-menu' : undefined}
+            aria-haspopup="true"
+            aria-expanded={open ? 'true' : undefined}
+            onClick={handleMenuClick}
+            color="inherit"
+            className="px-2 py-1 bg-zinc-700 rounded normal-case"
+          >
+            {currentProjectDisplayName}
+          </Button>
+          <Menu
+            id="project-dropdown-menu"
+            anchorEl={anchorEl}
+            open={open}
+            onClose={handleMenuClose}
+            MenuListProps={{
+              'aria-labelledby': 'project-dropdown-button',
+            }}
+          >
+            {loading && <MenuItem disabled>Loading projects...</MenuItem>}
+            {error && <MenuItem disabled className="text-red-400">Error loading projects</MenuItem>}
+            {!loading && !error && sheets.length === 0 && (
+              <MenuItem disabled>
+                No projects found
+              </MenuItem>
+            )}
+            {!loading && !error && sheets.length > 0 && (
+              sheets
+                .sort((a, b) => toProjectName(a).localeCompare(toProjectName(b)))
+                .map((f) => (
+                  <MenuItem key={f.id} onClick={() => changeProject(f.id)}>
+                    {toProjectName(f)}
+                  </MenuItem>
+                ))
+            )}
+          </Menu>
+        </Box>
 
-      {/* Sign-out 等は右端 */}
-      <div className="ml-auto">
-        {/* ここに既存の Sign-out ボタンなどを配置 */}
-      </div>
-    </header>
+        {/* Sign-out 等は右端 */}
+        <Box sx={{ ml: 'auto' }}>
+          <LoginButton />
+        </Box>
+      </Toolbar>
+    </AppBar>
   );
 }
