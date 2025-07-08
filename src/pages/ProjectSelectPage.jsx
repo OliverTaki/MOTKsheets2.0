@@ -10,7 +10,7 @@ export default function ProjectSelectPage({ setSheetId }) {
   const handleSelect = (id) => {
     setSheetId(id);
     localStorage.setItem('motk:lastSheetId', id);
-    navigate('/'); // Shots (既存ルート) へ
+    navigate('/', { replace: true });
   };
 
   if (loading) return <div className="p-4">Loading project list…</div>;

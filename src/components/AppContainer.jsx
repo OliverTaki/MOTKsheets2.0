@@ -22,6 +22,7 @@ import { updatePage } from '../api/updatePage';
 import { deletePage } from '../api/deletePage';
 import { v4 as uuidv4 } from 'uuid';
 import UpdateNonUuidIdsDialog from './UpdateNonUuidIdsDialog';
+import FullScreenSpinner from './FullScreenSpinner';
 
 const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 
@@ -318,15 +319,8 @@ export const AppContainer = () => {
 
   
 
-  if (!isAppReady) { // Only show loading if token and sheetId exist
-    return (
-      <div className="flex justify-center items-center h-screen bg-gray-100 dark:bg-gray-900">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">MOTK Sheets 2.0</h1>
-          <p className="text-xl">Loading...</p>
-        </div>
-      </div>
-    );
+  if (!isAppReady) {
+    return <FullScreenSpinner />;
   }
 
   return (
