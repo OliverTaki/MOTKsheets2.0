@@ -4,7 +4,7 @@ export const AuthContext = createContext(null);
 const TOKEN_STORAGE_KEY = 'google_auth_token';
 const LAST_SHEET_ID_STORAGE_KEY = 'motk:lastSheetId';
 
-export const AuthProvider = ({ children, sheets, fields, refreshData }) => {
+export const AuthProvider = ({ children, sheets = [], fields = [], refreshData }) => {
     const [token, setToken] = useState(() => localStorage.getItem(TOKEN_STORAGE_KEY));
     const [isInitialized, setIsInitialized] = useState(false);
     const [isGapiClientReady, setIsGapiClientReady] = useState(false);
@@ -145,7 +145,7 @@ export const AuthProvider = ({ children, sheets, fields, refreshData }) => {
     }, []);
 
     useEffect(() => {
-        if (sheetId && sheets.length > 0) {
+        if (sheetId && Array.isArray(sheets) && sheets.length > 0) {
             const currentSheet = sheets.find(sheet => sheet.id === sheetId);
             if (currentSheet) {
                 setDisplayName(currentSheet.appProperties?.projectName || currentSheet.name.replace(/^MOTK\s*/i, ''));
