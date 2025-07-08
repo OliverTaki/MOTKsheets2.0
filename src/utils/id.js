@@ -11,3 +11,7 @@ export function isValidUUID(uuid) {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return uuidRegex.test(uuid);
 }
+
+export const toProjectName = (file) =>
+  file.appProperties?.projectName ??
+  file.name.replace(/^MOTK\s*\[?|\]?$/gi, '');

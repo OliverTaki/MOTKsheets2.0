@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useDriveSheets } from '../hooks/useDriveSheets';
 import { AuthContext } from '../AuthContext';
 import { useContext } from 'react';
+import { toProjectName } from '../utils/id';
 
 export default function ProjectSelectPage() {
   const { sheets, loading, error } = useDriveSheets();
@@ -34,18 +35,20 @@ export default function ProjectSelectPage() {
       )}
 
       <ul className="space-y-2">
-        {sheets.map((file) => (
-          <li
-            key={file.id}
-            onClick={() => handleSelect(file.id)}
-            className="cursor-pointer border rounded-xl px-4 py-3 hover:bg-gray-50"
-          >
-            <div className="font-medium">{file.name}</div>
-            <div className="text-sm text-gray-500">
-              Owner: {file.owners?.[0]?.displayName ?? 'unknown'}
-            </div>
-          </li>
-        ))}
+        {sheets
+          .sort((a, b) => toProjectName(a).localeCompare(toProjectName(b)))
+          .map((file) => (
+            <li
+              key={file.id}
+              onClick={() => handleSelect(file.id)}
+              className="cursor-pointer border rounded-xl px-4 py-3 hover:bg-gray-50"
+            >
+              <div className="font-medium">{toProjectName(file)}</div>
+              <div className="text-sm text-gray-500">
+                Owner: {file.owners?.[0]?.displayName ?? 'unknown'}
+              </div>
+            </li>
+          ))}
       </ul>
     </main>
   );

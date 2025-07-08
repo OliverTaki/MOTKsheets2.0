@@ -1,5 +1,7 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 
+import { toProjectName } from './utils/id';
+
 export const AuthContext = createContext(null);
 const TOKEN_STORAGE_KEY = 'google_auth_token';
 const LAST_SHEET_ID_STORAGE_KEY = 'motk:lastSheetId';
@@ -148,7 +150,7 @@ export const AuthProvider = ({ children, sheets = [], fields = [], refreshData }
         if (sheetId && Array.isArray(sheets) && sheets.length > 0) {
             const currentSheet = sheets.find(sheet => sheet.id === sheetId);
             if (currentSheet) {
-                setDisplayName(currentSheet.appProperties?.projectName || currentSheet.name.replace(/^MOTK\s*/i, ''));
+                setDisplayName(toProjectName(currentSheet));
             } else {
                 setDisplayName(null);
             }

@@ -19,6 +19,7 @@
 10. [Roadmap](#roadmap)
 11. [Contributing](#contributing)
 12. [License](#license)
+13. [Google Sheets Setup](#google-sheets-setup)
 
 ---
 
@@ -184,3 +185,45 @@ Please stick to the existing ESLint rules (`npm run lint`) and keep PRs focused.
 ## License <a id="license"></a>
 
 MIT © 2025 **Oliver Taki** & contributors
+
+---
+
+## Google Sheets Setup <a id="google-sheets-setup"></a>
+
+To use MOTKsheets 2.0, you need to prepare your Google Sheets files with specific properties.
+
+### 1. Create a Template Sheet
+
+It's recommended to create a template Google Sheet that you can copy for each new project. This template sheet should have the necessary columns and initial data structure for your shots.
+
+### 2. Tag Your Sheets with `appProperties`
+
+MOTKsheets 2.0 identifies project sheets using custom `appProperties` in Google Drive. For each sheet you want to use as a project:
+
+1.  **Copy your Template Sheet:** Make a copy of your template sheet for a new project.
+2.  **Rename the File:** Rename the copied Google Sheet file to follow the convention: `MOTK[ProjectName]` (e.g., `MOTKOliver`, `MOTKMyNewProject`). Ensure there are no spaces between `MOTK` and `[ProjectName]`.
+3.  **Add `appProperties`:** Use the Google Drive API to add `appProperties` to your sheet. You can do this using the `gdrive` CLI tool (if installed) or by making a direct API call.
+
+    **Using `gdrive` CLI (recommended for ease):**
+
+    First, get the `FILE_ID` of your newly created sheet from its URL (e.g., `https://docs.google.com/spreadsheets/d/FILE_ID/edit`). Then run the following command, replacing `<FILE_ID>` and `<ProjectName>` with your actual values:
+
+    ```bash
+    gdrive files update <FILE_ID> \
+      --appProperties motk=true,projectName="<ProjectName>"
+    ```
+
+    For example, if your file is named `MOTKOliver` and the project name is `Oliver`:
+
+    ```bash
+    gdrive files update 1A2B3C4D5E... \
+      --appProperties motk=true,projectName="Oliver"
+    ```
+
+    This will add the `motk:true` property (to identify it as a MOTKsheets project) and `projectName:<ProjectName>` (to display a friendly name in the UI) to your Google Sheet.
+
+    **For existing sheets:** You can apply the same `gdrive` command to existing sheets that you want to use with MOTKsheets 2.0.
+
+### 3. Initial Setup for Existing Sheets (One-time)
+
+If you have existing Google Sheets that you want to use with MOTKsheets 2.0, you will need to apply the `appProperties` to them once, as described in step 2.
