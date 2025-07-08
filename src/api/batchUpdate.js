@@ -8,26 +8,37 @@
  * @param {string} token   - OAuth access_token
  * @param {string} apiKey  - API key (optional, token takes priority)
  */
-export async function batchUpdate({ requests, sheetId, token, apiKey }) {
+export async function batchUpdate({ requests, sheetId, ensureValidToken }, retried = false) {
   if (!sheetId) throw new Error('sheetId required');
-  if (!token && !apiKey) throw new Error('token or apiKey required');
   if (!requests?.length) return;
 
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values:batchUpdate`;
+  try {
+    const token = await ensureValidToken();
 
-  const res = await fetch(apiKey ? `${url}?key=${apiKey}` : url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({ data: requests, valueInputOption: 'USER_ENTERED' }),
-  });
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values:batchUpdate`;
 
-  if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(`batchUpdate failed: ${res.status} ${msg}`);
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ data: requests, valueInputOption: 'USER_ENTERED' }),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      if (res.status === 401 && !retried) {
+        console.warn("401 Unauthorized in batchUpdate, attempting to refresh token and retry...");
+        await ensureValidToken(); // Attempt to get a new token
+        return batchUpdate({ requests, sheetId, ensureValidToken }, true); // Retry the batchUpdate
+      }
+      throw new Error(errorData.error?.message || `batchUpdate failed: ${res.status} ${errorData.error?.message}`);
+    }
+
+    return res.json();
+  } catch (e) {
+    console.error("Error in batchUpdate:", e);
+    throw e;
   }
-
-  return res.json();
 }

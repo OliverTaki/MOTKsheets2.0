@@ -1,17 +1,20 @@
-const apiKey = import.meta.env.VITE_SHEETS_API_KEY;
-
-export async function updatePage(spreadsheetId, token, pageId, pageData) {
+export async function updatePage(spreadsheetId, ensureValidToken, pageId, pageData, retried = false) {
   try {
-    const getPagesUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/PAGES!A:A?key=${apiKey}`;
+    const token = await ensureValidToken();
+    const getPagesUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/PAGES!A:A`;
     const getPagesResponse = await fetch(getPagesUrl, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
     const pagesData = await getPagesResponse.json();
-    const rows = pagesData.values;
-    if (!rows) {
-      throw new Error('No data found in PAGES sheet.');
+    if (!getPagesResponse.ok) {
+      if (getPagesResponse.status === 401 && !retried) {
+        console.warn("401 Unauthorized fetching pages for update, attempting to refresh token and retry...");
+        await ensureValidToken();
+        return updatePage(spreadsheetId, ensureValidToken, pageId, pageData, true);
+      }
+      throw new Error(pagesData.error?.message || `Failed to fetch page data: ${getPagesResponse.status}`);
     }
 
     const rowIndex = rows.findIndex(row => row[0] === pageId);
@@ -21,7 +24,7 @@ export async function updatePage(spreadsheetId, token, pageId, pageData) {
 
     const sheetRowIndex = rowIndex + 1;
     const range = `PAGES!A${sheetRowIndex}:H${sheetRowIndex}`;
-    const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?valueInputOption=USER_ENTERED&key=${apiKey}`;
+    const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?valueInputOption=USER_ENTERED`;
 
     const {
       title,

@@ -1,10 +1,9 @@
 import { ensureSheetExists } from './sheetUtils';
-const apiKey = import.meta.env.VITE_SHEETS_API_KEY;
 
-export async function deletePage(spreadsheetId, token, pageId) {
+export async function deletePage(spreadsheetId, ensureValidToken, pageId, retried = false) {
   console.log(`Attempting to delete page with ID: ${pageId}`);
   try {
-    const sheetId = await ensureSheetExists(spreadsheetId, token);
+    const sheetId = await ensureSheetExists(spreadsheetId, ensureValidToken);
     if (!sheetId) {
       console.warn("PAGES sheet not found during deletion attempt. No action taken.");
       return; // Exit gracefully if sheet doesn't exist
@@ -22,6 +21,11 @@ export async function deletePage(spreadsheetId, token, pageId) {
 
     const pagesData = await getPagesResponse.json();
     if (!getPagesResponse.ok) {
+      if (getPagesResponse.status === 401 && !retried) {
+        console.warn("401 Unauthorized fetching pages for deletion, attempting to refresh token and retry...");
+        await ensureValidToken();
+        return deletePage(spreadsheetId, ensureValidToken, pageId, true);
+      }
       console.error("Error fetching page data:", pagesData);
       throw new Error(`Failed to fetch page data: ${pagesData.error.message}`);
     }
@@ -72,11 +76,16 @@ export async function deletePage(spreadsheetId, token, pageId) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(requests),
+      body: JSON.stringify({ requests: requests }), // requests should be wrapped in an object
     });
 
     const data = await response.json();
     if (!response.ok) {
+      if (response.status === 401 && !retried) {
+        console.warn("401 Unauthorized during batch update for deletion, attempting to refresh token and retry...");
+        await ensureValidToken();
+        return deletePage(spreadsheetId, ensureValidToken, pageId, true);
+      }
       console.error("Batch update failed:", data);
       throw new Error(data.error.message || 'Failed to delete the page from the sheet.');
     }

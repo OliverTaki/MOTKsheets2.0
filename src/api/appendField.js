@@ -4,23 +4,35 @@
  * @param {string} token 
  * @returns {Promise<Map<string, number>>}
  */
-const getSheetIds = async (spreadsheetId, token) => {
-    const response = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties`,
-        {
-            headers: { 'Authorization': `Bearer ${token}` }
+const getSheetIds = async (spreadsheetId, ensureValidToken, retried = false) => {
+    try {
+        const token = await ensureValidToken();
+        const response = await fetch(
+            `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties`,
+            {
+                headers: { 'Authorization': `Bearer ${token}` }
+            }
+        );
+        if (!response.ok) {
+            const errorData = await response.json();
+            if (response.status === 401 && !retried) {
+                console.warn("401 Unauthorized in getSheetIds, attempting to refresh token and retry...");
+                await ensureValidToken(); // Attempt to get a new token
+                return getSheetIds(spreadsheetId, ensureValidToken, true); // Retry the fetch
+            }
+            throw new Error(errorData.error?.message || 'Could not fetch spreadsheet metadata.');
         }
-    );
-    if (!response.ok) throw new Error('Could not fetch spreadsheet metadata.');
-    const data = await response.json();
-    const sheetIdMap = new Map();
-    // デバッグのため、取得したシート名をコンソールに出力します
-    console.log("Sheets found in spreadsheet:", data.sheets.map(s => s.properties.title));
-    data.sheets.forEach(sheet => {
-        // シート名を大文字に変換して、大文字小文字を区別しないようにします
-        sheetIdMap.set(sheet.properties.title.toUpperCase(), sheet.properties.sheetId);
-    });
-    return sheetIdMap;
+        const data = await response.json();
+        const sheetIdMap = new Map();
+        console.log("Sheets found in spreadsheet:", data.sheets.map(s => s.properties.title));
+        data.sheets.forEach(sheet => {
+            sheetIdMap.set(sheet.properties.title.toUpperCase(), sheet.properties.sheetId);
+        });
+        return sheetIdMap;
+    } catch (e) {
+        console.error("Error in getSheetIds:", e);
+        throw e;
+    }
 };
 
 
@@ -32,12 +44,12 @@ const getSheetIds = async (spreadsheetId, token) => {
  * @param {Array<object>} existingFields 既存のフィールドリスト
  * @returns {Promise<object>} Google Sheets APIからのレスポンス
  */
-export const appendField = async (spreadsheetId, token, newFieldDetails, existingFields) => {
-    // 新しいフィールドIDを自動生成 (例: "new_field_name")
+export const appendField = async (spreadsheetId, ensureValidToken, newFieldDetails, existingFields, retried = false) => {
     const newFieldId = newFieldDetails.id || newFieldDetails.label.toLowerCase().replace(/\s+/g, '_');
     
-    // シート名から実際のシートIDを取得 (大文字に変換して比較)
-    const sheetIds = await getSheetIds(spreadsheetId, token);
+    try {
+        const token = await ensureValidToken();
+        const sheetIds = await getSheetIds(spreadsheetId, ensureValidToken);
     const fieldsSheetId = sheetIds.get('FIELDS');
     const shotsSheetId = sheetIds.get('SHOTS');
 
@@ -115,9 +127,17 @@ export const appendField = async (spreadsheetId, token, newFieldDetails, existin
 
     if (!response.ok) {
         const errorData = await response.json();
+        if (response.status === 401 && !retried) {
+            console.warn("401 Unauthorized in appendField, attempting to refresh token and retry...");
+            await ensureValidToken(); // Attempt to get a new token
+            return appendField(spreadsheetId, ensureValidToken, newFieldDetails, existingFields, true); // Retry the append
+        }
         console.error('Google Sheets API Error:', errorData);
         throw new Error(errorData.error?.message || 'Failed to append field.');
     }
 
     return response.json();
-};
+} catch (e) {
+    console.error("Error in appendField:", e);
+    throw e;
+}

@@ -1,9 +1,7 @@
-import { ensureSheetExists } from './sheetUtils';
-
-const apiKey = import.meta.env.VITE_SHEETS_API_KEY;
-
-export async function appendPage(spreadsheetId, token, pageData) {
-  await ensureSheetExists(spreadsheetId, token);
+export async function appendPage(spreadsheetId, ensureValidToken, pageData, retried = false) {
+  try {
+    const token = await ensureValidToken();
+    await ensureSheetExists(spreadsheetId, ensureValidToken);
 
   const {
     page_id,
@@ -28,7 +26,7 @@ export async function appendPage(spreadsheetId, token, pageData) {
   ];
 
   const range = 'PAGES!A1';
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}:append?valueInputOption=USER_ENTERED&key=${apiKey}`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}:append?valueInputOption=USER_ENTERED`;
 
   try {
     const response = await fetch(url, {
@@ -43,7 +41,12 @@ export async function appendPage(spreadsheetId, token, pageData) {
     });
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.error.message);
+      if (response.status === 401 && !retried) {
+        console.warn("401 Unauthorized appending page, attempting to refresh token and retry...");
+        await ensureValidToken();
+        return appendPage(spreadsheetId, ensureValidToken, pageData, true);
+      }
+      throw new Error(data.error?.message || `Failed to append page: ${response.status}`);
     }
     return data;
   } catch (err) {

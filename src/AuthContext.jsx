@@ -14,6 +14,7 @@ export const AuthProvider = ({ children, refreshData }) => {
     const [isGapiClientReady, setIsGapiClientReady] = useState(false);
     const [error, setError] = useState(null);
     const [tokenClient, setTokenClient] = useState(null);
+    const [needsReAuth, setNeedsReAuth] = useState(false);
 
     const handleTokenResponse = useCallback((tokenResponse) => {
         if (tokenResponse && tokenResponse.access_token) {
@@ -26,11 +27,15 @@ export const AuthProvider = ({ children, refreshData }) => {
                 window.gapi.client.setToken({ access_token: accessToken });
             }
             setError(null);
+            setNeedsReAuth(false); // Clear re-auth flag on successful token acquisition
             if (refreshData) refreshData();
         } else {
             setError({ message: 'Failed to get access token from Google.' });
         }
     }, [refreshData]);
+
+    let refreshing = false;
+    const waiters = [];
 
     const ensureValidToken = useCallback(async () => {
         const now = Date.now();
@@ -38,23 +43,72 @@ export const AuthProvider = ({ children, refreshData }) => {
             return tokenInfo.access_token; // Return current token if still valid for at least 1 minute
         }
 
+        if (refreshing) {
+            return new Promise(resolve => waiters.push(resolve));
+        }
+
+        refreshing = true;
+
         return new Promise((resolve, reject) => {
-            if (!tokenClient) {
-                return reject(new Error("Token client is not initialized for silent refresh."));
-            }
-            tokenClient.requestAccessToken({
-                prompt: '', // silent refresh
-                callback: (resp) => {
-                    if (resp.error) {
-                        console.error("Silent refresh failed:", resp.error);
-                        return reject(resp.error);
-                    }
-                    const expires = now + resp.expires_in * 1000;
-                    setTokenInfo({ access_token: resp.access_token, expires_at: expires });
-                    window.gapi.client.setToken({ access_token: resp.access_token });
-                    resolve(resp.access_token);
-                },
-            });
+            const saveAndResolve = (resp) => {
+                const exp = now + resp.expires_in * 1000;
+                setTokenInfo({ access_token: resp.access_token, expires_at: exp });
+                window.gapi.client.setToken({ access_token: resp.access_token });
+                refreshing = false;
+                flushingWaiters(resolve, resp.access_token);
+            };
+
+            const flushingWaiters = (fn, val) => {
+                waiters.forEach(w => fn(val));
+                waiters.length = 0;
+            };
+
+            const attemptInteractive = () => {
+                if (!tokenClient) {
+                    refreshing = false;
+                    flushingWaiters(reject, new Error("Token client is not initialized for interactive refresh."));
+                    return;
+                }
+                tokenClient.requestAccessToken({
+                    prompt: 'consent',
+                    callback: (resp) => {
+                        if (resp.error) {
+                            setNeedsReAuth(true);
+                            refreshing = false;
+                            flushingWaiters(reject, resp);
+                        } else {
+                            saveAndResolve(resp);
+                        }
+                    },
+                });
+            };
+
+            const attemptSilent = () => {
+                if (!tokenClient) {
+                    refreshing = false;
+                    flushingWaiters(reject, new Error("Token client is not initialized for silent refresh."));
+                    return;
+                }
+                tokenClient.requestAccessToken({
+                    prompt: '', // silent
+                    callback: (resp) => {
+                        if (resp.error) {
+                            if (resp.error === 'popup_closed_by_user' || resp.error === 'popup_blocked_by_browser') {
+                                setNeedsReAuth(true);
+                                refreshing = false;
+                                flushingWaiters(reject, resp);
+                            } else {
+                                // Other error: try interactive once
+                                attemptInteractive();
+                            }
+                        } else {
+                            saveAndResolve(resp);
+                        }
+                    },
+                });
+            };
+
+            attemptSilent();
         });
     }, [tokenInfo, tokenClient]);
 
@@ -166,7 +220,7 @@ export const AuthProvider = ({ children, refreshData }) => {
         }
     }, []);
 
-    const value = { token, signIn, signOut, isInitialized, error, isGapiClientReady, refreshData, ensureValidToken };
+    const value = { token, signIn, signOut, isInitialized, error, isGapiClientReady, refreshData, ensureValidToken, needsReAuth, setNeedsReAuth };
 
     return (
         <AuthContext.Provider value={value}>

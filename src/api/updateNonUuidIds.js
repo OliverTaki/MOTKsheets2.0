@@ -6,20 +6,34 @@ import { isValidUUID } from '../utils/id';
  * @param {string} token 
  * @returns {Promise<Map<string, number>>}
  */
-const getSheetIds = async (spreadsheetId, token) => {
-    const response = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties`,
-        {
-            headers: { 'Authorization': `Bearer ${token}` }
+const getSheetIds = async (spreadsheetId, ensureValidToken, retried = false) => {
+    try {
+        const token = await ensureValidToken();
+        const response = await fetch(
+            `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties`,
+            {
+                headers: { 'Authorization': `Bearer ${token}` }
+            }
+        );
+        if (!response.ok) {
+            const errorData = await response.json();
+            if (response.status === 401 && !retried) {
+                console.warn("401 Unauthorized in getSheetIds, attempting to refresh token and retry...");
+                await ensureValidToken(); // Attempt to get a new token
+                return getSheetIds(spreadsheetId, ensureValidToken, true); // Retry the fetch
+            }
+            throw new Error(errorData.error?.message || 'Could not fetch spreadsheet metadata.');
         }
-    );
-    if (!response.ok) throw new Error('Could not fetch spreadsheet metadata.');
-    const data = await response.json();
-    const sheetIdMap = new Map();
-    data.sheets.forEach(sheet => {
-        sheetIdMap.set(sheet.properties.title.toUpperCase(), sheet.properties.sheetId);
-    });
-    return sheetIdMap;
+        const data = await response.json();
+        const sheetIdMap = new Map();
+        data.sheets.forEach(sheet => {
+            sheetIdMap.set(sheet.properties.title.toUpperCase(), sheet.properties.sheetId);
+        });
+        return sheetIdMap;
+    } catch (e) {
+        console.error("Error in getSheetIds:", e);
+        throw e;
+    }
 };
 
 /**
@@ -30,7 +44,7 @@ const getSheetIds = async (spreadsheetId, token) => {
  * @param {Array<object>} fields フィールド定義の配列
  * @returns {Promise<object>} Google Sheets APIからのレスポ1ンス
  */
-export const getNonUuidIds = async (spreadsheetId, token, sheets, fields) => {
+export const getNonUuidIds = async (spreadsheetId, ensureValidToken, sheets, fields, retried = false) => {
     console.log("getNonUuidIds: Received sheets data:", sheets);
     console.log("getNonUuidIds: Received fields data:", fields);
     const nonUuidShotIds = [];
@@ -53,9 +67,9 @@ export const getNonUuidIds = async (spreadsheetId, token, sheets, fields) => {
     return { nonUuidShotIds, nonUuidFieldIds };
 };
 
-export const updateNonUuidIds = async (spreadsheetId, token, sheets, fields, idsToUpdate) => {
+export const updateNonUuidIds = async (spreadsheetId, ensureValidToken, sheets, fields, idsToUpdate, retried = false) => {
     const requests = [];
-    const sheetIds = await getSheetIds(spreadsheetId, token);
+    const sheetIds = await getSheetIds(spreadsheetId, ensureValidToken);
     const shotsSheetId = sheetIds.get('SHOTS');
     const fieldsSheetId = sheetIds.get('FIELDS');
 
@@ -117,8 +131,8 @@ export const updateNonUuidIds = async (spreadsheetId, token, sheets, fields, ids
         {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify(body)
         }
@@ -126,6 +140,11 @@ export const updateNonUuidIds = async (spreadsheetId, token, sheets, fields, ids
 
     if (!response.ok) {
         const errorData = await response.json();
+        if (response.status === 401 && !retried) {
+            console.warn("401 Unauthorized in updateNonUuidIds, attempting to refresh token and retry...");
+            await ensureValidToken();
+            return updateNonUuidIds(spreadsheetId, ensureValidToken, sheets, fields, idsToUpdate, true);
+        }
         console.error('Google Sheets API Error:', errorData);
         throw new Error(errorData.error?.message || 'Failed to update non-UUID IDs.');
     }

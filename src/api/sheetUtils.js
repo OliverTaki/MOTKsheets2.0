@@ -1,13 +1,22 @@
-const apiKey = import.meta.env.VITE_SHEETS_API_KEY;
-
-export async function ensureSheetExists(spreadsheetId, token) {
+export async function ensureSheetExists(spreadsheetId, ensureValidToken, retried = false) {
   try {
-    const sheetsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?key=${apiKey}`;
+    const token = await ensureValidToken();
+    const sheetsUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`;
     const response = await fetch(sheetsUrl, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      if (response.status === 401 && !retried) {
+        console.warn("401 Unauthorized in ensureSheetExists, attempting to refresh token and retry...");
+        await ensureValidToken();
+        return ensureSheetExists(spreadsheetId, ensureValidToken, true);
+      }
+      throw new Error(errorData.error?.message || `Failed to fetch spreadsheet details: ${response.status}`);
+    }
     const spreadsheet = await response.json();
 
     if (spreadsheet.error) {
@@ -53,6 +62,11 @@ export async function ensureSheetExists(spreadsheetId, token) {
     const addSheetData = await addSheetResponse.json();
 
     if (!addSheetResponse.ok) {
+      if (addSheetResponse.status === 401 && !retried) {
+        console.warn("401 Unauthorized during sheet creation, attempting to refresh token and retry...");
+        await ensureValidToken();
+        return ensureSheetExists(spreadsheetId, ensureValidToken, true);
+      }
       console.error("Error creating PAGES sheet:", addSheetData.error);
       throw new Error(`Failed to create PAGES sheet: ${addSheetData.error.message}`);
     }

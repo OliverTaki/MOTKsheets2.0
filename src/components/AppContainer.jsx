@@ -23,6 +23,7 @@ import { deletePage } from '../api/deletePage';
 import { v4 as uuidv4 } from 'uuid';
 import UpdateNonUuidIdsDialog from './UpdateNonUuidIdsDialog';
 import FullScreenSpinner from './FullScreenSpinner';
+import ReAuthDialog from './ReAuthDialog';
 
 const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 
@@ -35,7 +36,7 @@ const theme = createTheme({
 });
 
 export const AppContainer = () => {
-  const { token, user, isInitialized } = useContext(AuthContext);
+  const { token, user, isInitialized, needsReAuth, signIn, ensureValidToken } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const [sheetId, setSheetId] = useState(() => {
@@ -86,15 +87,15 @@ export const AppContainer = () => {
   }, [fields]);
 
   useEffect(() => {
-    const ready = isInitialized && !fieldsLoading && !pagesLoading;
-    console.log(`AppContainer useEffect: isInitialized=${isInitialized}, fieldsLoading=${fieldsLoading}, pagesLoading=${pagesLoading}, ready=${ready}`);
+    const ready = isInitialized && !fieldsLoading && !pagesLoading && !needsReAuth;
+    console.log(`AppContainer useEffect: isInitialized=${isInitialized}, fieldsLoading=${fieldsLoading}, pagesLoading=${pagesLoading}, needsReAuth=${needsReAuth}, ready=${ready}`);
     if (ready && !booted) {
       setBooted(true);
       console.log("App is ready!");
     } else {
       console.log("App is NOT ready.");
     }
-  }, [isInitialized, fieldsLoading, pagesLoading, booted]);
+  }, [isInitialized, fieldsLoading, pagesLoading, needsReAuth, booted]);
 
   useEffect(() => {
     if (isAppReady && pages.length > 0 && !isInitialViewLoaded) {
@@ -186,9 +187,8 @@ export const AppContainer = () => {
   }, []);
 
   const handleAddField = useCallback(async (newFieldDetails) => {
-    if (!token) { alert("Authentication required."); return; }
     try {
-      const newField = await appendField(sheetId, token, newFieldDetails, fields);
+      const newField = await appendField(sheetId, ensureValidToken, newFieldDetails, fields);
       alert(`Field "${newField.label}" added successfully!`);
 
       // Instead of a full refresh, which can be slow and reset the UI,
@@ -210,8 +210,6 @@ export const AppContainer = () => {
   }, [token, fields, refreshData, sheetId]);
 
   const handleCellSave = useCallback(async (shotId, fieldId, newValue) => {
-    if (!token) { alert("Authentication required."); return; }
-
     const originalRowIndex = sheets.findIndex(s => s.shot_id === shotId);
     if (originalRowIndex === -1) {
       console.error("Could not find shot to update");
@@ -228,14 +226,15 @@ export const AppContainer = () => {
     const range = `Shots!${columnLetter}${sheetRowIndex}`;
 
     try {
-      await updateCell(sheetId, token, range, newValue);
+      const currentToken = await ensureValidToken();
+      await updateCell(sheetId, currentToken, range, newValue);
       refreshData(); // Refresh data after successful save
       console.log(`Cell ${range} updated successfully.`);
     } catch (err) {
       console.error("Failed to update cell:", err);
       alert(`Error: ${err.message}`);
     }
-  }, [token, sheets, sheetId, idToColIndex, refreshData]);
+  }, [sheets, sheetId, idToColIndex, refreshData, ensureValidToken]);
 
   const getCurrentView = () => ({
     columnWidths,
@@ -253,19 +252,21 @@ export const AppContainer = () => {
     }
     const currentView = getCurrentView();
     const existingPage = pages.find(p => p.page_id === loadedPageId);
-    await updatePage(sheetId, token, loadedPageId, { ...existingPage, ...currentView });
+    const currentToken = await ensureValidToken();
+    await updatePage(sheetId, currentToken, loadedPageId, { ...existingPage, ...currentView });
     alert('View saved successfully!');
     refreshPages();
-  }, [loadedPageId, token, pages, getCurrentView, refreshPages, sheetId]);
+  }, [loadedPageId, pages, getCurrentView, refreshPages, sheetId, ensureValidToken]);
 
   const handleSaveViewAs = useCallback(async (title) => {
     const page_id = uuidv4();
     const currentView = { ...getCurrentView(), page_id, title };
-    await appendPage(sheetId, token, currentView);
+    const currentToken = await ensureValidToken();
+    await appendPage(sheetId, currentToken, currentView);
     setLoadedPageId(page_id);
     alert(`View "${title}" saved successfully!`);
     refreshPages();
-  }, [token, getCurrentView, refreshPages, sheetId]);
+  }, [getCurrentView, refreshPages, sheetId, ensureValidToken]);
 
   const handleDeleteView = useCallback(async (pageId) => {
     if (pageId === 'default') {
@@ -273,7 +274,8 @@ export const AppContainer = () => {
       return;
     }
     if (window.confirm('Are you sure you want to delete this view?')) {
-      await deletePage(sheetId, token, pageId);
+      const currentToken = await ensureValidToken();
+      await deletePage(sheetId, currentToken, pageId);
       if (loadedPageId === pageId) {
         setLoadedPageId(null);
         localStorage.removeItem('loadedPageId');
@@ -281,7 +283,7 @@ export const AppContainer = () => {
       alert('View deleted successfully!');
       refreshPages();
     }
-  }, [token, loadedPageId, refreshPages, sheetId]);
+  }, [loadedPageId, refreshPages, sheetId, ensureValidToken]);
 
   const handleColumnOrderChange = (event) => {
     const { active, over } = event;
@@ -399,6 +401,10 @@ export const AppContainer = () => {
             onClose={() => setUpdateNonUuidIdsDialogOpen(false)}
             sheets={sheets}
             fields={fields}
+          />
+          <ReAuthDialog
+            open={needsReAuth}
+            onConfirm={signIn}
           />
         </div>
       
