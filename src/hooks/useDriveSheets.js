@@ -35,9 +35,10 @@ export function useDriveSheets() {
   }, [token, isGapiClientReady]);
 
   useEffect(() => {
-    setSheets([]); // Clear cache on token/gapi readiness change
-    fetchSheets();
-  }, [fetchSheets]);
+    if (isGapiClientReady) {
+      fetchSheets();
+    }
+  }, [isGapiClientReady, fetchSheets]);
 
   return { sheets, loading, error, fetchSheets };
 }

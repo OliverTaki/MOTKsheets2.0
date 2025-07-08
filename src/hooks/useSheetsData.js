@@ -100,11 +100,10 @@ export const useSheetsData = (sheetId) => {
   }, [sheetId, token, fields]);
 
   useEffect(() => {
-    setShots([]); // Clear cache on sheetId switch
-    setFields([]); // Clear cache on sheetId switch
-    setIdToColIndex({}); // Clear idToColIndex on sheetId switch
-    refreshData();
-  }, [refreshData, sheetId]); // Added sheetId to dependencies
+    if (isGapiClientReady) {
+      refreshData();
+    }
+  }, [isGapiClientReady, refreshData]);
 
   return {
     sheets: shots, // Renamed shots to sheets for consistency with AuthContext

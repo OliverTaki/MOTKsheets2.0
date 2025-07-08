@@ -44,7 +44,7 @@ const UpdateNonUuidIdsDialog = ({ open, onClose, sheets = [], fields = [] }) => 
     console.log("UpdateNonUuidIdsDialog: useEffect triggered.");
     const fetchIds = async () => {
       console.log("UpdateNonUuidIdsDialog: fetchIds called. open:", open, "token:", token ? "present" : "missing", "sheets:", sheets ? "present" : "missing", "fields:", fields ? "present" : "missing");
-      if (!open || !token || !sheets || !fields || !sheetId) {
+      if (!token || !sheets || !fields || !sheetId) {
         console.log("UpdateNonUuidIdsDialog: fetchIds returning early due to missing dependencies.");
         return;
       }
@@ -64,7 +64,9 @@ const UpdateNonUuidIdsDialog = ({ open, onClose, sheets = [], fields = [] }) => 
         setLoading(false);
       }
     };
-    fetchIds();
+    if (open) {
+      fetchIds();
+    }
   }, [open, token, sheets, fields]);
 
   const handleToggle = (id) => {

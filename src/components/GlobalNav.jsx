@@ -59,7 +59,7 @@ export default function GlobalNav({ sheetId, setSheetId }) {
             aria-controls={open ? 'project-dropdown-menu' : undefined}
             aria-haspopup="true"
             aria-expanded={open ? 'true' : undefined}
-            onClick={handleMenuClick}
+            onClick={() => navigate('/select')}
             color="inherit"
             className="px-2 py-1 bg-zinc-700 rounded normal-case"
           >

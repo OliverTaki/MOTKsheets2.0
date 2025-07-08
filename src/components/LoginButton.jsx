@@ -3,7 +3,7 @@ import { AuthContext } from '../AuthContext';
 import { Button, CircularProgress, Typography, Box } from '@mui/material';
 
 const LoginButton = () => {
-    const { token, signIn, signOut } = useContext(AuthContext);
+    const { token, signIn, signOut, isInitialized } = useContext(AuthContext);
 
     return (
         <Box>
@@ -12,7 +12,7 @@ const LoginButton = () => {
                     Sign Out
                 </Button>
             ) : (
-                <Button onClick={signIn} variant="contained" color="primary">
+                <Button onClick={signIn} variant="contained" color="primary" disabled={!isInitialized}>
                     Sign In with Google
                 </Button>
             )}

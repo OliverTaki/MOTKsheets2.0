@@ -58,7 +58,7 @@ const Toolbar = ({
                         <Select
                             labelId="page-select-label"
                             id="page-select"
-                            value={loadedPageId || ''}
+                            value={loadedPageId && pages.some(p => p.page_id === loadedPageId) ? loadedPageId : ''}
                             onChange={handlePageChange}
                             label="View"
                         >

@@ -82,9 +82,10 @@ const usePagesData = (sheetId) => {
   }, [token, isGapiClientReady, sheetId]);
 
   useEffect(() => {
-    setPages([]); // Clear cache on sheetId switch
-    refreshPages();
-  }, [refreshPages, sheetId]);
+    if (isGapiClientReady) {
+      refreshPages();
+    }
+  }, [isGapiClientReady, refreshPages]);
 
   return { pages, loading, error, refreshPages };
 };

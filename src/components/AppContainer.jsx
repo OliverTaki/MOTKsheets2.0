@@ -318,7 +318,7 @@ export const AppContainer = () => {
 
   
 
-  if (!isAppReady && token && sheetId) { // Only show loading if token and sheetId exist
+  if (!isAppReady) { // Only show loading if token and sheetId exist
     return (
       <div className="flex justify-center items-center h-screen bg-gray-100 dark:bg-gray-900">
         <div className="text-center">
@@ -332,7 +332,7 @@ export const AppContainer = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AuthProvider refreshData={refreshData}>
+      
         <div className="App bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col" style={{ height: '100dvh', overflow: 'hidden' }}>
           <GlobalNav sheetId={sheetId} setSheetId={setSheetId} />
           {token && sheetId && ( // Only show project navigation and toolbar if token and sheetId exist
@@ -366,6 +366,7 @@ export const AppContainer = () => {
               <SheetsDataContext.Provider value={{ sheets, fields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex }}>
                 <Routes>
                   <Route path="/signin" element={<LoginButton />} />
+                  <Route path="/select" element={<ProjectSelectPage setSheetId={setSheetId} />} />
                   {!sheetId ? (
                     <Route path="/" element={<ProjectSelectPage setSheetId={setSheetId} />} />
                   ) : (
@@ -405,7 +406,7 @@ export const AppContainer = () => {
             fields={fields}
           />
         </div>
-      </AuthProvider>
+      
     </ThemeProvider>
   );
 };
