@@ -98,7 +98,8 @@ export const useSheetsData = (sheetId) => {
       const optionsColumnLetter = 'F';
       const range = `FIELDS!${optionsColumnLetter}${fieldRowIndex}`;
 
-      await updateCell(sheetId, token, range, updatedOptionsString);
+      const currentToken = await ensureValidToken(); // Get a valid token
+      await updateCell(sheetId, currentToken, range, updatedOptionsString);
 
       setFields(prevFields => prevFields.map(f =>
         f.id === fieldId ? { ...f, options: updatedOptionsString } : f

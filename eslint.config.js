@@ -18,6 +18,7 @@ export default tseslint.config(
       'react-refresh': reactRefresh,
     },
     rules: {
+      'no-undef': 'error',
       'no-dupe-imports': 'error',
       'no-redeclare': 'error',
       'no-unexpected-multiline': 'error',
