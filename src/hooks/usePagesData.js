@@ -13,15 +13,13 @@ const safeJsonParse = (jsonString, defaultValue) => {
 
 const usePagesData = () => {
   const [pages, setPages] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Initial state should be false or true based on initial fetch
   const [error, setError] = useState(null);
   const { token, isGapiClientReady, sheetId: ctxSheetId } = useContext(AuthContext);
   const SHEET_ID = ctxSheetId || import.meta.env.VITE_SHEETS_ID;
 
   const refreshPages = useCallback(async () => {
-    console.log("refreshPages: Starting...");
     if (!token || !isGapiClientReady || !SHEET_ID || !window.gapi || !window.gapi.client || !window.gapi.client.sheets) {
-      console.log("refreshPages: Prerequisites not met.");
       setLoading(false);
       return;
     }
@@ -85,14 +83,9 @@ const usePagesData = () => {
   }, [token, isGapiClientReady, SHEET_ID]);
 
   useEffect(() => {
-    if (token && isGapiClientReady && SHEET_ID) {
-      setPages([]); // Clear cache on sheetId switch
-      refreshPages();
-    } else if (!token) {
-      setLoading(false);
-      setPages([]);
-    }
-  }, [token, isGapiClientReady, SHEET_ID, refreshPages]);
+    setPages([]); // Clear cache on sheetId switch
+    refreshPages();
+  }, [refreshPages]);
 
   return { pages, loading, error, refreshPages };
 };
