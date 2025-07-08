@@ -120,7 +120,7 @@ export const useSheetsData = (sheetId) => {
         alert(`Error updating field options: ${err.message}`);
       }
     }
-  }, [sheetId, token, fields, ensureValidToken]);
+  }, [sheetId, fields, ensureValidToken]);
 
   useEffect(() => {
     if (isGapiClientReady) {
