@@ -32,11 +32,11 @@ const usePagesData = (sheetId) => {
 
       if (res.status === 404 || (res.result.error && (res.result.error.code === 404 || (res.result.error.code === 400 && res.result.error.message.includes("Unable to parse range"))))) {
         console.warn("'PAGES' sheet does not exist or is inaccessible. Initializing with empty pages list.");
-        setPages([]);
+
       } else if (res.result.values) {
         const [header, ...rows] = res.result.values;
         if (!header || rows.length === 0) {
-          setPages([]);
+  
         } else {
           const pageIdCol = header.indexOf('page_id');
           const titleCol = header.indexOf('title');
@@ -70,7 +70,7 @@ const usePagesData = (sheetId) => {
           setPages(parsedPages);
         }
       } else {
-        setPages([]);
+
       }
     } catch (e) {
       console.error('refreshPages: Caught error:', e);

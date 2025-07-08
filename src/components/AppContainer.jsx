@@ -52,6 +52,7 @@ export const AppContainer = () => {
   const [visibleFieldIds, setVisibleFieldIds] = useState([]);
   const [loadedPageId, setLoadedPageId] = useState(() => localStorage.getItem('loadedPageId') || null);
   const [isAppReady, setIsAppReady] = useState(false);
+  const [booted, setBooted] = useState(false);
   const [orderedFields, setOrderedFields] = useState([]);
   const [columnOrder, setColumnOrder] = useState([]);
   const [isInitialViewLoaded, setIsInitialViewLoaded] = useState(false);
@@ -85,15 +86,15 @@ export const AppContainer = () => {
   }, [fields]);
 
   useEffect(() => {
-    console.log(`AppContainer useEffect: isInitialized=${isInitialized}, fieldsLoading=${fieldsLoading}, pagesLoading=${pagesLoading}`);
-    if (isInitialized && !fieldsLoading && !pagesLoading) {
-      setIsAppReady(true);
+    const ready = isInitialized && !fieldsLoading && !pagesLoading;
+    console.log(`AppContainer useEffect: isInitialized=${isInitialized}, fieldsLoading=${fieldsLoading}, pagesLoading=${pagesLoading}, ready=${ready}`);
+    if (ready && !booted) {
+      setBooted(true);
       console.log("App is ready!");
     } else {
-      setIsAppReady(false);
       console.log("App is NOT ready.");
     }
-  }, [isInitialized, fieldsLoading, pagesLoading]);
+  }, [isInitialized, fieldsLoading, pagesLoading, booted]);
 
   useEffect(() => {
     if (isAppReady && pages.length > 0 && !isInitialViewLoaded) {
@@ -319,7 +320,7 @@ export const AppContainer = () => {
 
   
 
-  if (!isAppReady) {
+  if (!booted) {
     return <FullScreenSpinner />;
   }
 
