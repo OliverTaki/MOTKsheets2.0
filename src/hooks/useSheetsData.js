@@ -5,6 +5,8 @@ import { missingIdHandler } from '../utils/missingIdHandler';
 import { updateCell } from '../api/updateCell';
 
 export const useSheetsData = (sheetId) => {
+  const { needsReAuth } = useContext(AuthContext);
+  if (needsReAuth) return { sheets: [], fields: [], loading: false, error: 'NEEDS_REAUTH' };
   const { isGapiClientReady, ensureValidToken, setNeedsReAuth } = useContext(AuthContext);
   const [shots, setShots] = useState([]);
   const [fields, setFields] = useState([]);

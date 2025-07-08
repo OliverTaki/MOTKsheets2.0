@@ -1,4 +1,15 @@
-import { createContext, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+
+// --- local in-memory access-token cache --------------------------
+const lastTokenRef      = { current: null };
+const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
+const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
 
 // --- local in-memory access-token cache --------------------------
 const lastTokenRef      = { current: null };
@@ -59,7 +70,20 @@ export const AuthProvider = ({ children, refreshData }) => {
     const [isGapiClientReady, setIsGapiClientReady] = useState(false);
     const [error, setError] = useState(null);
     const tokenClientRef = useRef(null);
-    const [needsReAuth, setNeedsReAuth] = useState(false);
+    const [isReady, setReady] = useState(false); // GSI script load 判定
+  const [needsReAuth, setNeedsReAuth] = useState(false);
+
+  /** GSI スクリプトロード完了判定 */
+  useEffect(() => {
+    if (window.google?.accounts?.oauth2) setReady(true);
+    const id = setInterval(() => {
+      if (window.google?.accounts?.oauth2) {
+        setReady(true);
+        clearInterval(id);
+      }
+    }, 250);
+    return () => clearInterval(id);
+  }, []);
     // 何度も silent を叩かないためのフラグ
     const attemptedSilent = useRef(false);
     const authError = useRef(null); // UI 用
@@ -87,38 +111,34 @@ export const AuthProvider = ({ children, refreshData }) => {
     const PROMPT_REQUIRED = Symbol('PROMPT_REQUIRED');
     const SILENT_TIMEOUT_MS = 1000;
 
-    const ensureValidToken = () =>
-        new Promise((resolve, reject) => {
-            if (needsReAuth) return reject(new Error('PROMPT_REQUIRED'));
+    const ensureValidToken = useCallback(async () => {
+        if (!isReady) throw new Error('GSI not ready');
 
-            
-
-            // ① 自前キャッシュが生きていれば即返す
-            if (
-                lastTokenRef.current &&
-                Date.now() - tokenIssuedAtRef.current < TOKEN_LIFETIME_MS
-            ) {
-                return resolve(lastTokenRef.current);
-            }
-
+        // ポップアップはユーザ操作トリガ必須
+        return new Promise((resolve, reject) => {
             const tc = tokenClientRef.current;
-            if (!tc) return reject(new Error('PROMPT_REQUIRED'));
-
-            tc.callback = (resp) =>
-                resp && resp.access_token
-                    ? (() => {
-                        lastTokenRef.current     = resp.access_token;
-                        tokenIssuedAtRef.current = Date.now();
-                        resolve(resp.access_token);
-                    })()
-                    : reject(new Error('PROMPT_REQUIRED'));
-
-            try {
-                tc.requestAccessToken({ prompt: '' });   // silent
-            } catch {
-                reject(new Error('PROMPT_REQUIRED'));
+            if (!tc) {
+                setError({ message: 'Authentication service is not ready. Please try again in a moment.' });
+                return reject(new Error('PROMPT_REQUIRED'));
             }
+
+            tc.callback = (resp) => {
+                if (resp?.error) {
+                    console.error(resp);
+                    setNeedsReAuth(true);
+                    reject(resp);
+                } else {
+                    lastTokenRef.current = resp.access_token;
+                    tokenIssuedAtRef.current = Date.now();
+                    setNeedsReAuth(false);
+                    resolve(resp.access_token);
+                }
+            };
+
+            // ★ ここではまだ popup を開かず、戻り値としてトリガ関数を返す
+            tc.requestAccessToken();
         });
+    }, [isReady]);
 
     useEffect(() => {
         const interceptor = (response) => {
