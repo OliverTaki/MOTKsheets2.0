@@ -8,15 +8,12 @@ import ErrorBoundary from './components/ErrorBoundary.jsx';
 import ReAuthDialog from './components/ReAuthDialog.jsx';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  {/* <React.StrictMode> */}
-    {/* アプリケーション全体をBrowserRouterでラップします */}
-    <BrowserRouter>
-      <ErrorBoundary>
-        <AuthProvider>
-          <App />
-          <ReAuthDialog />
-        </AuthProvider>
-      </ErrorBoundary>
-    </BrowserRouter>
-  {/* </React.StrictMode> */},
+  <BrowserRouter>
+    <ErrorBoundary>
+      <AuthProvider>
+        <App />
+        <ReAuthDialog />
+      </AuthProvider>
+    </ErrorBoundary>
+  </BrowserRouter>,
 )
