@@ -7,6 +7,7 @@ const LAST_SHEET_ID_STORAGE_KEY = 'motk:lastSheetId';
 export const AuthProvider = ({ children, sheets, fields, refreshData }) => {
     const [token, setToken] = useState(() => localStorage.getItem(TOKEN_STORAGE_KEY));
     const [isInitialized, setIsInitialized] = useState(false);
+    const [isGapiClientReady, setIsGapiClientReady] = useState(false);
     const [error, setError] = useState(null);
     const [tokenClient, setTokenClient] = useState(null);
     const [sheetId, setSheetId] = useState(() => localStorage.getItem(LAST_SHEET_ID_STORAGE_KEY));
@@ -27,11 +28,14 @@ export const AuthProvider = ({ children, sheets, fields, refreshData }) => {
                         if (tokenResponse && tokenResponse.access_token) {
                             const accessToken = tokenResponse.access_token;
                             setToken(accessToken);
-                            localStorage.setItem(TOKEN_STORAGE_KEY, accessToken); // トークンをlocalStorageに保存
+                            localStorage.setItem(TOKEN_STORAGE_KEY, accessToken);
+                            if (window.gapi && window.gapi.client) {
+                                window.gapi.client.setToken({ access_token: accessToken });
+                            }
                             setError(null);
                             console.log("Token obtained successfully.");
                             if (refreshData) {
-                                refreshData(); // Reload data after successful sign-in
+                                refreshData();
                             }
                         } else {
                             console.error("Token response error", tokenResponse);
@@ -53,44 +57,79 @@ export const AuthProvider = ({ children, sheets, fields, refreshData }) => {
             }
         };
 
-        const script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
-
         if (window.google && window.google.accounts) {
-            // If script is already loaded, initialize immediately
             initializeGis();
-        } else if (script) {
-            // If script tag exists but not loaded, wait for it
-            script.addEventListener('load', initializeGis);
-            return () => script.removeEventListener('load', initializeGis);
         } else {
-            // If script tag doesn't exist, something is wrong
-            console.error("GSI script tag not found in the document.");
-            setError({ message: "Google Identity Services script tag not found. Please ensure it's included in index.html." });
-            setIsInitialized(true);
+            // Ensure the GIS script is loaded before initializing
+            const script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+            if (script) {
+                script.addEventListener('load', initializeGis);
+                return () => script.removeEventListener('load', initializeGis);
+            } else {
+                console.error("GSI script tag not found in the document.");
+                setError({ message: "Google Identity Services script tag not found. Please ensure it's included in index.html." });
+                setIsInitialized(true);
+            }
         }
-    }, [CLIENT_ID, SCOPES]);
+    }, [CLIENT_ID, SCOPES, refreshData]);
+
+    // Initialize gapi client
+    useEffect(() => {
+        const script = document.createElement('script');
+        script.src = 'https://apis.google.com/js/api.js';
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
+            window.gapi.load('client', () => {
+                window.gapi.client.init({
+                    apiKey: import.meta.env.VITE_GOOGLE_API_KEY,
+                    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest', 'https://sheets.googleapis.com/$discovery/rest?version=v4'],
+                }).then(() => {
+                    // Explicitly load Drive and Sheets APIs after gapi.client.init
+                    return Promise.all([
+                        window.gapi.client.load('drive', 'v3'),
+                        window.gapi.client.load('sheets', 'v4')
+                    ]);
+                }).then(() => {
+                    console.log("gapi client initialized and Drive/Sheets APIs loaded.");
+                    setIsGapiClientReady(true);
+                    // Set token if already available from localStorage
+                    const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+                    if (storedToken) {
+                        window.gapi.client.setToken({ access_token: storedToken });
+                    }
+                }).catch((err) => {
+                    console.error("Error initializing gapi client:", err);
+                    setError(err);
+                });
+            });
+        };
+        document.head.appendChild(script);
+
+        return () => {
+            // Cleanup script if component unmounts
+            script.remove();
+        };
+    }, []);
 
     const signIn = useCallback(() => {
         if (tokenClient) {
-            if (token) {
-                // すでにトークンがある場合は、不要なポップアップを避ける
-                tokenClient.requestAccessToken({ prompt: '' });
-            } else {
-                // トークンがない場合のみ同意画面を要求
-                tokenClient.requestAccessToken({ prompt: 'consent' });
-            }
+            tokenClient.requestAccessToken({ prompt: 'consent' });
         } else {
             console.error("Token client is not initialized.");
             setError({ message: 'Authentication service is not ready. Please try again in a moment.' });
         }
-    }, [tokenClient, token]);
+    }, [tokenClient]);
 
     const signOut = useCallback(() => {
         const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
         if (storedToken) {
             window.google.accounts.oauth2.revoke(storedToken, () => {
                 setToken(null);
-                localStorage.removeItem(TOKEN_STORAGE_KEY); // localStorageからトークンを削除
+                localStorage.removeItem(TOKEN_STORAGE_KEY);
+                if (window.gapi && window.gapi.client) {
+                    window.gapi.client.setToken('');
+                }
                 console.log('Token revoked and user signed out.');
             });
         } else {
@@ -104,7 +143,7 @@ export const AuthProvider = ({ children, sheets, fields, refreshData }) => {
         console.log('Local token cleared.');
     }, []);
 
-    const value = { token, signIn, signOut, isInitialized, error, clearToken, sheets, fields, refreshData, sheetId, setSheetId };
+    const value = { token, signIn, signOut, isInitialized, error, clearToken, sheets, fields, refreshData, sheetId, setSheetId, isGapiClientReady, setIsGapiClientReady };
 
     return (
         <AuthContext.Provider value={value}>

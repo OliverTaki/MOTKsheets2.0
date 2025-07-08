@@ -12,8 +12,13 @@ const useSheetsData = (spreadsheetId) => {
     const [error, setError] = useState(null);
     const [idToColIndex, setIdToColIndex] = useState({});
 
+    // If no spreadsheetId is provided, we don't fetch any data.
+    if (!spreadsheetId) {
+        return { sheets: [], setSheets, fields: [], shotsHeader: [], loading: false, error: null, refreshData: () => {}, updateFieldOptions: () => {}, idToColIndex: {} };
+    }
+
     const fetchSheetsData = useCallback(async (currentToken) => {
-        if (!currentToken) {
+        if (!currentToken || !spreadsheetId) {
             setLoading(false);
             return;
         }

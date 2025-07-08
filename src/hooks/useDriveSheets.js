@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { gapi } from 'gapi-script';
+import { useEffect, useState, useContext } from 'react';
+import { AuthContext } from '../AuthContext';
 
 /**
  * Returns Drive spreadsheets the signed-in user can at least read.
@@ -9,19 +9,22 @@ export function useDriveSheets() {
   const [sheets, setSheets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { token, isGapiClientReady } = useContext(AuthContext);
 
   useEffect(() => {
-    async function fetchSheets() {
+    const fetchSheets = async () => {
+      if (!token || !isGapiClientReady || !window.gapi || !window.gapi.client || !window.gapi.client.drive) {
+        setLoading(false);
+        return;
+      }
       try {
-        await gapi.client.load('drive', 'v3');
-
-        const res = await gapi.client.drive.files.list({
+        const res = await window.gapi.client.drive.files.list({
           pageSize: 100,
           fields: 'files(id,name,owners(displayName))',
           q:
             "mimeType='application/vnd.google-apps.spreadsheet' " + // Sheets only
             "and ('me' in owners or 'me' in readers or 'me' in writers)",
-        }); // :contentReference[oaicite:1]{index=1}
+        });
 
         setSheets(res.result.files ?? []);
       } catch (e) {
@@ -30,10 +33,14 @@ export function useDriveSheets() {
       } finally {
         setLoading(false);
       }
-    }
+    };
 
-    fetchSheets();
-  }, []);
+    if (token && isGapiClientReady) {
+      fetchSheets();
+    } else if (!token) {
+      setLoading(false);
+    }
+  }, [token, isGapiClientReady]);
 
   return { sheets, loading, error };
 }

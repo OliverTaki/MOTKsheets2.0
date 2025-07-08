@@ -6,7 +6,7 @@ import { useContext } from 'react';
 
 export default function ProjectSelectPage() {
   const { sheets, loading, error } = useDriveSheets();
-  const { setSheetId } = useAuth();
+  const { setSheetId } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleSelect = (id) => {
