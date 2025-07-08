@@ -90,4 +90,4 @@ const usePagesData = () => {
   return { pages, loading, error, refreshPages };
 };
 
-export default usePagesData;
+export { usePagesData };
