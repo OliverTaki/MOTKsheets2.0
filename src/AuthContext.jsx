@@ -43,56 +43,39 @@ export const AuthProvider = ({ children, refreshData }) => {
 
     const ensureValidToken = useCallback(async () => {
         if (needsReAuth) return Promise.reject(PROMPT_REQUIRED);
-        const now = Date.now();
-        if (tokenInfo && now < tokenInfo.expires_at - 60_000) {
-            return tokenInfo.access_token; // Return current token if still valid for at least 1 minute
+        if (tokenInfo && Date.now() < tokenInfo.expires_at - 60_000) {
+            return tokenInfo.access_token;
         }
-
-        if (refreshing) {
-            return new Promise(resolve => waiters.push(resolve));
-        }
-
+        if (refreshing) return new Promise(r => waiters.push(r));
         refreshing = true;
-
         return new Promise((resolve, reject) => {
-            const saveAndResolve = (resp) => {
-                const exp = Date.now() + resp.expires_in * 1000;
-                setTokenInfo({ access_token: resp.access_token, expires_at: exp });
-                window.gapi.client.setToken({ access_token: resp.access_token });
-                refreshing = false;
-                flushingWaiters(resp.access_token);
-                resolve(resp.access_token);
-            };
-
-            const flushingWaiters = (val) => {
-                waiters.forEach(w => w(val));
-                waiters.length = 0;
-            };
-
-            const fail = (err) => {
-                console.warn('Silent token refresh failed', err);
+            const flush = (val) => { waiters.forEach(w => w(val)); waiters.length = 0; };
+            const fail = (reason) => {
+                console.warn('Silent refresh failed:', reason);
                 refreshing = false;
                 setNeedsReAuth(true);
-                flushingWaiters(PROMPT_REQUIRED);
+                flush(PROMPT_REQUIRED);
                 reject(PROMPT_REQUIRED);
             };
-
             const timer = setTimeout(() => fail('timeout'), SILENT_TIMEOUT_MS);
-
             try {
                 tokenClient.requestAccessToken({
-                    prompt: '', // silent
+                    prompt: '',
                     callback: (resp) => {
                         clearTimeout(timer);
                         refreshing = false;
                         if (resp.error) return fail(resp.error);
-                        saveAndResolve(resp);
+                        const exp = Date.now() + resp.expires_in * 1000;
+                        setTokenInfo({ access_token: resp.access_token, expires_at: exp });
+                        window.gapi.client.setToken({ access_token: resp.access_token });
+                        flush(resp.access_token);
+                        resolve(resp.access_token);
                     },
                     error_callback: (err) => { clearTimeout(timer); fail(err); },
                 });
             } catch (syncErr) {
                 clearTimeout(timer);
-                fail(syncErr); // unify path
+                fail(syncErr);
             }
         });
     }, [tokenInfo, tokenClient, needsReAuth]);
