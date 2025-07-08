@@ -20,6 +20,7 @@ export default tseslint.config(
     rules: {
       'no-dupe-imports': 'error',
       'no-redeclare': 'error',
+      'no-unexpected-multiline': 'error',
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': [
         'warn',

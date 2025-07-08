@@ -21,7 +21,7 @@ const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 
 const ShotDetailPage = () => {
   const { shotId } = useParams();
-  const { token } } = useContext(AuthContext);
+  const { token } = useContext(AuthContext);
   const { sheets, fields, idToColIndex, refreshData } = useContext(SheetsDataContext);
   const [shot, setShot] = useState(null);
   const [editValues, setEditValues] = useState({});
