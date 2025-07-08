@@ -34,7 +34,7 @@ const MainView = ({
   handleColResizeMouseDown,
 }) => {
   return (
-    <div style={{ height: '100%' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
       <ShotTable
         shots={sheets}
         fields={displayedFields}
@@ -353,9 +353,9 @@ export const AppContainer = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider sheets={sheets} fields={fields} refreshData={refreshData}>
-        <div className="App bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col h-screen">
+        <div className="App bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col" style={{ height: '100dvh', overflow: 'hidden' }}>
           <header className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 shadow z-30 flex-shrink-0 sticky top-0" style={{ height: '39px' }}>
-            <h1 className="text-2xl font-bold">MOTK Sheets 2.0</h1>
+            <h1 className="text-lg font-bold">MOTK Sheets 2.0</h1>
             <LoginButton />
           </header>
           <div className="sticky top-[39px] bg-gray-800 z-30 flex items-center px-4" style={{ height: '38px' }}>
@@ -382,7 +382,7 @@ export const AppContainer = () => {
               onOpenUpdateNonUuidIdsDialog={() => setUpdateNonUuidIdsDialogOpen(true)}
             />
           </div>
-          <main className="flex-grow overflow-y-auto bg-gray-800 pt-4">
+          <main className="flex-grow bg-gray-800" style={{ flex: 1 }}>
             {(fieldsError || pagesError) && <p className="text-red-500 text-center">Error: {fieldsError?.message || pagesError?.message}</p>}
             {!fieldsError && !pagesError && (
               <Routes>

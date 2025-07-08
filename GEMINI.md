@@ -25,6 +25,7 @@ We have been working on implementing a "Pages" feature that allows users to save
     *   Fixed a bug where adding a new field would reset the current view.
     *   Fixed a bug where the application would not load the saved view on reload.
     *   Fixed a bug where the `FIELDS` sheet was not being parsed correctly, causing new fields to be ignored.
+    *   **Fixed Double Scrollbar Issue:** Resolved the problem of two scrollbars appearing on the shot table by adjusting the height calculations and overflow properties in `AppContainer.jsx` and `ShotTable.jsx` to ensure a single, consistent scrollbar for the table content.
     *   Implemented advanced filtering with type-specific operators and inputs (checkbox lists for select fields, text input for image fields).
 *   **Fixed Date Editing:** Resolved issues with date input fields, allowing users to type dates in MM/DD/YYYY format with automatic slash insertion, and ensuring correct saving to Google Sheets in YYYY-MM-DD format.
 *   **Layout and Scrolling:**

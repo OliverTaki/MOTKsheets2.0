@@ -107,7 +107,7 @@ export default function ShotTable(props) {
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
     >
-      <TableContainer component={Paper} sx={{ height: 'calc(100vh - 133px)', overflow: 'auto' }}>
+      <TableContainer component={Paper} sx={{ height: 'calc(100dvh - 165px)', overflow: 'auto' }}>
         <Table stickyHeader sx={{ borderCollapse: "separate", borderSpacing: "0", width: tableWidth }}>
           <TableHead sx={{ position: "sticky", top: 0, bgcolor: "background.paper", zIndex: 15 }}>
             <SortableContext

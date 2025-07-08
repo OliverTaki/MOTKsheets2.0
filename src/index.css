@@ -15,6 +15,18 @@
   --color-link-hover: #ffffff;
 }
 
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   background-color: var(--color-bg);
   color: var(--color-text-primary);
