@@ -125,49 +125,97 @@ export const AuthProvider = ({ children, refreshData }) => {
     }, [isReady, token, tokenInfo]);
 
     useEffect(() => {
-        const interceptor = (response) => {
-            if (response.status === 401) {
-                setNeedsReAuth(true);
-            }
-            return response;
-        };
-        if (window.gapi && window.gapi.client) {
-            window.gapi.client.interceptors = [interceptor];
-        }
-    }, []);
+        console.log('[Auth] mount -> Initializing Google APIs');
+        const gisScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+        const gapiScript = document.querySelector('script[src="https://apis.google.com/js/api.js"]');
 
-    
-
-    const signIn = useCallback(() => {
-        const tc = tokenClientRef.current;
-        if (!tc) {
-            setError({ message: 'Authentication service is not ready. Please try again in a moment.' });
+        if (!gisScript || !gapiScript) {
+            setError({ message: "Required Google API script tags not found in index.html." });
+            setIsInitialized(true); // Set true even on error to unblock UI
             return;
         }
 
-        tc.callback = (resp) => {
-            if (resp?.error) {
-                console.error(resp);
-                setNeedsReAuth(true);
-                // Fallback to redirect if popup is blocked
-                if (resp.type === 'popup_blocked' || resp.error === 'popup_closed_by_user') {
-                    window.location.assign(tc.generateAuthUrl());
-                }
-            } else {
-                lastTokenRef.current = resp.access_token;
-                tokenIssuedAtRef.current = Date.now();
-                setNeedsReAuth(false);
-                handleTokenResponse(resp);
+        let gapiLoaded = false;
+        let gisLoaded = false;
+
+        const initialize = () => {
+            if (!gapiLoaded || !gisLoaded) return;
+            console.log('[Auth] Both GAPI and GIS scripts loaded. Initializing clients...');
+
+            try {
+                // 1. Initialize GAPI client
+                window.gapi.client.init({
+                    apiKey: API_KEY,
+                    discoveryDocs: [
+                        'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+                        'https://sheets.googleapis.com/$discovery/rest?version=v4'
+                    ],
+                }).then(() => {
+                    console.log('[Auth] GAPI client initialized.');
+                    // 2. Initialize GIS token client
+                    const client = window.google.accounts.oauth2.initTokenClient({
+                        client_id: CLIENT_ID,
+                        scope: SCOPES,
+                        callback: handleTokenResponse,
+                        error_callback: (err) => {
+                            console.error('[Auth] GIS token client error:', err);
+                            setError({ message: err.type || 'An unknown authentication error occurred.' });
+                            setIsInitialized(true); // Set true even on error to unblock UI
+                        }
+                    });
+                    tokenClientRef.current = client;
+                    setIsGapiClientReady(true);
+                    console.log('[Auth] GIS token client initialized.');
+
+                    // 3. Set token if it exists
+                    const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+                    if (storedToken) {
+                        window.gapi.client.setToken({ access_token: storedToken });
+                        console.log('[Auth] Stored token set to gapi client.');
+                    }
+                    setIsInitialized(true); // Set true on successful initialization
+                }).catch((err) => {
+                    console.error("Error initializing gapi client:", err);
+                    setError(err);
+                    setIsInitialized(true); // Set true even on error to unblock UI
+                });
+            } catch (e) {
+                console.error("Error during API initialization:", e);
+                setError(e);
+                setIsInitialized(true); // Set true even on error to unblock UI
             }
         };
 
-        try {
-            tc.requestAccessToken({ prompt: 'consent' });
-        } catch (e) {
-            console.error("Error requesting access token:", e);
-            setNeedsReAuth(true);
+        // GAPI load handler
+        const handleGapiLoad = () => {
+            window.gapi.load('client', () => {
+                gapiLoaded = true;
+                console.log('[Auth] GAPI script loaded.');
+                initialize();
+            });
+        };
+
+        // GIS load handler
+        const handleGisLoad = () => {
+            gisLoaded = true;
+            console.log('[Auth] GIS script loaded.');
+            initialize();
+        };
+
+        // Attach listeners or run handlers if already loaded
+        if (window.gapi && window.gapi.load) {
+            handleGapiLoad();
+        } else {
+            gapiScript.onload = handleGapiLoad;
         }
-    }, [tokenClientRef, handleTokenResponse]);
+
+        if (window.google && window.google.accounts) {
+            handleGisLoad();
+        } else {
+            gisScript.onload = handleGisLoad;
+        }
+
+    }, [CLIENT_ID, API_KEY, SCOPES, handleTokenResponse]);
 
     const signOut = useCallback(() => {
         const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
