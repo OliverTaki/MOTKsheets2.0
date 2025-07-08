@@ -9,6 +9,7 @@ export const AuthProvider = ({ children, refreshData }) => {
     const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.metadata.readonly';
 
     const [token, setToken] = useState(() => localStorage.getItem(TOKEN_STORAGE_KEY));
+    const [tokenInfo, setTokenInfo] = useState(null); // { access_token, expires_at }
     const [isInitialized, setIsInitialized] = useState(false);
     const [isGapiClientReady, setIsGapiClientReady] = useState(false);
     const [error, setError] = useState(null);
@@ -17,7 +18,9 @@ export const AuthProvider = ({ children, refreshData }) => {
     const handleTokenResponse = useCallback((tokenResponse) => {
         if (tokenResponse && tokenResponse.access_token) {
             const accessToken = tokenResponse.access_token;
+            const expiresAt = Date.now() + tokenResponse.expires_in * 1000; // Calculate expiration time
             setToken(accessToken);
+            setTokenInfo({ access_token: accessToken, expires_at: expiresAt }); // Set tokenInfo
             localStorage.setItem(TOKEN_STORAGE_KEY, accessToken);
             if (window.gapi?.client) {
                 window.gapi.client.setToken({ access_token: accessToken });
@@ -28,6 +31,32 @@ export const AuthProvider = ({ children, refreshData }) => {
             setError({ message: 'Failed to get access token from Google.' });
         }
     }, [refreshData]);
+
+    const ensureValidToken = useCallback(async () => {
+        const now = Date.now();
+        if (tokenInfo && now < tokenInfo.expires_at - 60_000) {
+            return tokenInfo.access_token; // Return current token if still valid for at least 1 minute
+        }
+
+        return new Promise((resolve, reject) => {
+            if (!tokenClient) {
+                return reject(new Error("Token client is not initialized for silent refresh."));
+            }
+            tokenClient.requestAccessToken({
+                prompt: '', // silent refresh
+                callback: (resp) => {
+                    if (resp.error) {
+                        console.error("Silent refresh failed:", resp.error);
+                        return reject(resp.error);
+                    }
+                    const expires = now + resp.expires_in * 1000;
+                    setTokenInfo({ access_token: resp.access_token, expires_at: expires });
+                    window.gapi.client.setToken({ access_token: resp.access_token });
+                    resolve(resp.access_token);
+                },
+            });
+        });
+    }, [tokenInfo, tokenClient]);
 
     useEffect(() => {
         const gisScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
@@ -137,7 +166,7 @@ export const AuthProvider = ({ children, refreshData }) => {
         }
     }, []);
 
-    const value = { token, signIn, signOut, isInitialized, error, isGapiClientReady, refreshData };
+    const value = { token, signIn, signOut, isInitialized, error, isGapiClientReady, refreshData, ensureValidToken };
 
     return (
         <AuthContext.Provider value={value}>

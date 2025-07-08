@@ -6,16 +6,18 @@ export function useDriveSheets() {
   const [sheets, setSheets] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { token, isGapiClientReady } = useContext(AuthContext);
+  const { isGapiClientReady, ensureValidToken } = useContext(AuthContext);
 
-  const fetchSheets = useCallback(async () => {
-    if (!token || !isGapiClientReady || !window.gapi || !window.gapi.client || !window.gapi.client.drive) {
+  const fetchSheets = useCallback(async (retried = false) => {
+    if (!isGapiClientReady || !window.gapi || !window.gapi.client || !window.gapi.client.drive) {
       setLoading(false);
       return;
     }
     setLoading(true);
     setError(null);
     try {
+      await ensureValidToken(); // Ensure valid token before making the request
+
       const res = await window.gapi.client.drive.files.list({
         pageSize: 100,
         fields: 'files(id,name,owners(displayName))',
@@ -27,12 +29,23 @@ export function useDriveSheets() {
 
       setSheets(res.result.files ?? []);
     } catch (e) {
-      console.error(e);
-      setError(e);
+      console.error("Error fetching sheets:", e);
+      if (e.status === 401 && !retried) {
+        console.warn("401 Unauthorized, attempting to refresh token and retry...");
+        try {
+          await ensureValidToken(); // Attempt to get a new token
+          return fetchSheets(true); // Retry the fetch
+        } catch (refreshError) {
+          console.error("Failed to refresh token during retry:", refreshError);
+          setError(refreshError);
+        }
+      } else {
+        setError(e);
+      }
     } finally {
       setLoading(false);
     }
-  }, [token, isGapiClientReady]);
+  }, [isGapiClientReady, ensureValidToken]);
 
   useEffect(() => {
     if (isGapiClientReady) {

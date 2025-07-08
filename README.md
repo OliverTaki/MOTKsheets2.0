@@ -148,7 +148,7 @@ docs/                  # screenshots, diagrams
 1. `useSheetsData` fetches:
    • **data tab** (`Sheet1!A1:Z`) → rows → `shots`
    • **field definition tab** (optional) → input *type*, enum *options* → `fields`
-2. AuthContext stores the **OAuth token** (sessionStorage, 1 hr lifetime).
+2. AuthContext stores the **OAuth token** (sessionStorage, 1 hr lifetime) and automatically refreshes it when needed.
 3. **Editing flow**:
    `ShotTable` ✏ → local `onCellSave` (optimistic) → `updateCell()` → Sheets API `PUT`
    *On failure, UI rolls back by full page reload.*

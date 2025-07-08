@@ -5,21 +5,23 @@ import { missingIdHandler } from '../utils/missingIdHandler';
 import { updateCell } from '../api/updateCell';
 
 export const useSheetsData = (sheetId) => {
-  const { token, isGapiClientReady } = useContext(AuthContext);
+  const { isGapiClientReady, ensureValidToken } = useContext(AuthContext);
   const [shots, setShots] = useState([]);
   const [fields, setFields] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [idToColIndex, setIdToColIndex] = useState({});
 
-  const refreshData = useCallback(async () => {
-    if (!sheetId || !token || !isGapiClientReady || !window.gapi || !window.gapi.client || !window.gapi.client.sheets) {
+  const refreshData = useCallback(async (retried = false) => {
+    if (!sheetId || !isGapiClientReady || !window.gapi || !window.gapi.client || !window.gapi.client.sheets) {
       setLoading(false);
       return;
     }
     setLoading(true);
     setError(null);
     try {
+      await ensureValidToken(); // Ensure valid token before making the request
+
       const res = await window.gapi.client.sheets.spreadsheets.values.batchGet({
         spreadsheetId: sheetId,
         ranges: ['Shots!A:AZ', 'FIELDS!A:F'],
@@ -60,18 +62,27 @@ export const useSheetsData = (sheetId) => {
 
     } catch (e) {
       console.error("Error fetching sheets data:", e);
-      setError(e);
+      if (e.status === 401 && !retried) {
+        console.warn("401 Unauthorized, attempting to refresh token and retry...");
+        try {
+          await ensureValidToken(); // Attempt to get a new token
+          return refreshData(true); // Retry the fetch
+        } catch (refreshError) {
+          console.error("Failed to refresh token during retry:", refreshError);
+          setError(refreshError);
+        }
+      } else {
+        setError(e);
+      }
     } finally {
       setLoading(false);
     }
-  }, [sheetId, token, isGapiClientReady]);
+  }, [sheetId, isGapiClientReady, ensureValidToken]);
 
-  const updateFieldOptions = useCallback(async (fieldId, newOption) => {
-    if (!token) {
-      alert("Authentication required to update field options.");
-      return;
-    }
+  const updateFieldOptions = useCallback(async (fieldId, newOption, retried = false) => {
     try {
+      await ensureValidToken(); // Ensure valid token before making the request
+
       const fieldToUpdate = fields.find(f => f.id === fieldId);
       if (!fieldToUpdate) {
         throw new Error(`Field with ID ${fieldId} not found.`);
@@ -95,9 +106,20 @@ export const useSheetsData = (sheetId) => {
       console.log(`Field options for ${fieldId} updated successfully in Google Sheet.`);
     } catch (err) {
       console.error('Error updating field options:', err);
-      alert(`Error updating field options: ${err.message}`);
+      if (err.status === 401 && !retried) {
+        console.warn("401 Unauthorized, attempting to refresh token and retry...");
+        try {
+          await ensureValidToken(); // Attempt to get a new token
+          return updateFieldOptions(fieldId, newOption, true); // Retry the update
+        } catch (refreshError) {
+          console.error("Failed to refresh token during retry:", refreshError);
+          alert(`Error updating field options: ${refreshError.message}`);
+        }
+      } else {
+        alert(`Error updating field options: ${err.message}`);
+      }
     }
-  }, [sheetId, token, fields]);
+  }, [sheetId, token, fields, ensureValidToken]);
 
   useEffect(() => {
     if (isGapiClientReady) {
