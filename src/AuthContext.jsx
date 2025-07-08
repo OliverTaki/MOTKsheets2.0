@@ -44,55 +44,26 @@ export const AuthProvider = ({ children, refreshData }) => {
     const PROMPT_REQUIRED = Symbol('PROMPT_REQUIRED');
     const SILENT_TIMEOUT_MS = 1000;
 
-    const ensureValidToken = useCallback(async () => {
-        if (needsReAuth) return Promise.reject(PROMPT_REQUIRED);
-        if (tokenInfo && Date.now() < tokenInfo.expires_at - 60_000) {
-            return tokenInfo.access_token;
-        }
-        if (refreshing) return new Promise(r => waiters.push(r));
-        refreshing = true;
-        return new Promise((resolve, reject) => {
-            const flush = (val) => { waiters.forEach(w => w(val)); waiters.length = 0; };
-            const fail = (reason) => {
-                console.warn('Silent token refresh failed:', reason);
-                refreshing = false;
-                authError.current = reason ?? 'TIMEOUT';
-                setNeedsReAuth(true);
-                flush(PROMPT_REQUIRED);
-                reject(PROMPT_REQUIRED);
-            };
-            const timer = setTimeout(() => fail('timeout'), SILENT_TIMEOUT_MS);
+    const ensureValidToken = () =>
+        new Promise((resolve, reject) => {
+            if (needsReAuth) return reject(new Error('PROMPT_REQUIRED'));
+
+            // google 内部キャッシュを先に確認
+            const cached = window.google?.accounts?.oauth2?.getToken();
+            if (cached?.access_token) return resolve(cached.access_token);
+
+            const tc = tokenClientRef.current;
+            if (!tc) return reject(new Error('PROMPT_REQUIRED'));
+
+            tc.callback = (resp) =>
+                resp && resp.access_token ? resolve(resp.access_token) : reject(new Error('PROMPT_REQUIRED'));
+
             try {
-                tokenClientRef.current.requestAccessToken({
-                    prompt: '',
-                    callback: (resp) => {
-                        clearTimeout(timer);
-                        refreshing = false;
-                        if (resp.error) {
-                            console.warn('silent refresh failed', resp);
-                            authError.current = resp.error ?? 'TIMEOUT';
-                            setNeedsReAuth(true);
-                            return;
-                        }
-                        const exp = Date.now() + resp.expires_in * 1000;
-                        setTokenInfo({ access_token: resp.access_token, expires_at: exp });
-                        window.gapi.client.setToken({ access_token: resp.access_token });
-                        flush(resp.access_token);
-                        resolve(resp.access_token);
-                    },
-                    error_callback: (err) => {
-                        clearTimeout(timer);
-                        console.warn('silent error', err);
-                        authError.current = err.error ?? 'ERROR';
-                        setNeedsReAuth(true);
-                    },
-                });
-            } catch (syncErr) {
-                clearTimeout(timer);
-                fail(syncErr);
+                tc.requestAccessToken({ prompt: '' });   // silent
+            } catch {
+                reject(new Error('PROMPT_REQUIRED'));
             }
         });
-    }, [tokenInfo, tokenClientRef, needsReAuth]);
 
     useEffect(() => {
         const interceptor = (response) => {
@@ -106,19 +77,7 @@ export const AuthProvider = ({ children, refreshData }) => {
         }
     }, []);
 
-    // ↓1 回だけ silent 取得を試みる
-    useEffect(() => {
-        if (!tokenClientRef.current || attemptedSilent.current) return;
-        attemptedSilent.current = true;
-        const tc = tokenClientRef.current;
-        tc.callback = (resp) =>
-            resp && resp.access_token ? setNeedsReAuth(false) : setNeedsReAuth(true);
-        try {
-            tc.requestAccessToken({ prompt: '' }); // silent
-        } catch {
-            setNeedsReAuth(true);
-        }
-    }, [tokenClientRef.current]);
+    
 
     /**
      * ── ユーザ操作で呼ぶ再ログイン用
