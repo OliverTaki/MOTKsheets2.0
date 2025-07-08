@@ -1,5 +1,5 @@
 import { useEffect, useState, useContext, useCallback } from 'react';
-import { AuthContext } from '../AuthContext';
+import { AuthContext, PROMPT_REQUIRED } from '../AuthContext';
 import { toProjectName } from '../utils/id';
 
 export function useDriveSheets() {

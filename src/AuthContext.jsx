@@ -3,6 +3,8 @@ import React, { createContext, useState, useEffect, useCallback } from 'react';
 export const AuthContext = createContext({});
 const TOKEN_STORAGE_KEY = 'google_auth_token';
 
+export const PROMPT_REQUIRED = Symbol('PROMPT_REQUIRED');
+
 export const AuthProvider = ({ children, refreshData }) => {
     const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
@@ -39,6 +41,7 @@ export const AuthProvider = ({ children, refreshData }) => {
     const PROMPT_REQUIRED = Symbol('PROMPT_REQUIRED');
 
     const ensureValidToken = useCallback(async () => {
+        if (needsReAuth) return Promise.reject(PROMPT_REQUIRED);
         const now = Date.now();
         if (tokenInfo && now < tokenInfo.expires_at - 60_000) {
             return tokenInfo.access_token; // Return current token if still valid for at least 1 minute
@@ -52,66 +55,42 @@ export const AuthProvider = ({ children, refreshData }) => {
 
         return new Promise((resolve, reject) => {
             const saveAndResolve = (resp) => {
-                const exp = now + resp.expires_in * 1000;
+                const exp = Date.now() + resp.expires_in * 1000;
                 setTokenInfo({ access_token: resp.access_token, expires_at: exp });
                 window.gapi.client.setToken({ access_token: resp.access_token });
                 refreshing = false;
-                flushingWaiters(resolve, resp.access_token);
+                flushingWaiters(resp.access_token);
+                resolve(resp.access_token);
             };
 
-            const flushingWaiters = (fn, val) => {
-                waiters.forEach(w => fn(val));
+            const flushingWaiters = (val) => {
+                waiters.forEach(w => w(val));
                 waiters.length = 0;
             };
 
-            const attemptInteractive = () => {
-                if (!tokenClient) {
-                    refreshing = false;
-                    flushingWaiters(reject, new Error("Token client is not initialized for interactive refresh."));
-                    return;
-                }
-                tokenClient.requestAccessToken({
-                    prompt: 'consent',
-                    callback: (resp) => {
-                        if (resp.error) {
-                            setNeedsReAuth(true);
-                            refreshing = false;
-                            flushingWaiters(reject, resp);
-                        } else {
-                            saveAndResolve(resp);
-                        }
-                    },
-                });
+            const fail = (err) => {
+                console.warn('Silent token refresh failed', err);
+                refreshing = false;
+                setNeedsReAuth(true);
+                flushingWaiters(PROMPT_REQUIRED);
+                reject(PROMPT_REQUIRED);
             };
 
-            const attemptSilent = () => {
-                if (!tokenClient) {
-                    refreshing = false;
-                    flushingWaiters(reject, new Error("Token client is not initialized for silent refresh."));
-                    return;
-                }
+            try {
                 tokenClient.requestAccessToken({
                     prompt: '', // silent
                     callback: (resp) => {
-                        if (resp.error) {
-                            if (resp.error === 'popup_closed_by_user' || resp.error === 'popup_blocked_by_browser') {
-                                setNeedsReAuth(true);
-                                refreshing = false;
-                                flushingWaiters(reject, resp);
-                            } else {
-                                // Other error: try interactive once
-                                attemptInteractive();
-                            }
-                        } else {
-                            saveAndResolve(resp);
-                        }
+                        refreshing = false;
+                        if (resp.error) return fail(resp.error);
+                        saveAndResolve(resp);
                     },
+                    error_callback: fail,
                 });
-            };
-
-            attemptSilent();
+            } catch (syncErr) {
+                fail(syncErr); // unify path
+            }
         });
-    }, [tokenInfo, tokenClient]);
+    }, [tokenInfo, tokenClient, needsReAuth]);
 
     const interactiveSignIn = useCallback(() => {
         if (!tokenClient) {

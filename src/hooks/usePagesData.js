@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useContext } from 'react';
-import { AuthContext } from '../AuthContext';
+import { AuthContext, PROMPT_REQUIRED } from '../AuthContext';
 
 const safeJsonParse = (jsonString, defaultValue) => {
   if (!jsonString) return defaultValue;

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useContext } from 'react';
-import { AuthContext } from '../AuthContext';
+import { AuthContext, PROMPT_REQUIRED } from '../AuthContext';
 import { parseShots, parseFields } from '../utils/parse';
 import { missingIdHandler } from '../utils/missingIdHandler';
 import { updateCell } from '../api/updateCell';
@@ -100,20 +100,14 @@ export const useSheetsData = (sheetId) => {
       console.log(`Field options for ${fieldId} updated successfully in Google Sheet.`);
     } catch (err) {
       console.error('Error updating field options:', err);
-      if (err.status === 401 && !retried) {
-        console.warn("401 Unauthorized, attempting to refresh token and retry...");
-        try {
-          await ensureValidToken(); // Attempt to get a new token
-          return updateFieldOptions(fieldId, newOption, true); // Retry the update
-        } catch (refreshError) {
-          console.error("Failed to refresh token during retry:", refreshError);
-          alert(`Error updating field options: ${refreshError.message}`);
-        }
+      if (err === PROMPT_REQUIRED || (err.status === 401 && !retried)) {
+        setNeedsReAuth(true); // show dialog
+        return;
       } else {
         alert(`Error updating field options: ${err.message}`);
       }
     }
-  }, [sheetId, fields, ensureValidToken]);
+  }, [sheetId, fields, ensureValidToken, setNeedsReAuth]);
 
   useEffect(() => {
     if (isGapiClientReady) {

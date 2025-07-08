@@ -322,7 +322,7 @@ export const AppContainer = () => {
 
   
 
-  if (!booted) {
+  if (!booted || needsReAuth) {
     return <FullScreenSpinner />;
   }
 
