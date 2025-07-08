@@ -39,6 +39,7 @@ export const AuthProvider = ({ children, refreshData }) => {
     let refreshing = false;
     const waiters = [];
     const PROMPT_REQUIRED = Symbol('PROMPT_REQUIRED');
+    const SILENT_TIMEOUT_MS = 1000;
 
     const ensureValidToken = useCallback(async () => {
         if (needsReAuth) return Promise.reject(PROMPT_REQUIRED);
@@ -76,17 +77,21 @@ export const AuthProvider = ({ children, refreshData }) => {
                 reject(PROMPT_REQUIRED);
             };
 
+            const timer = setTimeout(() => fail('timeout'), SILENT_TIMEOUT_MS);
+
             try {
                 tokenClient.requestAccessToken({
                     prompt: '', // silent
                     callback: (resp) => {
+                        clearTimeout(timer);
                         refreshing = false;
                         if (resp.error) return fail(resp.error);
                         saveAndResolve(resp);
                     },
-                    error_callback: fail,
+                    error_callback: (err) => { clearTimeout(timer); fail(err); },
                 });
             } catch (syncErr) {
+                clearTimeout(timer);
                 fail(syncErr); // unify path
             }
         });
