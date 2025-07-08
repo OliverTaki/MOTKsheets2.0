@@ -96,13 +96,12 @@ const UpdateNonUuidIdsDialog = ({ open, onClose }) => {
     setUpdateError(null);
     setUpdateSuccess(false);
     try {
-      try {
       await updateNonUuidIds(sheetId, token, sheets, fields, Array.from(selectedIds));
       setUpdateSuccess(true);
       // Refresh data in AppContainer after successful update
       if (refreshData) refreshData();
       // Re-fetch IDs to show updated state (should be empty if all updated)
-      const { nonUuidShotIds: newShotIds, nonUuidFieldIds: newFieldIds } = await getNonUuidIds(spreadsheetId, token, sheets, fields);
+      const { nonUuidShotIds: newShotIds, nonUuidFieldIds: newFieldIds } = await getNonUuidIds(sheetId, token, sheets, fields);
       setNonUuidShotIds(newShotIds);
       setNonUuidFieldIds(newFieldIds);
       setSelectedIds(new Set([...newShotIds, ...newFieldIds]));
