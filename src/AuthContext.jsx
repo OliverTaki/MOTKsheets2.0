@@ -1,4 +1,91 @@
-import React, { createContext, useState, useEffect, useCallback, useRef } from 'react';
+import { createContext, useCallback, useEffect, useRef, useState } from 'react';
+
+// --- local in-memory access-token cache --------------------------
+const lastTokenRef      = { current: null };
+const tokenIssuedAtRef  = { current: 0   };  // epoch (ms);
+const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
+
+// --- local in-memory access-token cache --------------------------
+const lastTokenRef      = { current: null };
+const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
+const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
+
+// --- local in-memory access-token cache --------------------------
+const lastTokenRef      = { current: null };
+const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
+const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
+
+// --- local in-memory access-token cache --------------------------
+const lastTokenRef      = { current: null };
+const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
+const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
+
+// --- local in-memory access-token cache --------------------------
+const lastTokenRef      = { current: null };
+const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
+const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
+
+// --- local in-memory access-token cache --------------------------
+const lastTokenRef      = { current: null };
+const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
+const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
+
+// --- local in-memory access-token cache --------------------------
+const lastTokenRef      = { current: null };
+const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
+const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
+
+// --- local in-memory access-token cache --------------------------
+const lastTokenRef      = { current: null };
+const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
+const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
+
+// --- local in-memory access-token cache --------------------------
+const lastTokenRef      = { current: null };
+const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
+const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
+
+// --- local in-memory access-token cache --------------------------
+const lastTokenRef      = { current: null };
+const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
+const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
+
+// --- local in-memory access-token cache --------------------------
+const lastTokenRef      = { current: null };
+const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
+const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
+
+// --- local in-memory access-token cache --------------------------
+const lastTokenRef      = { current: null };
+const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
+const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
+
+// --- local in-memory access-token cache --------------------------
+const lastTokenRef      = { current: null };
+const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
+const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
+
+// --- local in-memory access-token cache --------------------------
+const lastTokenRef      = { current: null };
+const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
+const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
+
+// --- local in-memory access-token cache --------------------------
+const lastTokenRef      = { current: null };
+const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
+const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
+
+// --- local in-memory access-token cache --------------------------
+const lastTokenRef      = { current: null };
+const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
+const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
+
+// --- local in-memory access-token cache --------------------------
+const lastTokenRef      = { current: null };
+const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
+const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
+
+
 
 export const AuthContext = createContext({});
 const TOKEN_STORAGE_KEY = 'google_auth_token';
@@ -48,15 +135,19 @@ export const AuthProvider = ({ children, refreshData }) => {
         new Promise((resolve, reject) => {
             if (needsReAuth) return reject(new Error('PROMPT_REQUIRED'));
 
-            // google 内部キャッシュを先に確認
-            const cached = window.google?.accounts?.oauth2?.getToken();
-            if (cached?.access_token) return resolve(cached.access_token);
+            
 
             const tc = tokenClientRef.current;
             if (!tc) return reject(new Error('PROMPT_REQUIRED'));
 
             tc.callback = (resp) =>
-                resp && resp.access_token ? resolve(resp.access_token) : reject(new Error('PROMPT_REQUIRED'));
+                resp && resp.access_token
+                    ? (() => {
+                        lastTokenRef.current     = resp.access_token;
+                        tokenIssuedAtRef.current = Date.now();
+                        resolve(resp.access_token);
+                    })()
+                    : reject(new Error('PROMPT_REQUIRED'));
 
             try {
                 tc.requestAccessToken({ prompt: '' });   // silent
