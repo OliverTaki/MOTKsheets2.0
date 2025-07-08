@@ -6,6 +6,7 @@ import ProjectSelectPage from '../pages/ProjectSelectPage';
 import { useSheetsData } from '../hooks/useSheetsData';
 import usePagesData from '../hooks/usePagesData';
 import ShotTable from './ShotTable';
+import GlobalNav from './GlobalNav';
 import Toolbar from './Toolbar';
 import LoginButton from './LoginButton';
 import { AuthContext, AuthProvider } from '../AuthContext';
@@ -367,16 +368,10 @@ export const AppContainer = () => {
       <CssBaseline />
       <AuthProvider sheets={sheets} fields={fields} refreshData={refreshData}>
         <div className="App bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col" style={{ height: '100dvh', overflow: 'hidden' }}>
-          <header className="flex justify-between items-center p-4 bg-white dark:bg-gray-800 shadow z-30 flex-shrink-0 sticky top-0" style={{ height: '39px' }}>
-            <h1 className="text-lg font-bold">MOTK Sheets 2.0</h1>
-            <LoginButton />
-          </header>
+          <GlobalNav />
           {token && sheetId && ( // Only show project navigation and toolbar if token and sheetId exist
             <>
-              <div className="sticky top-[39px] bg-gray-800 z-30 flex items-center px-4" style={{ height: '38px' }}>
-                <span className="text-lg font-semibold">Project: Oliver01</span>
-              </div>
-              <div className="sticky top-[77px] z-20 bg-gray-800">
+              <div className="sticky top-[48px] z-20 bg-gray-800">
                 <Toolbar
                   fields={fields}
                   pages={pages}
