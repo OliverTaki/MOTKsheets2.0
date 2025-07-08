@@ -11,11 +11,6 @@ const lastTokenRef      = { current: null };
 const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
 const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
 
-// --- local in-memory access-token cache --------------------------
-const lastTokenRef      = { current: null };
-const tokenIssuedAtRef  = { current: 0   };  // epoch (ms)
-const TOKEN_LIFETIME_MS = 50 * 60 * 1000;    // 50分で強制更新;
-
 
 
 
