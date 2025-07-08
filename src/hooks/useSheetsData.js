@@ -4,12 +4,6 @@ import { parseShots, parseFields } from '../utils/parse';
 import { missingIdHandler } from '../utils/missingIdHandler';
 import { updateCell } from '../api/updateCell';
 
-import { useState, useEffect, useContext, useCallback } from 'react';
-import { AuthContext } from '../AuthContext';
-import { parseShots, parseFields } from '../utils/parse';
-import { missingIdHandler } from '../utils/missingIdHandler';
-import { updateCell } from '../api/updateCell';
-
 const useSheetsData = () => {
     const { token, isInitialized, clearToken, sheetId: ctxSheetId } = useContext(AuthContext);
     const SHEET_ID = ctxSheetId || import.meta.env.VITE_SHEETS_ID;
