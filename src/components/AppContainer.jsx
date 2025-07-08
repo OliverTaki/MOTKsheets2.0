@@ -13,6 +13,7 @@ import { AuthContext, AuthProvider } from '../AuthContext';
 import { SheetsDataContext } from '../contexts/SheetsDataContext';
 import ShotDetailPage from './ShotDetailPage';
 import AddShotPage from './AddShotPage'; // Import the new component
+import ProjectSelectPage from '../pages/ProjectSelectPage';
 import { appendField } from '../api/appendField';
 import { updateCell } from '../api/updateCell';
 import { updateNonUuidIds } from '../api/updateNonUuidIds';
