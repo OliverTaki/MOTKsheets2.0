@@ -23,7 +23,6 @@ import { deletePage } from '../api/deletePage';
 import { v4 as uuidv4 } from 'uuid';
 import UpdateNonUuidIdsDialog from './UpdateNonUuidIdsDialog';
 import FullScreenSpinner from './FullScreenSpinner';
-import ReAuthDialog from './ReAuthDialog';
 
 const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 
@@ -401,10 +400,6 @@ export const AppContainer = () => {
             onClose={() => setUpdateNonUuidIdsDialogOpen(false)}
             sheets={sheets}
             fields={fields}
-          />
-          <ReAuthDialog
-            open={needsReAuth}
-            onConfirm={signIn}
           />
         </div>
       

@@ -17,6 +17,7 @@ export const AuthProvider = ({ children, refreshData }) => {
     const [error, setError] = useState(null);
     const [tokenClient, setTokenClient] = useState(null);
     const [needsReAuth, setNeedsReAuth] = useState(false);
+    const authError = useRef(null); // UI 用
 
     const handleTokenResponse = useCallback((tokenResponse) => {
         if (tokenResponse && tokenResponse.access_token) {
@@ -51,8 +52,9 @@ export const AuthProvider = ({ children, refreshData }) => {
         return new Promise((resolve, reject) => {
             const flush = (val) => { waiters.forEach(w => w(val)); waiters.length = 0; };
             const fail = (reason) => {
-                console.warn('Silent refresh failed:', reason);
+                console.warn('Silent token refresh failed:', reason);
                 refreshing = false;
+                authError.current = reason ?? 'TIMEOUT';
                 setNeedsReAuth(true);
                 flush(PROMPT_REQUIRED);
                 reject(PROMPT_REQUIRED);
@@ -64,14 +66,24 @@ export const AuthProvider = ({ children, refreshData }) => {
                     callback: (resp) => {
                         clearTimeout(timer);
                         refreshing = false;
-                        if (resp.error) return fail(resp.error);
+                        if (resp.error) {
+                            console.warn('silent refresh failed', resp);
+                            authError.current = resp.error ?? 'TIMEOUT';
+                            setNeedsReAuth(true);
+                            return;
+                        }
                         const exp = Date.now() + resp.expires_in * 1000;
                         setTokenInfo({ access_token: resp.access_token, expires_at: exp });
                         window.gapi.client.setToken({ access_token: resp.access_token });
                         flush(resp.access_token);
                         resolve(resp.access_token);
                     },
-                    error_callback: (err) => { clearTimeout(timer); fail(err); },
+                    error_callback: (err) => {
+                        clearTimeout(timer);
+                        console.warn('silent error', err);
+                        authError.current = err.error ?? 'ERROR';
+                        setNeedsReAuth(true);
+                    },
                 });
             } catch (syncErr) {
                 clearTimeout(timer);
@@ -79,6 +91,18 @@ export const AuthProvider = ({ children, refreshData }) => {
             }
         });
     }, [tokenInfo, tokenClient, needsReAuth]);
+
+    useEffect(() => {
+        const interceptor = (response) => {
+            if (response.status === 401) {
+                setNeedsReAuth(true);
+            }
+            return response;
+        };
+        if (window.gapi && window.gapi.client) {
+            window.gapi.client.interceptors = [interceptor];
+        }
+    }, []);
 
     const interactiveSignIn = useCallback(() => {
         if (!tokenClient) {
@@ -211,7 +235,7 @@ export const AuthProvider = ({ children, refreshData }) => {
         }
     }, []);
 
-    const value = { token, signIn, signOut, isInitialized, error, isGapiClientReady, refreshData, ensureValidToken, needsReAuth, setNeedsReAuth, interactiveSignIn };
+    const value = { token, signIn, signOut, isInitialized, error, isGapiClientReady, refreshData, ensureValidToken, needsReAuth, setNeedsReAuth, interactiveSignIn, authError };
 
     return (
         <AuthContext.Provider value={value}>

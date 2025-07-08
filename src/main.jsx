@@ -5,6 +5,7 @@ import './index.css'
 import { AuthProvider } from './AuthContext'
 import { BrowserRouter } from 'react-router-dom'
 import ErrorBoundary from './components/ErrorBoundary.jsx';
+import ReAuthDialog from './components/ReAuthDialog.jsx';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -13,6 +14,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <ErrorBoundary>
         <AuthProvider>
           <App />
+          <ReAuthDialog />
         </AuthProvider>
       </ErrorBoundary>
     </BrowserRouter>

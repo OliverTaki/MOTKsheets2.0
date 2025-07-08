@@ -1,19 +1,26 @@
 import React from 'react';
-import { Dialog, DialogTitle, DialogContent, Button } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, Button, Typography } from '@mui/material';
 import { useContext } from 'react';
 import { AuthContext } from '../AuthContext';
 
-export default function ReAuthDialog() {
-  const { needsReAuth, interactiveSignIn } = useContext(AuthContext);
+const ReAuthDialog = () => {
+  const { needsReAuth, interactiveSignIn, authError } = useContext(AuthContext);
 
   return (
-    <Dialog open={needsReAuth} disableEscapeKeyDown>
-      <DialogTitle>Session expired</DialogTitle>
-      <DialogContent>
+    <Dialog open={needsReAuth}>
+      <DialogTitle>Google への再認証が必要です</DialogTitle>
+      <DialogContent sx={{ textAlign: 'center', pb: 4 }}>
+        <Typography sx={{ mb: 3 }}>
+          {authError?.toString() ?? ''}
+          <br/>ブラウザのポップアップブロックにより自動更新に失敗しました。<br/>
+          下のボタンを押して再ログインしてください。
+        </Typography>
         <Button variant="contained" onClick={interactiveSignIn}>
-          Sign in with Google
+          Google でログイン
         </Button>
       </DialogContent>
     </Dialog>
   );
-}
+};
+
+export default ReAuthDialog;
