@@ -64,6 +64,7 @@ export const AuthProvider = ({ children, refreshData }) => {
     const [isInitialized, setIsInitialized] = useState(false);
     const [isGapiClientReady, setIsGapiClientReady] = useState(false);
     const [error, setError] = useState(null);
+    const [gapiError, setGapiError] = useState(null); // New state for GAPI specific errors
     const tokenClientRef = useRef(null);
     const [isReady, setReady] = useState(false); // GSI script load 判定
   const [needsReAuth, setNeedsReAuth] = useState(false);
@@ -144,14 +145,12 @@ export const AuthProvider = ({ children, refreshData }) => {
 
             try {
                 // 1. Initialize GAPI client
-                window.gapi.client.init({
+                const loadDrive = (retries = 3) =>
+                    window.gapi.client.init({
                     apiKey: API_KEY,
-                    discoveryDocs: [
-                        'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
-                        'https://sheets.googleapis.com/$discovery/rest?version=v4'
-                    ],
                 }).then(() => {
                     console.log('[Auth] GAPI client initialized.');
+                    setGapiError(null); // Clear GAPI error on successful init
                     // 2. Initialize GIS token client
                     const client = window.google.accounts.oauth2.initTokenClient({
                         client_id: CLIENT_ID,
@@ -263,7 +262,7 @@ export const AuthProvider = ({ children, refreshData }) => {
         }
     }, []);
 
-    const value = { token, signIn, signOut, isInitialized, error, isGapiClientReady, refreshData, ensureValidToken, needsReAuth, setNeedsReAuth };
+    const value = { token, signIn, signOut, isInitialized, error, gapiError, isGapiClientReady, refreshData, ensureValidToken, needsReAuth, setNeedsReAuth };
 
     return (
         <AuthContext.Provider value={value}>

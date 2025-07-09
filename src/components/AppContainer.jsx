@@ -35,7 +35,7 @@ const theme = createTheme({
 });
 
 export const AppContainer = () => {
-  const { token, user, isInitialized, needsReAuth, signIn, ensureValidToken, error: authError } = useContext(AuthContext);
+  const { token, user, isInitialized, needsReAuth, signIn, ensureValidToken, error: authError, gapiError } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const [sheetId, setSheetId] = useState(() => {
@@ -86,15 +86,15 @@ export const AppContainer = () => {
   }, [fields]);
 
   useEffect(() => {
-    const ready = isInitialized && !fieldsLoading && !pagesLoading && !needsReAuth;
-    console.log(`AppContainer useEffect: isInitialized=${isInitialized}, fieldsLoading=${fieldsLoading}, pagesLoading=${pagesLoading}, needsReAuth=${needsReAuth}, ready=${ready}`);
+    const ready = isInitialized && !fieldsLoading && !pagesLoading && !needsReAuth && !gapiError;
+    console.log(`AppContainer useEffect: isInitialized=${isInitialized}, fieldsLoading=${fieldsLoading}, pagesLoading=${pagesLoading}, needsReAuth=${needsReAuth}, gapiError=${gapiError}, ready=${ready}`);
     if (ready && !booted) {
       setBooted(true);
       console.log("App is ready!");
     } else {
       console.log("App is NOT ready.");
     }
-  }, [isInitialized, fieldsLoading, pagesLoading, needsReAuth, booted]);
+  }, [isInitialized, fieldsLoading, pagesLoading, needsReAuth, booted, gapiError]);
 
   useEffect(() => {
     if (isAppReady && pages.length > 0 && !isInitialViewLoaded) {
