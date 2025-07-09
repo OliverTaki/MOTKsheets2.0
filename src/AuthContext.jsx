@@ -104,7 +104,6 @@ export const AuthProvider = ({ children, refreshData }) => {
 
     let refreshing = false;
     const waiters = [];
-    const PROMPT_REQUIRED = Symbol('PROMPT_REQUIRED');
     const SILENT_TIMEOUT_MS = 1000;
 
     const ensureValidToken = useCallback(() => {
@@ -157,13 +156,17 @@ export const AuthProvider = ({ children, refreshData }) => {
                 // 1. Initialize GAPI client
                 // ここではローカル discoveryDocs のみを使用 ※オンライン呼び出し禁止
                 const base = window.location.origin.replace(/\/$/, ''); // スラッシュ除去で二重 // 防止
-                await window.gapi.client.init({
-                    apiKey: API_KEY,
-                    discoveryDocs: [
-                        `${base}/drive_v3.json`,
-                        `${base}/sheets_v4.json`,
-                    ],
-                });
+                await withTimeout(
+                    window.gapi.client.init({
+                        apiKey: API_KEY,
+                        discoveryDocs: [
+                            `${base}/drive_v3.json`,
+                            `${base}/sheets_v4.json`,
+                        ],
+                    }),
+                    5000,
+                    'gapi.init'
+                );
                 console.log('[Auth] gapi.init done with local docs');
                 setGapiError(null); // Clear GAPI error on successful init
 
