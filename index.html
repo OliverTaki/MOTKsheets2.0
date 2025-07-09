@@ -5,7 +5,18 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MOTK Sheets 2.0</title>
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://accounts.google.com https://apis.google.com 'unsafe-inline' 'unsafe-eval'; object-src 'none'; base-uri 'self';">
+    <!-- ========= 開発モード専用 CSP =========
+         Vite の Fast-Refresh が eval を使うため 'unsafe-eval' を許可。
+         本番ビルド (dist/) には含まれないので安全。
+                 -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        script-src 'self' 'unsafe-eval' https://accounts.google.com https://apis.google.com;
+        connect-src 'self' ws://localhost:5173 https://www.googleapis.com;
+        frame-src https://accounts.google.com;
+      ">
     <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin-allow-popups">
     <!-- 新しいGoogle Identity Services (GIS) ライブラリを読み込みます -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
