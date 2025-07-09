@@ -141,8 +141,8 @@ export const AuthProvider = ({ children, refreshData }) => {
             ]);
 
         const initialize = async () => {
-            if (!gapiLoaded || !gisLoaded) return;
-            console.log('[Auth] Both GAPI and GIS scripts loaded. Initializing clients...');
+            if (!gisLoaded) return;
+            console.log('[Auth] GIS script loaded. Initializing clients...');
 
             try {
                 console.log('[Auth] initClients start');
@@ -163,7 +163,6 @@ export const AuthProvider = ({ children, refreshData }) => {
                 }
             } catch (e) {
                 console.error('[Auth] initClients failed', e);
-                setGapiError(e); // Store the error
                 setError(e); // Also set general error
                 setIsInitialized(true); // エラーが出ても ready フラグは上げる
             } finally {
@@ -184,51 +183,3 @@ export const AuthProvider = ({ children, refreshData }) => {
         } else {
             gisScript.onload = handleGisLoad;
         }
-
-    }, [CLIENT_ID, API_KEY, SCOPES, handleTokenResponse]);
-
-    
-
-    const interactiveSignIn = useCallback(() => {
-        setNeedsReAuth(false); // Hide the re-auth panel immediately
-        // This function is called by the ReAuthDialog button
-        // It must be synchronous to be recognized as a user gesture
-        window.google.accounts.oauth2.initCodeClient({
-            client_id: CLIENT_ID,
-            scope: SCOPES,
-            ux_mode: 'redirect',
-            redirect_uri: import.meta.env.VITE_GOOGLE_REDIRECT_URI,
-            callback: (response) => {
-                // This callback is for the code client, not token client
-                // It receives an authorization code, not an access token
-                // You would typically send this code to your backend to exchange for tokens
-                // For frontend-only, you might need to handle it differently or use tokenClient directly
-                console.log('Authorization code received:', response.code);
-                // For now, we'll just navigate to the callback URL
-                // The actual token exchange will happen on the /auth/callback route
-            }
-        }).requestCode();
-    }, [CLIENT_ID, SCOPES, setNeedsReAuth]);
-
-    const signOut = useCallback(() => {
-        const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
-        if (storedToken) {
-            window.google.accounts.oauth2.revoke(storedToken, () => {
-                setToken(null);
-                localStorage.removeItem(TOKEN_STORAGE_KEY);
-            });
-        } else {
-            setToken(null);
-        }
-    }, []);
-
-    
-
-    const value = { token, interactiveSignIn, signOut, isInitialized, error, refreshData, ensureValidToken, needsReAuth, setNeedsReAuth };
-
-    return (
-        <AuthContext.Provider value={value}>
-            {children}
-        </AuthContext.Provider>
-    );
-};

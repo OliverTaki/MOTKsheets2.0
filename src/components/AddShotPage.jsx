@@ -2,11 +2,8 @@ import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../AuthContext';
 import { SheetsDataContext } from '../contexts/SheetsDataContext';
 import { appendRow } from '../api/appendRow';
-import { useNavigate } from 'react-router-dom';
-import { v4 as uuidv4 } from 'uuid';
-
-const AddShotPage = () => {
-  const { token, sheetId } = useContext(AuthContext);
+import { useNavigate } => {
+  const { token, sheetId, setNeedsReAuth } = useContext(AuthContext);
   const navigate = useNavigate();
   const { fields, idToColIndex, loading: sheetsLoading, error: sheetsError } = useContext(SheetsDataContext);
   const [formData, setFormData] = useState({});
@@ -78,6 +75,7 @@ const AddShotPage = () => {
       await appendRow({
         sheetId,
         token,
+        setNeedsReAuth,
         tabName: 'Shots',
         values: orderedValues,
       });
