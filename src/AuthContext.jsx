@@ -156,7 +156,7 @@ export const AuthProvider = ({ children, refreshData }) => {
 
                 // 1. Initialize GAPI client
                 // ここではローカル discoveryDocs のみを使用 ※オンライン呼び出し禁止
-                const base = window.location.origin;      // 例: http://localhost:5173
+                const base = window.location.origin.replace(/\/$/, ''); // スラッシュ除去で二重 // 防止
                 await window.gapi.client.init({
                     apiKey: API_KEY,
                     discoveryDocs: [
