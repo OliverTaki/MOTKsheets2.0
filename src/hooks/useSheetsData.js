@@ -12,8 +12,6 @@ export const useSheetsData = (sheetId) => {
   const [error, setError] = useState(null);
   const [idToColIndex, setIdToColIndex] = useState({});
 
-  if (needsReAuth) return { sheets: [], fields: [], loading: false, error: 'NEEDS_REAUTH' };
-
   const refreshData = useCallback(async (retried = false) => {
     if (!sheetId || !isGapiClientReady || !window.gapi || !window.gapi.client || !window.gapi.client.sheets) {
       setLoading(false);
@@ -116,6 +114,8 @@ export const useSheetsData = (sheetId) => {
       refreshData();
     }
   }, [isGapiClientReady, refreshData]);
+
+  if (needsReAuth) return { sheets: [], fields: [], loading: false, error: 'NEEDS_REAUTH' };
 
   return {
     sheets: shots, // Renamed shots to sheets for consistency with AuthContext
