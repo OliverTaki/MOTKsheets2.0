@@ -43,23 +43,23 @@ export const AuthProvider = ({ children, refreshData }) => {
 
   // ---------- GIS init --------------------------------------------
   useEffect(() => {
-    const gisScript = document.querySelector(
-      'script[src="https://accounts.google.com/gsi/client"]',
+    let gisScript = document.querySelector(
+      'script[src*="accounts.google.com/gsi/client"]',
     );
+
+    // なければ動的に注入
     if (gisScript) {
-      setError({
-        message: 'Required Google API script tag not found in index.html.',
-      });
-      setIsInitialized(true);
-      return;
+      gisScript = document.createElement('script');
+      gisScript.src = 'https://accounts.google.com/gsi/client';
+      gisScript.async = true;
+      gisScript.defer = true;
+      document.head.appendChild(gisScript);
     }
 
     const initialize = () => {
-      const codeClient = window.google.accounts.oauth2.initCodeClient({
+      const tokenClient = window.google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
-        ux_mode: 'redirect',
-        redirect_uri: import.meta.env.VITE_GOOGLE_REDIRECT_URI,
         callback: (resp) => {
           if (resp?.error) {
             setNeedsReAuth(true);
@@ -71,14 +71,10 @@ export const AuthProvider = ({ children, refreshData }) => {
           }
         },
       });
-      // 自動再ログイン用
-      if (token) {
-        setNeedsReAuth(true);
-      }
-      setIsInitialized(true);
-      // sign-in helperを expose
+
+      // sign-in helper を expose
       signInRef.current = () =>
-        codeClient.requestAccessToken({ prompt: 'consent' });
+        tokenClient.requestAccessToken({ prompt: 'consent' });
     };
 
     if (window.google && window.google.accounts) {
