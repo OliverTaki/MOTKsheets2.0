@@ -156,9 +156,13 @@ export const AuthProvider = ({ children, refreshData }) => {
 
                 // 1. Initialize GAPI client
                 // ここではローカル discoveryDocs のみを使用 ※オンライン呼び出し禁止
+                const base = window.location.origin;      // 例: http://localhost:5173
                 await window.gapi.client.init({
                     apiKey: API_KEY,
-                    discoveryDocs: ['/drive_v3.json', '/sheets_v4.json'],
+                    discoveryDocs: [
+                        `${base}/drive_v3.json`,
+                        `${base}/sheets_v4.json`,
+                    ],
                 });
                 console.log('[Auth] gapi.init done with local docs');
                 setGapiError(null); // Clear GAPI error on successful init
