@@ -8,6 +8,11 @@ import {
 
 // ---------- Const -------------------------------------------------
 export const AuthContext = createContext({});
+
+// useDriveSheets が参照するエラーコードを公開
+export const PROMPT_REQUIRED = 'user_interaction_required';
+export const POPUP_BLOCKED   = 'popup_blocked_by_browser';
+
 const TOKEN_STORAGE_KEY = 'google_auth_token';
 const SCOPES =  'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.metadata.readonly';
 
