@@ -217,6 +217,37 @@ export const AuthProvider = ({ children, refreshData }) => {
 
     }, [CLIENT_ID, API_KEY, SCOPES, handleTokenResponse]);
 
+    const signIn = useCallback(() => {
+        const tc = tokenClientRef.current;
+        if (!tc) {
+            setError({ message: 'Authentication service is not ready. Please try again in a moment.' });
+            return;
+        }
+
+        tc.callback = (resp) => {
+            if (resp?.error) {
+                console.error(resp);
+                setNeedsReAuth(true);
+                // Fallback to redirect if popup is blocked
+                if (resp.type === 'popup_blocked' || resp.error === 'popup_closed_by_user') {
+                    window.location.assign(tc.generateAuthUrl());
+                }
+            } else {
+                lastTokenRef.current = resp.access_token;
+                tokenIssuedAtRef.current = Date.now();
+                setNeedsReAuth(false);
+                handleTokenResponse(resp);
+            }
+        };
+
+        try {
+            tc.requestAccessToken({ prompt: 'consent' });
+        } catch (e) {
+            console.error("Error requesting access token:", e);
+            setNeedsReAuth(true);
+        }
+    }, [tokenClientRef, handleTokenResponse]);
+
     const signOut = useCallback(() => {
         const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
         if (storedToken) {
