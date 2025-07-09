@@ -86,7 +86,7 @@ export const AppContainer = () => {
   }, [fields]);
 
   useEffect(() => {
-    const ready = isInitialized && !fieldsLoading && !pagesLoading && !needsReAuth && !gapiError;
+    const ready = isInitialized && !fieldsLoading && !pagesLoading && !needsReAuth;
     console.log(`AppContainer useEffect: isInitialized=${isInitialized}, fieldsLoading=${fieldsLoading}, pagesLoading=${pagesLoading}, needsReAuth=${needsReAuth}, gapiError=${gapiError}, ready=${ready}`);
     if (ready && !booted) {
       setBooted(true);
@@ -94,7 +94,7 @@ export const AppContainer = () => {
     } else {
       console.log("App is NOT ready.");
     }
-  }, [isInitialized, fieldsLoading, pagesLoading, needsReAuth, booted, gapiError]);
+  }, [isInitialized, fieldsLoading, pagesLoading, needsReAuth, booted]);
 
   useEffect(() => {
     if (isAppReady && pages.length > 0 && !isInitialViewLoaded) {
