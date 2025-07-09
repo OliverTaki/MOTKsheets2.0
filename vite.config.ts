@@ -8,12 +8,12 @@ import react from '@vitejs/plugin-react';
   server: {
     port: 5173,
     headers: {
-      // DEVELOPMENT ONLY ─ 本番 build には含まれない
+      // DEVELOPMENT-ONLY CSP
       'Content-Security-Policy':
-        "default-src 'self'; " + 
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com; " + 
-        "style-src  'self' 'unsafe-inline'; " + 
-        "connect-src 'self' ws://localhost:5173 https://www.googleapis.com; " + 
-        "frame-src https://accounts.google.com;",
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-eval' https://accounts.google.com/gsi/client; " +
+         "frame-src  'self' https://accounts.google.com/gsi/; " +
+         "connect-src 'self' https://accounts.google.com/gsi/; " +
+         "style-src  'self' https://accounts.google.com/gsi/style;",
     },
   }, });
