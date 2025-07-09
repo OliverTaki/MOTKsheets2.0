@@ -61,13 +61,15 @@ export const AuthProvider = ({ children, refreshData }) => {
         client_id: CLIENT_ID,
         scope: SCOPES,
         callback: (resp) => {
-          if (resp?.error) {
-            setNeedsReAuth(true);
-          } else if (resp?.access_token) {
+          console.log('[Auth] token callback', resp);           // ★ログ
+          if (resp && resp.access_token) {
+            localStorage.setItem('google_auth_token', resp.access_token);
             setToken(resp.access_token);
-            localStorage.setItem(TOKEN_STORAGE_KEY, resp.access_token);
             setNeedsReAuth(false);
             if (refreshData) refreshData();
+          } else {
+            console.error('[Auth] token callback error', resp); // ★ログ
+            setNeedsReAuth(true);
           }
         },
       });

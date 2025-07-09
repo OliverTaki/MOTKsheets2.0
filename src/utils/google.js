@@ -15,6 +15,7 @@ export async function fetchGoogle(endpoint, accessToken, params = {}) {
   });
   if (!res.ok) {
     const text = await res.text();
+    console.error('[Google API] HTTP', res.status, text);    // ★追加
     throw new Error(`HTTP ${res.status} – ${text}`);
   }
   return res.json();
