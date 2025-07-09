@@ -155,49 +155,13 @@ export const AuthProvider = ({ children, refreshData }) => {
                 console.log('[Auth] initClients start');
 
                 // 1. Initialize GAPI client
+                // ここではローカル discoveryDocs のみを使用 ※オンライン呼び出し禁止
                 await window.gapi.client.init({
                     apiKey: API_KEY,
+                    discoveryDocs: ['/drive_v3.json', '/sheets_v4.json'],
                 });
-                console.log('[Auth] GAPI client initialized.');
+                console.log('[Auth] gapi.init done with local docs');
                 setGapiError(null); // Clear GAPI error on successful init
-
-                // Load Drive API with retry
-                const loadDrive = async (retries = 3) => {
-                    try {
-                        console.time('driveLoad');
-                        await withTimeout(window.gapi.client.load('drive', 'v3'), 5000, 'driveLoad');
-                        console.timeEnd('driveLoad');
-                        console.log('[Auth] Drive API loaded OK');
-                    } catch (err) {
-                        console.warn('[Auth] Drive discovery failed, retrying in 1 s', err);
-                        if (retries > 0) {
-                            await new Promise((res) => setTimeout(res, 1000));
-                            return loadDrive(retries - 1);
-                        } else {
-                            throw err; // Re-throw to be caught by the outer catch
-                        }
-                    }
-                };
-                await loadDrive();
-
-                // Load Sheets API with retry
-                const loadSheets = async (retries = 3) => {
-                    try {
-                        console.time('sheetsLoad');
-                        await withTimeout(window.gapi.client.load('sheets', 'v4'), 5000, 'sheetsLoad');
-                        console.timeEnd('sheetsLoad');
-                        console.log('[Auth] Sheets API loaded OK');
-                    } catch (err) {
-                        console.warn('[Auth] Sheets discovery failed, retrying in 1 s', err);
-                        if (retries > 0) {
-                            await new Promise((res) => setTimeout(res, 1000));
-                            return loadSheets(retries - 1);
-                        } else {
-                            throw err; // Re-throw to be caught by the outer catch
-                        }
-                    }
-                };
-                await loadSheets();
 
                 // 2. Initialize GIS token client
                 const client = window.google.accounts.oauth2.initTokenClient({
