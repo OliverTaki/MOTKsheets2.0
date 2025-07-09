@@ -62,9 +62,7 @@ export const AuthProvider = ({ children, refreshData }) => {
     const [token, setToken] = useState(() => localStorage.getItem(TOKEN_STORAGE_KEY));
     const [tokenInfo, setTokenInfo] = useState(null); // { access_token, expires_at }
     const [isInitialized, setIsInitialized] = useState(false);
-    const [isGapiClientReady, setIsGapiClientReady] = useState(false);
     const [error, setError] = useState(null);
-    const [gapiError, setGapiError] = useState(null); // New state for GAPI specific errors
     const [isReady, setReady] = useState(false); // GSI script load 判定
   const [needsReAuth, setNeedsReAuth] = useState(false);
 
@@ -90,9 +88,6 @@ export const AuthProvider = ({ children, refreshData }) => {
             setToken(accessToken);
             setTokenInfo({ access_token: accessToken, expires_at: expiresAt }); // Set tokenInfo
             localStorage.setItem(TOKEN_STORAGE_KEY, accessToken);
-            if (window.gapi?.client) {
-                window.gapi.client.setToken({ access_token: accessToken });
-            }
             setError(null);
             setNeedsReAuth(false); // Clear re-auth flag on successful token acquisition
             if (refreshData) refreshData();
@@ -128,15 +123,13 @@ export const AuthProvider = ({ children, refreshData }) => {
     useEffect(() => {
         console.log('[Auth] mount -> Initializing Google APIs');
         const gisScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
-        const gapiScript = document.querySelector('script[src="https://apis.google.com/js/api.js"]');
 
-        if (!gisScript || !gapiScript) {
+        if (!gisScript) {
             setError({ message: "Required Google API script tags not found in index.html." });
             setIsInitialized(true); // Set true even on error to unblock UI
             return;
         }
 
-        let gapiLoaded = false;
         let gisLoaded = false;
 
         const withTimeout = (p, ms, tag) =>
@@ -154,32 +147,6 @@ export const AuthProvider = ({ children, refreshData }) => {
             try {
                 console.log('[Auth] initClients start');
 
-                // 1. Initialize GAPI client
-                // Use online discovery docs to avoid local fetch issues
-                // Import discovery documents
-                const driveDiscoveryDoc = await (await fetch('/drive_v3.json')).json();
-                const sheetsDiscoveryDoc = await (await fetch('/sheets_v4.json')).json();
-
-                await withTimeout(
-                    window.gapi.client.init({
-                        apiKey: API_KEY,
-                        // No discoveryDocs here, load them manually
-                    }),
-                    5000,
-                    'gapi.init'
-                );
-                console.log('[Auth] gapi.client.init done');
-
-                // Load APIs using the imported discovery documents
-                await Promise.all([
-                    window.gapi.client.load(driveDiscoveryDoc),
-                    window.gapi.client.load(sheetsDiscoveryDoc)
-                ]);
-                console.log('[Auth] APIs loaded from local docs');
-                setGapiError(null); // Clear GAPI error on successful init
-
-                setIsGapiClientReady(true);
-
                 // 3. Initialize GIS code client for interactive sign-in (redirect flow)
                 const codeClient = window.google.accounts.oauth2.initCodeClient({
                     client_id: CLIENT_ID,
@@ -192,10 +159,8 @@ export const AuthProvider = ({ children, refreshData }) => {
                 // 3. Set token if it exists
                 const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
                 if (storedToken) {
-                    window.gapi.client.setToken({ access_token: storedToken });
-                    console.log('[Auth] Stored token set to gapi client.');
+                    console.log('[Auth] Stored token set.');
                 }
-                // setIsInitialized(true); // Handled by finally
             } catch (e) {
                 console.error('[Auth] initClients failed', e);
                 setGapiError(e); // Store the error
@@ -206,15 +171,6 @@ export const AuthProvider = ({ children, refreshData }) => {
             }
         };
 
-        // GAPI load handler
-        const handleGapiLoad = () => {
-            window.gapi.load('client', () => {
-                gapiLoaded = true;
-                console.log('[Auth] GAPI script loaded.');
-                initialize();
-            });
-        };
-
         // GIS load handler
         const handleGisLoad = () => {
             gisLoaded = true;
@@ -223,12 +179,6 @@ export const AuthProvider = ({ children, refreshData }) => {
         };
 
         // Attach listeners or run handlers if already loaded
-        if (window.gapi && window.gapi.load) {
-            handleGapiLoad();
-        } else {
-            gapiScript.onload = handleGapiLoad;
-        }
-
         if (window.google && window.google.accounts) {
             handleGisLoad();
         } else {
@@ -266,9 +216,6 @@ export const AuthProvider = ({ children, refreshData }) => {
             window.google.accounts.oauth2.revoke(storedToken, () => {
                 setToken(null);
                 localStorage.removeItem(TOKEN_STORAGE_KEY);
-                if (window.gapi?.client) {
-                    window.gapi.client.setToken(null);
-                }
             });
         } else {
             setToken(null);
@@ -277,7 +224,7 @@ export const AuthProvider = ({ children, refreshData }) => {
 
     
 
-    const value = { token, interactiveSignIn, signOut, isInitialized, error, gapiError, isGapiClientReady, refreshData, ensureValidToken, needsReAuth, setNeedsReAuth };
+    const value = { token, interactiveSignIn, signOut, isInitialized, error, refreshData, ensureValidToken, needsReAuth, setNeedsReAuth };
 
     return (
         <AuthContext.Provider value={value}>

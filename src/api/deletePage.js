@@ -1,29 +1,22 @@
 import { ensureSheetExists } from './sheetUtils';
+import { fetchGoogle } from '../utils/google';
 
-export async function deletePage(spreadsheetId, ensureValidToken, pageId, retried = false) {
+export async function deletePage(spreadsheetId, token, setNeedsReAuth, pageId) {
   console.log(`Attempting to delete page with ID: ${pageId}`);
   try {
-    const sheetId = await ensureSheetExists(spreadsheetId, ensureValidToken);
+    const sheetId = await ensureSheetExists(spreadsheetId, token, setNeedsReAuth);
     if (!sheetId) {
       console.warn("PAGES sheet not found during deletion attempt. No action taken.");
       return; // Exit gracefully if sheet doesn't exist
     }
 
-    // Fetch page IDs using gapi.client
-    const getPagesRes = await window.gapi.client.sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: 'PAGES!A:A',
-    });
+    // Fetch page IDs
+    const getPagesRes = await fetchGoogle(`spreadsheets/${spreadsheetId}/values/PAGES!A:A`, token);
 
-    const pagesData = getPagesRes.result;
-    if (!getPagesRes.result) {
-      if (getPagesRes.status === 401 && !retried) {
-        console.warn("401 Unauthorized fetching pages for deletion, attempting to refresh token and retry...");
-        await ensureValidToken();
-        return deletePage(spreadsheetId, ensureValidToken, pageId, true);
-      }
+    const pagesData = getPagesRes;
+    if (!getPagesRes) {
       console.error("Error fetching page data:", getPagesRes);
-      throw new Error(getPagesRes.error?.message || `Failed to fetch page data: ${getPagesRes.status}`);
+      throw new Error(`Failed to fetch page data: ${getPagesRes.status}`);
     }
 
     const rows = pagesData.values;
@@ -65,23 +58,13 @@ export async function deletePage(spreadsheetId, ensureValidToken, pageId, retrie
 
     console.log("Sending batch update request to delete rows:", requests);
 
-    const batchUpdateRes = await window.gapi.client.sheets.spreadsheets.batchUpdate({
-      spreadsheetId,
-      resource: { requests: requests },
+    const batchUpdateRes = await fetchGoogle(`spreadsheets/${spreadsheetId}:batchUpdate`, token, {
+      method: 'POST',
+      body: { requests: requests },
     });
 
-    if (!batchUpdateRes.result) {
-      if (batchUpdateRes.status === 401 && !retried) {
-        console.warn("401 Unauthorized during batch update for deletion, attempting to refresh token and retry...");
-        await ensureValidToken();
-        return deletePage(spreadsheetId, ensureValidToken, pageId, true);
-      }
-      console.error("Batch update failed:", batchUpdateRes);
-      throw new Error(batchUpdateRes.error?.message || 'Failed to delete the page from the sheet.');
-    }
-
-    console.log("Page(s) deleted successfully. Response:", batchUpdateRes.result);
-    return batchUpdateRes.result;
+    console.log("Page(s) deleted successfully. Response:", batchUpdateRes);
+    return batchUpdateRes;
   } catch (err) {
     console.error('Caught error in deletePage:', err);
     throw new Error(`Failed to delete the page from the sheet: ${err.message}`);

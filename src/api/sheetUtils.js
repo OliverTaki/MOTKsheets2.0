@@ -1,19 +1,12 @@
-export async function ensureSheetExists(spreadsheetId, ensureValidToken, retried = false) {
-  try {
-    await ensureValidToken();
-    const getSpreadsheetRes = await window.gapi.client.sheets.spreadsheets.get({
-      spreadsheetId,
-      fields: 'sheets.properties',
-    });
+import { fetchGoogle } from '../utils/google';
 
-    const spreadsheet = getSpreadsheetRes.result;
-    if (!getSpreadsheetRes.result) {
-      if (getSpreadsheetRes.status === 401 && !retried) {
-        console.warn("401 Unauthorized in ensureSheetExists, attempting to refresh token and retry...");
-        await ensureValidToken();
-        return ensureSheetExists(spreadsheetId, ensureValidToken, true);
-      }
-      throw new Error(getSpreadsheetRes.error?.message || `Failed to fetch spreadsheet details: ${getSpreadsheetRes.status}`);
+export async function ensureSheetExists(spreadsheetId, token, setNeedsReAuth) {
+  try {
+    const getSpreadsheetRes = await fetchGoogle(`spreadsheets/${spreadsheetId}`, token, { fields: 'sheets.properties' });
+
+    const spreadsheet = getSpreadsheetRes;
+    if (!getSpreadsheetRes) {
+      throw new Error(`Failed to fetch spreadsheet details: ${getSpreadsheetRes.status}`);
     }
 
     console.log("All sheets in spreadsheet:");
@@ -42,19 +35,14 @@ export async function ensureSheetExists(spreadsheetId, ensureValidToken, retried
       ],
     };
 
-    const addSheetRes = await window.gapi.client.sheets.spreadsheets.batchUpdate({
-      spreadsheetId,
-      resource: addSheetRequest,
+    const addSheetRes = await fetchGoogle(`spreadsheets/${spreadsheetId}:batchUpdate`, token, {
+      method: 'POST',
+      body: addSheetRequest,
     });
-    const addSheetData = addSheetRes.result;
+    const addSheetData = addSheetRes;
 
-    if (!addSheetRes.result) {
-      if (addSheetRes.status === 401 && !retried) {
-        console.warn("401 Unauthorized during sheet creation, attempting to refresh token and retry...");
-        await ensureValidToken();
-        return ensureSheetExists(spreadsheetId, ensureValidToken, true);
-      }
-      throw new Error(addSheetRes.error?.message || `Failed to create PAGES sheet: ${addSheetRes.status}`);
+    if (!addSheetRes) {
+      throw new Error(`Failed to create PAGES sheet: ${addSheetRes.status}`);
     }
 
     const newSheetId = addSheetData.replies[0].addSheet.properties.sheetId;

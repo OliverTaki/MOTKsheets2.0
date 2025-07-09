@@ -3,30 +3,28 @@ import { AuthContext, PROMPT_REQUIRED } from '../AuthContext';
 import { parseShots, parseFields } from '../utils/parse';
 import { missingIdHandler } from '../utils/missingIdHandler';
 import { updateCell } from '../api/updateCell';
+import { fetchGoogle } from '../utils/google';
 
 export const useSheetsData = (sheetId) => {
-  const { needsReAuth, isGapiClientReady, ensureValidToken, setNeedsReAuth } = useContext(AuthContext);
+  const { needsReAuth, ensureValidToken, setNeedsReAuth, token } = useContext(AuthContext);
   const [shots, setShots] = useState([]);
   const [fields, setFields] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [idToColIndex, setIdToColIndex] = useState({});
 
-  const refreshData = useCallback(async (retried = false) => {
-    if (!sheetId || !isGapiClientReady || !window.gapi || !window.gapi.client || !window.gapi.client.sheets) {
+  const refreshData = useCallback(async () => {
+    if (!sheetId) {
       setLoading(false);
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      await ensureValidToken(); // Ensure valid token before making the request
-
-      const res = await window.gapi.client.sheets.spreadsheets.values.batchGet({
-        spreadsheetId: sheetId,
+      const res = await fetchGoogle(`spreadsheets/${sheetId}/values:batchGet`, token, {
         ranges: ['Shots!A:AZ', 'FIELDS!A:F'],
       });
-      const { valueRanges } = res.result;
+      const { valueRanges } = res;
 
       if (!valueRanges || valueRanges.length < 2 || !valueRanges[0].values || !valueRanges[1].values) {
         throw new Error("Data not found in spreadsheet. Check sheet names ('Shots', 'FIELDS') and ranges.");
@@ -62,7 +60,7 @@ export const useSheetsData = (sheetId) => {
 
     } catch (e) {
       console.error("Error fetching sheets data:", e);
-      if (e === PROMPT_REQUIRED || (e.status === 401 && !retried)) {
+      if (e === PROMPT_REQUIRED) {
         setNeedsReAuth(true); // show dialog
         return;
       }
@@ -70,12 +68,10 @@ export const useSheetsData = (sheetId) => {
     } finally {
       setLoading(false);
     }
-  }, [sheetId, isGapiClientReady, ensureValidToken, setNeedsReAuth]);
+  }, [sheetId, token, setNeedsReAuth]);
 
-  const updateFieldOptions = useCallback(async (fieldId, newOption, retried = false) => {
+  const updateFieldOptions = useCallback(async (fieldId, newOption) => {
     try {
-      await ensureValidToken(); // Ensure valid token before making the request
-
       const fieldToUpdate = fields.find(f => f.id === fieldId);
       if (!fieldToUpdate) {
         throw new Error(`Field with ID ${fieldId} not found.`);
@@ -91,8 +87,7 @@ export const useSheetsData = (sheetId) => {
       const optionsColumnLetter = 'F';
       const range = `FIELDS!${optionsColumnLetter}${fieldRowIndex}`;
 
-      const currentToken = await ensureValidToken(); // Get a valid token
-      await updateCell(sheetId, currentToken, range, updatedOptionsString);
+      await updateCell(sheetId, token, setNeedsReAuth, range, updatedOptionsString);
 
       setFields(prevFields => prevFields.map(f =>
         f.id === fieldId ? { ...f, options: updatedOptionsString } : f
@@ -100,20 +95,20 @@ export const useSheetsData = (sheetId) => {
       console.log(`Field options for ${fieldId} updated successfully in Google Sheet.`);
     } catch (err) {
       console.error('Error updating field options:', err);
-      if (err === PROMPT_REQUIRED || (err.status === 401 && !retried)) {
+      if (err === PROMPT_REQUIRED) {
         setNeedsReAuth(true); // show dialog
         return;
       } else {
         alert(`Error updating field options: ${err.message}`);
       }
     }
-  }, [sheetId, fields, ensureValidToken, setNeedsReAuth]);
+  }, [sheetId, fields, token, setNeedsReAuth]);
 
   useEffect(() => {
-    if (isGapiClientReady) {
+    if (sheetId) {
       refreshData();
     }
-  }, [isGapiClientReady, refreshData]);
+  }, [sheetId, refreshData]);
 
   if (needsReAuth) return { sheets: [], fields: [], loading: false, error: 'NEEDS_REAUTH' };
 

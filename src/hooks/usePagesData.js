@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useContext } from 'react';
 import { AuthContext, PROMPT_REQUIRED } from '../AuthContext';
+import { fetchGoogle } from '../utils/google';
 
 const safeJsonParse = (jsonString, defaultValue) => {
   if (!jsonString) return defaultValue;
@@ -12,31 +13,22 @@ const safeJsonParse = (jsonString, defaultValue) => {
 };
 
 const usePagesData = (sheetId) => {
-  const { isGapiClientReady, ensureValidToken, setNeedsReAuth } = useContext(AuthContext);
+  const { ensureValidToken, setNeedsReAuth, token } = useContext(AuthContext);
   const [pages, setPages] = useState([]);
   const [loading, setLoading] = useState(false); // Initial state should be false or true based on initial fetch
   const [error, setError] = useState(null);
 
-  const refreshPages = useCallback(async (retried = false) => {
-    if (!isGapiClientReady || !sheetId || !window.gapi || !window.gapi.client || !window.gapi.client.sheets) {
-      setLoading(false);
-      return;
-    }
+  const refreshPages = useCallback(async () => {
     setLoading(true);
     setError(null); // Clear previous errors
     try {
-      await ensureValidToken(); // Ensure valid token before making the request
+      const res = await fetchGoogle(`spreadsheets/${sheetId}/values/PAGES!A:H`, token);
 
-      const res = await window.gapi.client.sheets.spreadsheets.values.get({
-        spreadsheetId: sheetId,
-        range: 'PAGES!A:H',
-      });
-
-      if (res.status === 404 || (res.result.error && (res.result.error.code === 404 || (res.result.error.code === 400 && res.result.error.message.includes("Unable to parse range"))))) {
+      if (res.status === 404 || (res.error && (res.error.code === 404 || (res.error.code === 400 && res.error.message.includes("Unable to parse range"))))) {
         console.warn("'PAGES' sheet does not exist or is inaccessible. Using empty pages list.");
 
-      } else if (res.result.values) {
-        const [header, ...rows] = res.result.values;
+      } else if (res.values) {
+        const [header, ...rows] = res.values;
         if (!header || rows.length === 0) {
   
         } else {
@@ -74,7 +66,7 @@ const usePagesData = (sheetId) => {
       }
     } catch (e) {
       console.error('refreshPages: Caught error:', e);
-      if (e === PROMPT_REQUIRED || (e.status === 401 && !retried)) {
+      if (e === PROMPT_REQUIRED) {
         setNeedsReAuth(true); // show dialog
         return;
       }
@@ -82,13 +74,13 @@ const usePagesData = (sheetId) => {
     } finally {
       setLoading(false);
     }
-  }, [isGapiClientReady, sheetId, ensureValidToken, setNeedsReAuth]);
+  }, [sheetId, token, setNeedsReAuth]);
 
   useEffect(() => {
-    if (isGapiClientReady) {
+    if (sheetId) {
       refreshPages();
     }
-  }, [isGapiClientReady, refreshPages]);
+  }, [sheetId, refreshPages]);
 
   return { pages, loading, error, refreshPages };
 };

@@ -36,7 +36,7 @@ const theme = createTheme({
 });
 
 export const AppContainer = () => {
-  const { token, user, isInitialized, needsReAuth, signIn, ensureValidToken, error: authError, gapiError } = useContext(AuthContext);
+  const { token, user, isInitialized, needsReAuth, signIn, ensureValidToken, error: authError } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const [sheetId, setSheetId] = useState(() => {
@@ -88,7 +88,7 @@ export const AppContainer = () => {
 
   useEffect(() => {
     const ready = isInitialized && !fieldsLoading && !pagesLoading && !needsReAuth;
-    console.log(`AppContainer useEffect: isInitialized=${isInitialized}, fieldsLoading=${fieldsLoading}, pagesLoading=${pagesLoading}, needsReAuth=${needsReAuth}, gapiError=${gapiError}, ready=${ready}`);
+    console.log(`AppContainer useEffect: isInitialized=${isInitialized}, fieldsLoading=${fieldsLoading}, pagesLoading=${pagesLoading}, needsReAuth=${needsReAuth}, ready=${ready}`);
     if (ready && !booted) {
       setBooted(true);
       console.log("App is ready!");
@@ -188,7 +188,7 @@ export const AppContainer = () => {
 
   const handleAddField = useCallback(async (newFieldDetails) => {
     try {
-      const newField = await appendField(sheetId, ensureValidToken, newFieldDetails, fields);
+      const newField = await appendField(sheetId, token, setNeedsReAuth, newFieldDetails, fields);
       alert(`Field "${newField.label}" added successfully!`);
 
       // Instead of a full refresh, which can be slow and reset the UI,
@@ -226,8 +226,7 @@ export const AppContainer = () => {
     const range = `Shots!${columnLetter}${sheetRowIndex}`;
 
     try {
-      const currentToken = await ensureValidToken();
-      await updateCell(sheetId, currentToken, range, newValue);
+      await updateCell(sheetId, token, setNeedsReAuth, range, newValue);
       refreshData(); // Refresh data after successful save
       console.log(`Cell ${range} updated successfully.`);
     } catch (err) {
@@ -252,8 +251,7 @@ export const AppContainer = () => {
     }
     const currentView = getCurrentView();
     const existingPage = pages.find(p => p.page_id === loadedPageId);
-    const currentToken = await ensureValidToken();
-    await updatePage(sheetId, currentToken, loadedPageId, { ...existingPage, ...currentView });
+    await updatePage(sheetId, token, setNeedsReAuth, loadedPageId, { ...existingPage, ...currentView });
     alert('View saved successfully!');
     refreshPages();
   }, [loadedPageId, pages, getCurrentView, refreshPages, sheetId, ensureValidToken]);
@@ -261,8 +259,7 @@ export const AppContainer = () => {
   const handleSaveViewAs = useCallback(async (title) => {
     const page_id = uuidv4();
     const currentView = { ...getCurrentView(), page_id, title };
-    const currentToken = await ensureValidToken();
-    await appendPage(sheetId, currentToken, currentView);
+    await appendPage(sheetId, token, setNeedsReAuth, currentView);
     setLoadedPageId(page_id);
     alert(`View "${title}" saved successfully!`);
     refreshPages();
@@ -274,8 +271,7 @@ export const AppContainer = () => {
       return;
     }
     if (window.confirm('Are you sure you want to delete this view?')) {
-      const currentToken = await ensureValidToken();
-      await deletePage(sheetId, currentToken, pageId);
+      await deletePage(sheetId, token, setNeedsReAuth, pageId);
       if (loadedPageId === pageId) {
         setLoadedPageId(null);
         localStorage.removeItem('loadedPageId');
@@ -358,11 +354,6 @@ export const AppContainer = () => {
             </>
           )}
           <main className="flex-grow bg-gray-800" style={{ flex: 1 }}>
-            {gapiError && (
-              <div className="bg-red-700 text-white p-2 text-center">
-                Google API init failed – {gapiError.error?.message || 'unknown'}
-              </div>
-            )}
             {(fieldsError || pagesError || authError) && (
               <p className="text-red-500 text-center">
                 Error: {fieldsError?.message || pagesError?.message || authError?.message}

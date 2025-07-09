@@ -1,11 +1,9 @@
-const getSheetIds = async (spreadsheetId, ensureValidToken, retried = false) => {
+import { fetchGoogle } from '../utils/google';
+
+const getSheetIds = async (spreadsheetId, token, setNeedsReAuth) => {
     try {
-        await ensureValidToken();
-        const res = await window.gapi.client.sheets.spreadsheets.get({
-            spreadsheetId,
-            fields: 'sheets.properties',
-        });
-        const data = res.result;
+        const res = await fetchGoogle(`spreadsheets/${spreadsheetId}`, token, { fields: 'sheets.properties' });
+        const data = res;
         const sheetIdMap = new Map();
         console.log("Sheets found in spreadsheet:", data.sheets.map(s => s.properties.title));
         data.sheets.forEach(sheet => {
@@ -13,22 +11,16 @@ const getSheetIds = async (spreadsheetId, ensureValidToken, retried = false) => 
         });
         return sheetIdMap;
     } catch (e) {
-        if (e.status === 401 && !retried) {
-            console.warn("401 Unauthorized in getSheetIds, attempting to refresh token and retry...");
-            await ensureValidToken();
-            return getSheetIds(spreadsheetId, ensureValidToken, true); // Retry the fetch
-        }
         console.error("Error in getSheetIds:", e);
         throw e;
     }
 };
 
-export const appendField = async (spreadsheetId, ensureValidToken, newFieldDetails, existingFields, retried = false) => {
+export const appendField = async (spreadsheetId, token, setNeedsReAuth, newFieldDetails, existingFields) => {
     const newFieldId = newFieldDetails.id || newFieldDetails.label.toLowerCase().replace(/\s+/g, '_');
     
     try {
-        await ensureValidToken();
-        const sheetIds = await getSheetIds(spreadsheetId, ensureValidToken);
+        const sheetIds = await getSheetIds(spreadsheetId, token, setNeedsReAuth);
     const fieldsSheetId = sheetIds.get('FIELDS');
     const shotsSheetId = sheetIds.get('SHOTS');
 
@@ -47,7 +39,7 @@ export const appendField = async (spreadsheetId, ensureValidToken, newFieldDetai
                             { userEnteredValue: { stringValue: newFieldDetails.label } },
                             { userEnteredValue: { stringValue: newFieldDetails.type } },
                             { userEnteredValue: { stringValue: newFieldDetails.editable ? 'TRUE' : 'FALSE' } },
-                            { userEnteredValue: { stringValue: 'FALSE' } }, // requiredは常にFALSEで追加
+                            { userEnteredValue: { stringString: 'FALSE' } }, // requiredは常にFALSEで追加
                             { userEnteredValue: { stringValue: newFieldDetails.options || '' } },
                         ]
                     }
@@ -87,22 +79,9 @@ export const appendField = async (spreadsheetId, ensureValidToken, newFieldDetai
     ];
 
     const body = { requests: requests };
-    const res = await window.gapi.client.sheets.spreadsheets.batchUpdate({
-        spreadsheetId,
-        resource: body,
-    });
+    const res = await fetchGoogle(`spreadsheets/${spreadsheetId}:batchUpdate`, token, { method: 'POST', body: JSON.stringify(body) });
 
-    if (!res.result) {
-        if (res.status === 401 && !retried) {
-            console.warn("401 Unauthorized in appendField, attempting to refresh token and retry...");
-            await ensureValidToken(); // Attempt to get a new token
-            return appendField(spreadsheetId, ensureValidToken, newFieldDetails, existingFields, true); // Retry the append
-        }
-        console.error('Google Sheets API Error:', res);
-        throw new Error(res.error?.message || 'Failed to append field.');
-    }
-
-    return res.result;
+    return res;
 } catch (e) {
     console.error("Error in appendField:", e);
     throw e;

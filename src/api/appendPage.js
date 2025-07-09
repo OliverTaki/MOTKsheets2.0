@@ -1,18 +1,13 @@
-export async function appendPage(spreadsheetId, ensureValidToken, pageData, retried = false) {
+import { fetchGoogle } from '../utils/google';
+
+export async function appendPage(spreadsheetId, token, setNeedsReAuth, pageData) {
   try {
-    const token = await ensureValidToken();
-    await window.gapi.client.sheets.spreadsheets.values.append({
-      spreadsheetId,
-      range: 'PAGES',
-      valueInputOption: 'USER_ENTERED',
-      insertDataOption: 'INSERT_ROWS',
-      resource: { values: [pageData] },
+    await fetchGoogle(`spreadsheets/${spreadsheetId}/values/PAGES:append`, token, {
+      method: 'POST',
+      params: { valueInputOption: 'USER_ENTERED', insertDataOption: 'INSERT_ROWS' },
+      body: { values: [pageData] },
     });
   } catch (e) {
-    if (e.status === 401 && !retried) {
-      await ensureValidToken();       // トークン再取得
-      return appendPage(spreadsheetId, ensureValidToken, pageData, true);
-    }
     throw e;
   }
 }
