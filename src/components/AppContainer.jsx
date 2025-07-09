@@ -357,6 +357,11 @@ export const AppContainer = () => {
             </>
           )}
           <main className="flex-grow bg-gray-800" style={{ flex: 1 }}>
+            {gapiError && (
+              <div className="bg-red-700 text-white p-2 text-center">
+                Google API Error: {gapiError.message}
+              </div>
+            )}
             {(fieldsError || pagesError || authError) && (
               <p className="text-red-500 text-center">
                 Error: {fieldsError?.message || pagesError?.message || authError?.message}

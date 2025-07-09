@@ -139,49 +139,95 @@ export const AuthProvider = ({ children, refreshData }) => {
         let gapiLoaded = false;
         let gisLoaded = false;
 
-        const initialize = () => {
+        const withTimeout = (p, ms, tag) =>
+            Promise.race([
+                p,
+                new Promise((_, rej) =>
+                    setTimeout(() => rej(new Error(tag + ' timeout')), ms)
+                ),
+            ]);
+
+        const initialize = async () => {
             if (!gapiLoaded || !gisLoaded) return;
             console.log('[Auth] Both GAPI and GIS scripts loaded. Initializing clients...');
 
             try {
-                // 1. Initialize GAPI client
-                const loadDrive = (retries = 3) =>
-                    window.gapi.client.init({
-                    apiKey: API_KEY,
-                }).then(() => {
-                    console.log('[Auth] GAPI client initialized.');
-                    setGapiError(null); // Clear GAPI error on successful init
-                    // 2. Initialize GIS token client
-                    const client = window.google.accounts.oauth2.initTokenClient({
-                        client_id: CLIENT_ID,
-                        scope: SCOPES,
-                        callback: handleTokenResponse,
-                        error_callback: (err) => {
-                            console.error('[Auth] GIS token client error:', err);
-                            setError({ message: err.type || 'An unknown authentication error occurred.' });
-                            setIsInitialized(true); // Set true even on error to unblock UI
-                        }
-                    });
-                    tokenClientRef.current = client;
-                    setIsGapiClientReady(true);
-                    console.log('[Auth] GIS token client initialized.');
+                console.log('[Auth] initClients start');
 
-                    // 3. Set token if it exists
-                    const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
-                    if (storedToken) {
-                        window.gapi.client.setToken({ access_token: storedToken });
-                        console.log('[Auth] Stored token set to gapi client.');
-                    }
-                    setIsInitialized(true); // Set true on successful initialization
-                }).catch((err) => {
-                    console.error("Error initializing gapi client:", err);
-                    setError(err);
-                    setIsInitialized(true); // Set true even on error to unblock UI
+                // 1. Initialize GAPI client
+                await window.gapi.client.init({
+                    apiKey: API_KEY,
                 });
+                console.log('[Auth] GAPI client initialized.');
+                setGapiError(null); // Clear GAPI error on successful init
+
+                // Load Drive API with retry
+                const loadDrive = async (retries = 3) => {
+                    try {
+                        console.time('driveLoad');
+                        await withTimeout(window.gapi.client.load('drive', 'v3'), 5000, 'driveLoad');
+                        console.timeEnd('driveLoad');
+                        console.log('[Auth] Drive API loaded OK');
+                    } catch (err) {
+                        console.warn('[Auth] Drive discovery failed, retrying in 1 s', err);
+                        if (retries > 0) {
+                            await new Promise((res) => setTimeout(res, 1000));
+                            return loadDrive(retries - 1);
+                        } else {
+                            throw err; // Re-throw to be caught by the outer catch
+                        }
+                    }
+                };
+                await loadDrive();
+
+                // Load Sheets API with retry
+                const loadSheets = async (retries = 3) => {
+                    try {
+                        console.time('sheetsLoad');
+                        await withTimeout(window.gapi.client.load('sheets', 'v4'), 5000, 'sheetsLoad');
+                        console.timeEnd('sheetsLoad');
+                        console.log('[Auth] Sheets API loaded OK');
+                    } catch (err) {
+                        console.warn('[Auth] Sheets discovery failed, retrying in 1 s', err);
+                        if (retries > 0) {
+                            await new Promise((res) => setTimeout(res, 1000));
+                            return loadSheets(retries - 1);
+                        } else {
+                            throw err; // Re-throw to be caught by the outer catch
+                        }
+                    }
+                };
+                await loadSheets();
+
+                // 2. Initialize GIS token client
+                const client = window.google.accounts.oauth2.initTokenClient({
+                    client_id: CLIENT_ID,
+                    scope: SCOPES,
+                    callback: handleTokenResponse,
+                    error_callback: (err) => {
+                        console.error('[Auth] GIS token client error:', err);
+                        setError({ message: err.type || 'An unknown authentication error occurred.' });
+                        // setIsInitialized(true); // Handled by finally
+                    }
+                });
+                tokenClientRef.current = client;
+                setIsGapiClientReady(true);
+                console.log('[Auth] GIS token client initialized.');
+
+                // 3. Set token if it exists
+                const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+                if (storedToken) {
+                    window.gapi.client.setToken({ access_token: storedToken });
+                    console.log('[Auth] Stored token set to gapi client.');
+                }
+                // setIsInitialized(true); // Handled by finally
             } catch (e) {
-                console.error("Error during API initialization:", e);
-                setError(e);
-                setIsInitialized(true); // Set true even on error to unblock UI
+                console.error('[Auth] initClients failed', e);
+                setGapiError(e); // Store the error
+                setError(e); // Also set general error
+                // setIsInitialized(true); // Handled by finally
+            } finally {
+                setIsInitialized(true); // Always set true to unblock UI
             }
         };
 
