@@ -109,6 +109,7 @@ export const AuthProvider = ({ children, refreshData }) => {
     const ensureValidToken = useCallback(() => {
         if (!isReady) {
             setError({ message: 'Google Sign-in is not ready.' });
+            console.log('ensureValidToken: Setting needsReAuth to true because GIS is not ready.');
             setNeedsReAuth(true);
             return null;
         }
@@ -118,6 +119,7 @@ export const AuthProvider = ({ children, refreshData }) => {
             return token;
         } else {
             // Token is missing or expired
+            console.log('ensureValidToken: Setting needsReAuth to true because token is missing or expired.');
             setNeedsReAuth(true);
             setError({ message: 'Authentication required. Please sign in again.' });
             return null;
@@ -177,20 +179,28 @@ export const AuthProvider = ({ children, refreshData }) => {
                 console.log('[Auth] APIs loaded from local docs');
                 setGapiError(null); // Clear GAPI error on successful init
 
-                // 2. Initialize GIS token client
-                const client = window.google.accounts.oauth2.initTokenClient({
+                // 2. Initialize GIS token client for silent refresh
+                const tokenClient = window.google.accounts.oauth2.initTokenClient({
                     client_id: CLIENT_ID,
                     scope: SCOPES,
                     callback: handleTokenResponse,
                     error_callback: (err) => {
                         console.error('[Auth] GIS token client error:', err);
                         setError({ message: err.type || 'An unknown authentication error occurred.' });
-                        // setIsInitialized(true); // Handled by finally
                     }
                 });
-                tokenClientRef.current = client;
+                tokenClientRef.current = tokenClient;
                 setIsGapiClientReady(true);
                 console.log('[Auth] GIS token client initialized.');
+
+                // 3. Initialize GIS code client for interactive sign-in (redirect flow)
+                const codeClient = window.google.accounts.oauth2.initCodeClient({
+                    client_id: CLIENT_ID,
+                    scope: SCOPES,
+                    ux_mode: 'redirect',
+                    redirect_uri: `${window.location.origin}/auth/callback`,
+                });
+                console.log('[Auth] GIS code client initialized.');
 
                 // 3. Set token if it exists
                 const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
@@ -240,7 +250,7 @@ export const AuthProvider = ({ children, refreshData }) => {
 
     }, [CLIENT_ID, API_KEY, SCOPES, handleTokenResponse]);
 
-    const signIn = useCallback(() => {
+    const silentSignIn = useCallback(() => {
         const tc = tokenClientRef.current;
         if (!tc) {
             setError({ message: 'Authentication service is not ready. Please try again in a moment.' });
@@ -249,10 +259,12 @@ export const AuthProvider = ({ children, refreshData }) => {
 
         tc.callback = (resp) => {
             if (resp?.error) {
-                console.error(resp);
+                console.error('silentSignIn tc.callback error:', resp);
                 setNeedsReAuth(true);
                 // Fallback to redirect if popup is blocked
                 if (resp.type === 'popup_blocked' || resp.error === 'popup_closed_by_user') {
+                    // This case should ideally not happen with prompt: ''
+                    // but keeping for robustness or if prompt changes
                     window.location.assign(tc.generateAuthUrl());
                 }
             } else {
@@ -264,12 +276,32 @@ export const AuthProvider = ({ children, refreshData }) => {
         };
 
         try {
-            tc.requestAccessToken({ prompt: 'consent' });
+            tc.requestAccessToken({ prompt: '' }); // Silent refresh
         } catch (e) {
-            console.error("Error requesting access token:", e);
+            console.error("Error requesting access token (silent):", e);
             setNeedsReAuth(true);
         }
     }, [tokenClientRef, handleTokenResponse]);
+
+    const interactiveSignIn = useCallback(() => {
+        // This function is called by the ReAuthDialog button
+        // It must be synchronous to be recognized as a user gesture
+        window.google.accounts.oauth2.initCodeClient({
+            client_id: CLIENT_ID,
+            scope: SCOPES,
+            ux_mode: 'redirect',
+            redirect_uri: `${window.location.origin}/auth/callback`,
+            callback: (response) => {
+                // This callback is for the code client, not token client
+                // It receives an authorization code, not an access token
+                // You would typically send this code to your backend to exchange for tokens
+                // For frontend-only, you might need to handle it differently or use tokenClient directly
+                console.log('Authorization code received:', response.code);
+                // For now, we'll just navigate to the callback URL
+                // The actual token exchange will happen on the /auth/callback route
+            }
+        }).requestCode();
+    }, [CLIENT_ID, SCOPES]);
 
     const signOut = useCallback(() => {
         const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
@@ -286,7 +318,7 @@ export const AuthProvider = ({ children, refreshData }) => {
         }
     }, []);
 
-    const value = { token, signIn, signOut, isInitialized, error, gapiError, isGapiClientReady, refreshData, ensureValidToken, needsReAuth, setNeedsReAuth };
+    const value = { token, silentSignIn, interactiveSignIn, signOut, isInitialized, error, gapiError, isGapiClientReady, refreshData, ensureValidToken, needsReAuth, setNeedsReAuth };
 
     return (
         <AuthContext.Provider value={value}>

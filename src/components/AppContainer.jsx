@@ -23,6 +23,7 @@ import { deletePage } from '../api/deletePage';
 import { v4 as uuidv4 } from 'uuid';
 import UpdateNonUuidIdsDialog from './UpdateNonUuidIdsDialog';
 import FullScreenSpinner from './FullScreenSpinner';
+import AuthCallbackHandler from './AuthCallbackHandler';
 
 const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 
@@ -372,6 +373,7 @@ export const AppContainer = () => {
                 <Routes>
                   <Route path="/signin" element={<LoginButton />} />
                   <Route path="/select" element={<ProjectSelectPage setSheetId={setSheetId} />} />
+                  <Route path="/auth/callback" element={<AuthCallbackHandler />} /> {/* New route */}
                   {!sheetId ? (
                     <Route path="/" element={<ProjectSelectPage setSheetId={setSheetId} />} />
                   ) : (
