@@ -204,6 +204,9 @@ export const AuthProvider = ({ children, refreshData }) => {
 
         // GAPI load handler
         const handleGapiLoad = () => {
+            if (window.gapi?.iframes) {
+                window.gapi.iframes.CROSS_ORIGIN_PROXY_URI = '/static/proxy.html';
+            }
             window.gapi.load('client', () => {
                 gapiLoaded = true;
                 console.log('[Auth] GAPI script loaded.');
