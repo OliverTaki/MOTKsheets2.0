@@ -22,7 +22,7 @@ const usePagesData = (sheetId) => {
     setLoading(true);
     setError(null); // Clear previous errors
     try {
-      const res = await fetchGoogle(`spreadsheets/${sheetId}/values/PAGES!A:H`, token);
+      const res = await fetchGoogle(`spreadsheets/${sheetId}`, token, { includeGridData: 'true' });
 
       if (res.status === 404 || (res.error && (res.error.code === 404 || (res.error.code === 400 && res.error.message.includes("Unable to parse range"))))) {
         console.warn("'PAGES' sheet does not exist or is inaccessible. Using empty pages list.");
