@@ -16,7 +16,11 @@ export function useDriveSheets() {
     setLoading(true);
     setError(null);
     try {
-      await ensureValidToken(); // Ensure valid token before making the request
+      const token = ensureValidToken(); // Ensure valid token before making the request
+      if (!token) {
+        setLoading(false);
+        return;
+      }
 
       const res = await window.gapi.client.drive.files.list({
         pageSize: 100,
@@ -30,7 +34,7 @@ export function useDriveSheets() {
       setSheets(res.result.files ?? []);
     } catch (e) {
       console.error("Error fetching sheets:", e);
-      if (e === PROMPT_REQUIRED || (e.status === 401 && !retried)) {
+      if (e.status === 401 && !retried) {
         setNeedsReAuth(true); // show dialog
         return;
       }

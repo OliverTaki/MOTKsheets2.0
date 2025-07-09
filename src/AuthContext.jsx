@@ -110,7 +110,7 @@ export const AuthProvider = ({ children, refreshData }) => {
         if (!isReady) {
             setError({ message: 'Google Sign-in is not ready.' });
             setNeedsReAuth(true);
-            throw new Error('GSI not ready');
+            return null;
         }
 
         if (token && tokenInfo && tokenInfo.expires_at > Date.now()) {
@@ -120,7 +120,7 @@ export const AuthProvider = ({ children, refreshData }) => {
             // Token is missing or expired
             setNeedsReAuth(true);
             setError({ message: 'Authentication required. Please sign in again.' });
-            throw new Error('PROMPT_REQUIRED');
+            return null;
         }
     }, [isReady, token, tokenInfo]);
 

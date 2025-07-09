@@ -1,15 +1,18 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDriveSheets } from '../hooks/useDriveSheets';
 import { toProjectName } from '../utils/id';
+import { SheetsContext } from '../contexts/SheetsContext';
+import { Select, MenuItem, FormControl, InputLabel, Box } from '@mui/material';
 
-export default function ProjectSelectPage({ setSheetId }) {
+export default function ProjectSelectPage() {
   const { sheets, loading, error } = useDriveSheets();
   const navigate = useNavigate();
+  const { sheetId, setSheetId } = useContext(SheetsContext);
 
-  const handleSelect = (id) => {
-    setSheetId(id);
-    localStorage.setItem('motk:lastSheetId', id);
+  const handleSelect = (event) => {
+    const selectedId = event.target.value;
+    setSheetId(selectedId);
     navigate('/', { replace: true });
   };
 
@@ -25,28 +28,35 @@ export default function ProjectSelectPage({ setSheetId }) {
     <main className="max-w-xl mx-auto p-6">
       <h1 className="text-2xl font-semibold mb-4">Select a Project</h1>
 
-      {sheets.length === 0 && (
-        <p className="text-gray-500">
+      <FormControl fullWidth>
+        <InputLabel id="project-select-label">Project</InputLabel>
+        <Select
+          labelId="project-select-label"
+          id="project-select"
+          value={sheetId || ''}
+          label="Project"
+          onChange={handleSelect}
+        >
+          {sheets.length === 0 && (
+            <MenuItem value="" disabled>
+              No Google Sheets found
+            </MenuItem>
+          )}
+          {sheets
+            .sort((a, b) => toProjectName(a).localeCompare(toProjectName(b)))
+            .map((file) => (
+              <MenuItem key={file.id} value={file.id}>
+                {toProjectName(file)}
+              </MenuItem>
+            ))}
+        </Select>
+      </FormControl>
+
+      {sheets.length === 0 && !loading && (
+        <p className="text-gray-500 mt-4">
           No Google Sheets shared with this account were found.
         </p>
       )}
-
-      <ul className="space-y-2">
-        {sheets
-          .sort((a, b) => toProjectName(a).localeCompare(toProjectName(b)))
-          .map((file) => (
-            <li
-              key={file.id}
-              onClick={() => handleSelect(file.id)}
-              className="cursor-pointer border rounded-xl px-4 py-3 hover:bg-gray-50"
-            >
-              <div className="font-medium">{toProjectName(file)}</div>
-              <div className="text-sm text-gray-500">
-                Owner: {file.owners?.[0]?.displayName ?? 'unknown'}
-              </div>
-            </li>
-          ))}
-      </ul>
     </main>
   );
 }
