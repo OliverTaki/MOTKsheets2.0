@@ -10,6 +10,10 @@ export function useDriveSheets() {
   const { ensureValidToken, setNeedsReAuth, token } = useContext(AuthContext);
 
   const fetchSheets = useCallback(async () => {
+    if (!token) {
+      setLoading(false);     // ★永遠に true にならないよう明示的に false
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
