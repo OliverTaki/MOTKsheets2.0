@@ -83,13 +83,11 @@ export const AuthProvider = ({ children, refreshData }) => {
         },
       });
 
-      /* signInRef.current を安全に差し替え */
-      if (signInRef.current || typeof signInRef.current == 'object') {
-        signInRef.current = {};
-      }
-      signInRef.current.signIn = () =>
+      // signInRef は “関数” に戻す（既存 UI 互換）
+      signInRef.current = () =>
         tokenClient.requestAccessToken({ prompt: 'consent' });
 
+      /* Console から強制発火できるデバッグ用 */
       /* Console から強制発火できるデバッグ用 */
       window.__MOTK_DEBUG = {
         requestAccess: () => {
