@@ -1,13 +1,14 @@
+import { apiFetch } from './api';
+
 /**
  * 新しく割り当てられたIDをGoogleスプレッドシートに書き込みます。
  * @param {string} spreadsheetId - スプレッドシートのID
  * @param {string} sheetName - 対象のシート名 (例: 'Shots')
- * @param {string} token - 認証トークン
  * @param {Array<{index: number, newId: string}>} updates - 更新する行の情報配列
  * @param {Array<{id: string}>} fields - フィールド定義
  * @returns {Promise<Object>} - batchUpdate APIからのレスポンス
  */
-export async function updateSheetWithNewIds(spreadsheetId, sheetName, token, updates, fields) {
+export async function updateSheetWithNewIds(spreadsheetId, sheetName, token, setNeedsReAuth, updates, fields) {
     // 'id'フィールドが何番目の列かを探す
     const idColumnIndex = fields.findIndex(f => f.id === 'id');
     if (idColumnIndex === -1) {
@@ -35,16 +36,17 @@ export async function updateSheetWithNewIds(spreadsheetId, sheetName, token, upd
         data: requests
     };
 
-    const response = await fetch(
+    const response = await apiFetch(
         `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchUpdate`,
         {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(body)
-        }
+        },
+        token,
+        setNeedsReAuth
     );
 
     if (!response.ok) {

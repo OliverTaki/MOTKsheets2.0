@@ -22,7 +22,7 @@ import { getNonUuidIds, updateNonUuidIds } from '../api/updateNonUuidIds';
 const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 
 const UpdateNonUuidIdsDialog = ({ open, onClose, sheets = [], fields: fieldsProp = [] }) => {
-  const { token, sheetId, ensureValidToken } = useContext(AuthContext);
+  const { token, sheetId, ensureValidToken, setNeedsReAuth } = useContext(AuthContext);
   const { refreshData } = useContext(SheetsDataContext);
   const memoFields = useMemo(() => fieldsProp, [fieldsProp]);
   const [loading, setLoading] = useState(true);
@@ -54,7 +54,7 @@ const UpdateNonUuidIdsDialog = ({ open, onClose, sheets = [], fields: fieldsProp
       setLoading(true);
       setError(null);
       try {
-        const { nonUuidShotIds, nonUuidFieldIds } = await getNonUuidIds(sheetId, ensureValidToken, sheets, memoFields);
+        const { nonUuidShotIds, nonUuidFieldIds } = await getNonUuidIds(sheetId, sheets, memoFields);
         setNonUuidShotIds(nonUuidShotIds);
         setNonUuidFieldIds(nonUuidFieldIds);
         setSelectedIds(new Set([...nonUuidShotIds, ...nonUuidFieldIds])); // Select all by default
@@ -99,12 +99,12 @@ const UpdateNonUuidIdsDialog = ({ open, onClose, sheets = [], fields: fieldsProp
     setUpdateError(null);
     setUpdateSuccess(false);
     try {
-      await updateNonUuidIds(sheetId, ensureValidToken, sheets, memoFields, Array.from(selectedIds));
+      await updateNonUuidIds(sheetId, token, setNeedsReAuth, sheets, memoFields, Array.from(selectedIds));
       setUpdateSuccess(true);
       // Refresh data in AppContainer after successful update
       if (refreshData) refreshData();
       // Re-fetch IDs to show updated state (should be empty if all updated)
-      const { nonUuidShotIds: newShotIds, nonUuidFieldIds: newFieldIds } = await getNonUuidIds(sheetId, ensureValidToken, sheets, memoFields);
+      const { nonUuidShotIds: newShotIds, nonUuidFieldIds: newFieldIds } = await getNonUuidIds(sheetId, sheets, memoFields);
       setNonUuidShotIds(newShotIds);
       setNonUuidFieldIds(newFieldIds);
       setSelectedIds(new Set([...newShotIds, ...newFieldIds]));

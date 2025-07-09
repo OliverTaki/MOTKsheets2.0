@@ -65,7 +65,6 @@ export const AuthProvider = ({ children, refreshData }) => {
     const [isGapiClientReady, setIsGapiClientReady] = useState(false);
     const [error, setError] = useState(null);
     const [gapiError, setGapiError] = useState(null); // New state for GAPI specific errors
-    const tokenClientRef = useRef(null);
     const [isReady, setReady] = useState(false); // GSI script load 判定
   const [needsReAuth, setNeedsReAuth] = useState(false);
 
@@ -179,19 +178,7 @@ export const AuthProvider = ({ children, refreshData }) => {
                 console.log('[Auth] APIs loaded from local docs');
                 setGapiError(null); // Clear GAPI error on successful init
 
-                // 2. Initialize GIS token client for silent refresh
-                const tokenClient = window.google.accounts.oauth2.initTokenClient({
-                    client_id: CLIENT_ID,
-                    scope: SCOPES,
-                    callback: handleTokenResponse,
-                    error_callback: (err) => {
-                        console.error('[Auth] GIS token client error:', err);
-                        setError({ message: err.type || 'An unknown authentication error occurred.' });
-                    }
-                });
-                tokenClientRef.current = tokenClient;
                 setIsGapiClientReady(true);
-                console.log('[Auth] GIS token client initialized.');
 
                 // 3. Initialize GIS code client for interactive sign-in (redirect flow)
                 const codeClient = window.google.accounts.oauth2.initCodeClient({
@@ -250,43 +237,7 @@ export const AuthProvider = ({ children, refreshData }) => {
 
     }, [CLIENT_ID, API_KEY, SCOPES, handleTokenResponse]);
 
-    const silentSignIn = useCallback(() => {
-        const tc = tokenClientRef.current;
-        if (!tc) {
-            setError({ message: 'Authentication service is not ready. Please try again in a moment.' });
-            return;
-        }
-
-        tc.callback = (resp) => {
-            if (resp?.error) {
-                console.error('silentSignIn tc.callback error:', resp);
-                // Only set needsReAuth for specific errors that require user interaction
-                if (['popup_blocked_by_browser', 'user_interaction_required'].includes(resp.error)) {
-                    console.warn('Silent refresh failed:', resp.error, 'Setting needsReAuth to true.');
-                    setNeedsReAuth(true);
-                } else {
-                    // For other errors, just log and don't trigger re-auth dialog immediately
-                    console.error('Silent refresh failed for other reason:', resp.error);
-                }
-                // Fallback to redirect if popup is blocked (this part might be redundant with prompt: '')
-                if (resp.type === 'popup_blocked' || resp.error === 'popup_closed_by_user') {
-                    window.location.assign(tc.generateAuthUrl());
-                }
-            } else {
-                lastTokenRef.current = resp.access_token;
-                tokenIssuedAtRef.current = Date.now();
-                setNeedsReAuth(false);
-                handleTokenResponse(resp);
-            }
-        };
-
-        try {
-            tc.requestAccessToken({ prompt: '' }); // Silent refresh
-        } catch (e) {
-            console.error("Error requesting access token (silent):", e);
-            setNeedsReAuth(true);
-        }
-    }, [tokenClientRef, handleTokenResponse]);
+    
 
     const interactiveSignIn = useCallback(() => {
         setNeedsReAuth(false); // Hide the re-auth panel immediately
@@ -324,31 +275,9 @@ export const AuthProvider = ({ children, refreshData }) => {
         }
     }, []);
 
-    // Schedule silent refresh
-    useEffect(() => {
-        if (!tokenInfo?.expires_at) return; // No token or expiry info
+    
 
-        const FIVE_MINUTES_MS = 5 * 60 * 1000;
-        const timeUntilExpiry = tokenInfo.expires_at - Date.now();
-        const msToRefresh = timeUntilExpiry - FIVE_MINUTES_MS; // 5 minutes before expiry
-
-        let timeoutId;
-        if (msToRefresh <= 0) { // Already close to expiry or expired, refresh immediately
-            console.log('Auth: Token close to expiry or expired, attempting immediate silent refresh.');
-            silentSignIn();
-        } else {
-            console.log(`Auth: Scheduling silent refresh in ${msToRefresh / 1000} seconds.`);
-            timeoutId = setTimeout(silentSignIn, msToRefresh);
-        }
-
-        return () => {
-            if (timeoutId) {
-                clearTimeout(timeoutId);
-            }
-        };
-    }, [tokenInfo?.expires_at, silentSignIn]);
-
-    const value = { token, silentSignIn, interactiveSignIn, signOut, isInitialized, error, gapiError, isGapiClientReady, refreshData, ensureValidToken, needsReAuth, setNeedsReAuth };
+    const value = { token, interactiveSignIn, signOut, isInitialized, error, gapiError, isGapiClientReady, refreshData, ensureValidToken, needsReAuth, setNeedsReAuth };
 
     return (
         <AuthContext.Provider value={value}>
