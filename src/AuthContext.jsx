@@ -72,15 +72,19 @@ export const AuthProvider = ({ children, refreshData }) => {
         },
       });
 
-      // sign-in helper を expose
-      signInRef.current = () =>
+      // ▶︎ signInRef がまだ null なら “空オブジェクト” を入れておく
+      if (signInRef.current == null) signInRef.current = {};
+
+      // ── 通常サインイン（UI 経由）
+      signInRef.current.signIn = () =>
         tokenClient.requestAccessToken({ prompt: 'consent' });
 
-      // ─── デバッグ専用グローバル ─────────────────
-      if (window.__MOTK_DEBUG) window.__MOTK_DEBUG = {};
-      window.__MOTK_DEBUG.requestAccess = () => {
-        console.log('[DEBUG] 手動で GIS ポップアップを開きます');
-        tokenClient.requestAccessToken({ prompt: 'consent' });
+      // ── デバッグ用 : Console から強制発火できる関数
+      window.__MOTK_DEBUG = {
+        requestAccess: () => {
+          console.log('[DEBUG] GIS pop-up forced');
+          tokenClient.requestAccessToken({ prompt: 'consent' });
+        },
       };
     };
 
