@@ -155,18 +155,26 @@ export const AuthProvider = ({ children, refreshData }) => {
 
                 // 1. Initialize GAPI client
                 // Use online discovery docs to avoid local fetch issues
+                // Import discovery documents
+                const driveDiscoveryDoc = await import('/public/drive_v3.json');
+                const sheetsDiscoveryDoc = await import('/public/sheets_v4.json');
+
                 await withTimeout(
                     window.gapi.client.init({
                         apiKey: API_KEY,
-                        discoveryDocs: [
-                            'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
-                            'https://sheets.googleapis.com/$discovery/rest?version=v4',
-                        ],
+                        // No discoveryDocs here, load them manually
                     }),
                     5000,
                     'gapi.init'
                 );
-                console.log('[Auth] gapi.init done with local docs');
+                console.log('[Auth] gapi.client.init done');
+
+                // Load APIs using the imported discovery documents
+                await Promise.all([
+                    window.gapi.client.load(driveDiscoveryDoc.default),
+                    window.gapi.client.load(sheetsDiscoveryDoc.default)
+                ]);
+                console.log('[Auth] APIs loaded from local docs');
                 setGapiError(null); // Clear GAPI error on successful init
 
                 // 2. Initialize GIS token client
