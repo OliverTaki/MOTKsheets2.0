@@ -8,11 +8,16 @@ import { AuthContext } from '../AuthContext';
 
 export default function GlobalNav({ sheetId, setSheetId }) {
   const navigate = useNavigate();
-  const { sheets, loading, error } = useDriveSheets();
+  const { token } = useContext(AuthContext);
+  const { loading } = useDriveSheets(token); // ← 戻り値だけ利用
   const [currentProjectDisplayName, setCurrentProjectDisplayName] = useState('Select Project');
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
   const { needsReAuth, signIn } = useContext(AuthContext);
+
+  // sheets, sheetId などが必要な場合は useContext(SheetsDataContext) で取得してください
+  // 例:
+  // const { sheets } = useContext(SheetsDataContext);
 
   useEffect(() => {
     if (sheetId && sheets.length > 0) {
