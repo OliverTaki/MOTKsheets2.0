@@ -198,7 +198,7 @@ export const AuthProvider = ({ children, refreshData }) => {
                     client_id: CLIENT_ID,
                     scope: SCOPES,
                     ux_mode: 'redirect',
-                    redirect_uri: `${window.location.origin}/auth/callback`,
+                    redirect_uri: import.meta.env.VITE_GOOGLE_REDIRECT_URI,
                 });
                 console.log('[Auth] GIS code client initialized.');
 
@@ -290,7 +290,7 @@ export const AuthProvider = ({ children, refreshData }) => {
             client_id: CLIENT_ID,
             scope: SCOPES,
             ux_mode: 'redirect',
-            redirect_uri: `${window.location.origin}/auth/callback`,
+            redirect_uri: import.meta.env.VITE_GOOGLE_REDIRECT_URI,
             callback: (response) => {
                 // This callback is for the code client, not token client
                 // It receives an authorization code, not an access token
