@@ -75,6 +75,13 @@ export const AuthProvider = ({ children, refreshData }) => {
       // sign-in helper を expose
       signInRef.current = () =>
         tokenClient.requestAccessToken({ prompt: 'consent' });
+
+      // ─── デバッグ専用グローバル ─────────────────
+      if (window.__MOTK_DEBUG) window.__MOTK_DEBUG = {};
+      window.__MOTK_DEBUG.requestAccess = () => {
+        console.log('[DEBUG] 手動で GIS ポップアップを開きます');
+        tokenClient.requestAccessToken({ prompt: 'consent' });
+      };
     };
 
     if (window.google && window.google.accounts) {

@@ -13,7 +13,10 @@ export async function fetchGoogle(endpoint, accessToken, params = {}) {
   const res = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`HTTP ${res.status} – ${text}`);
+  }
   return res.json();
 }
 
