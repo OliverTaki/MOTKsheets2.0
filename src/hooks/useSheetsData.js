@@ -5,14 +5,14 @@ import { missingIdHandler } from '../utils/missingIdHandler';
 import { updateCell } from '../api/updateCell';
 
 export const useSheetsData = (sheetId) => {
-  const { needsReAuth } = useContext(AuthContext);
-  if (needsReAuth) return { sheets: [], fields: [], loading: false, error: 'NEEDS_REAUTH' };
-  const { isGapiClientReady, ensureValidToken, setNeedsReAuth } = useContext(AuthContext);
+  const { needsReAuth, isGapiClientReady, ensureValidToken, setNeedsReAuth } = useContext(AuthContext);
   const [shots, setShots] = useState([]);
   const [fields, setFields] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [idToColIndex, setIdToColIndex] = useState({});
+
+  if (needsReAuth) return { sheets: [], fields: [], loading: false, error: 'NEEDS_REAUTH' };
 
   const refreshData = useCallback(async (retried = false) => {
     if (!sheetId || !isGapiClientReady || !window.gapi || !window.gapi.client || !window.gapi.client.sheets) {

@@ -12,10 +12,10 @@ const safeJsonParse = (jsonString, defaultValue) => {
 };
 
 const usePagesData = (sheetId) => {
+  const { isGapiClientReady, ensureValidToken, setNeedsReAuth } = useContext(AuthContext);
   const [pages, setPages] = useState([]);
   const [loading, setLoading] = useState(false); // Initial state should be false or true based on initial fetch
   const [error, setError] = useState(null);
-  const { isGapiClientReady, ensureValidToken, setNeedsReAuth } = useContext(AuthContext);
 
   const refreshPages = useCallback(async (retried = false) => {
     if (!isGapiClientReady || !sheetId || !window.gapi || !window.gapi.client || !window.gapi.client.sheets) {

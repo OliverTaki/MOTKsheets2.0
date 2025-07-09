@@ -156,8 +156,8 @@ export const AuthProvider = ({ children, refreshData }) => {
                 // 1. Initialize GAPI client
                 // Use online discovery docs to avoid local fetch issues
                 // Import discovery documents
-                const driveDiscoveryDoc = await import('/public/drive_v3.json');
-                const sheetsDiscoveryDoc = await import('/public/sheets_v4.json');
+                const driveDiscoveryDoc = await (await fetch('/drive_v3.json')).json();
+                const sheetsDiscoveryDoc = await (await fetch('/sheets_v4.json')).json();
 
                 await withTimeout(
                     window.gapi.client.init({
@@ -171,8 +171,8 @@ export const AuthProvider = ({ children, refreshData }) => {
 
                 // Load APIs using the imported discovery documents
                 await Promise.all([
-                    window.gapi.client.load(driveDiscoveryDoc.default),
-                    window.gapi.client.load(sheetsDiscoveryDoc.default)
+                    window.gapi.client.load(driveDiscoveryDoc),
+                    window.gapi.client.load(sheetsDiscoveryDoc)
                 ]);
                 console.log('[Auth] APIs loaded from local docs');
                 setGapiError(null); // Clear GAPI error on successful init
@@ -203,7 +203,7 @@ export const AuthProvider = ({ children, refreshData }) => {
                 console.error('[Auth] initClients failed', e);
                 setGapiError(e); // Store the error
                 setError(e); // Also set general error
-                // setIsInitialized(true); // Handled by finally
+                setIsInitialized(true); // エラーが出ても ready フラグは上げる
             } finally {
                 setIsInitialized(true); // Always set true to unblock UI
             }
