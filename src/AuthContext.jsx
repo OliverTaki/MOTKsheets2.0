@@ -47,6 +47,8 @@ export const AuthProvider = ({ children, refreshData }) => {
       window.google.accounts.oauth2.revoke(token, () => {
         localStorage.removeItem(TOKEN_STORAGE_KEY);
         setToken(null);
+        setInit(false);        // ★ ← 初期化を解除
+        setReAuth(true);       // ★ ← ログインパネル再表示
       });
     }
   }, [token]);

@@ -80,7 +80,7 @@ const usePagesData = (sheetId) => {
     if (sheetId) {
       refreshPages();
     }
-  }, [sheetId, refreshPages]);
+  }, [sheetId, refreshPages, token]);
 
   return { pages, loading, error, refreshPages };
 };

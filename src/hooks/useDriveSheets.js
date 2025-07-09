@@ -37,7 +37,7 @@ export function useDriveSheets() {
 
   useEffect(() => {
     fetchSheets();
-  }, [fetchSheets]);
+  }, [token, sheetId]);        // ★ 依存を追加
 
   return { sheets, loading, error, fetchSheets };
 }
