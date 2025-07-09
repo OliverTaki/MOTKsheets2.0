@@ -260,11 +260,16 @@ export const AuthProvider = ({ children, refreshData }) => {
         tc.callback = (resp) => {
             if (resp?.error) {
                 console.error('silentSignIn tc.callback error:', resp);
-                setNeedsReAuth(true);
-                // Fallback to redirect if popup is blocked
+                // Only set needsReAuth for specific errors that require user interaction
+                if (['popup_blocked_by_browser', 'user_interaction_required'].includes(resp.error)) {
+                    console.warn('Silent refresh failed:', resp.error, 'Setting needsReAuth to true.');
+                    setNeedsReAuth(true);
+                } else {
+                    // For other errors, just log and don't trigger re-auth dialog immediately
+                    console.error('Silent refresh failed for other reason:', resp.error);
+                }
+                // Fallback to redirect if popup is blocked (this part might be redundant with prompt: '')
                 if (resp.type === 'popup_blocked' || resp.error === 'popup_closed_by_user') {
-                    // This case should ideally not happen with prompt: ''
-                    // but keeping for robustness or if prompt changes
                     window.location.assign(tc.generateAuthUrl());
                 }
             } else {
@@ -284,6 +289,7 @@ export const AuthProvider = ({ children, refreshData }) => {
     }, [tokenClientRef, handleTokenResponse]);
 
     const interactiveSignIn = useCallback(() => {
+        setNeedsReAuth(false); // Hide the re-auth panel immediately
         // This function is called by the ReAuthDialog button
         // It must be synchronous to be recognized as a user gesture
         window.google.accounts.oauth2.initCodeClient({
@@ -301,7 +307,7 @@ export const AuthProvider = ({ children, refreshData }) => {
                 // The actual token exchange will happen on the /auth/callback route
             }
         }).requestCode();
-    }, [CLIENT_ID, SCOPES]);
+    }, [CLIENT_ID, SCOPES, setNeedsReAuth]);
 
     const signOut = useCallback(() => {
         const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
@@ -317,6 +323,30 @@ export const AuthProvider = ({ children, refreshData }) => {
             setToken(null);
         }
     }, []);
+
+    // Schedule silent refresh
+    useEffect(() => {
+        if (!tokenInfo?.expires_at) return; // No token or expiry info
+
+        const FIVE_MINUTES_MS = 5 * 60 * 1000;
+        const timeUntilExpiry = tokenInfo.expires_at - Date.now();
+        const msToRefresh = timeUntilExpiry - FIVE_MINUTES_MS; // 5 minutes before expiry
+
+        let timeoutId;
+        if (msToRefresh <= 0) { // Already close to expiry or expired, refresh immediately
+            console.log('Auth: Token close to expiry or expired, attempting immediate silent refresh.');
+            silentSignIn();
+        } else {
+            console.log(`Auth: Scheduling silent refresh in ${msToRefresh / 1000} seconds.`);
+            timeoutId = setTimeout(silentSignIn, msToRefresh);
+        }
+
+        return () => {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+        };
+    }, [tokenInfo?.expires_at, silentSignIn]);
 
     const value = { token, silentSignIn, interactiveSignIn, signOut, isInitialized, error, gapiError, isGapiClientReady, refreshData, ensureValidToken, needsReAuth, setNeedsReAuth };
 
