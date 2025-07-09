@@ -154,14 +154,13 @@ export const AuthProvider = ({ children, refreshData }) => {
                 console.log('[Auth] initClients start');
 
                 // 1. Initialize GAPI client
-                // ここではローカル discoveryDocs のみを使用 ※オンライン呼び出し禁止
-                const base = window.location.origin.replace(/\/$/, ''); // スラッシュ除去で二重 // 防止
+                // Use online discovery docs to avoid local fetch issues
                 await withTimeout(
                     window.gapi.client.init({
                         apiKey: API_KEY,
                         discoveryDocs: [
-                            `${base}/drive_v3.json`,
-                            `${base}/sheets_v4.json`,
+                            'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+                            'https://sheets.googleapis.com/$discovery/rest?version=v4',
                         ],
                     }),
                     5000,
