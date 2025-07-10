@@ -33,7 +33,7 @@ export default function ProjectSelectPage() {
         <Select
           labelId="project-select-label"
           id="project-select"
-          value={sheetId || ''}
+          value={sheets.some(s => s.id === sheetId) ? sheetId : ''}
           label="Project"
           onChange={handleSelect}
         >

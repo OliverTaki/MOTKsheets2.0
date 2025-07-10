@@ -14,7 +14,7 @@ export const useSheetsData = (sheetId) => {
   const [idToColIndex, setIdToColIndex] = useState({});
 
   const refreshData = useCallback(async () => {
-    if (!sheetId) {
+    if (!sheetId || !token) {
       setLoading(false);
       return;
     }
@@ -24,6 +24,7 @@ export const useSheetsData = (sheetId) => {
       const res = await fetchGoogle(`spreadsheets/${sheetId}/values:batchGet`, token, {
         ranges: ['Shots!A:AZ', 'FIELDS!A:F'],
       });
+      console.log('useSheetsData: API response', res);
       const { valueRanges } = res;
 
       if (!valueRanges || valueRanges.length < 2 || !valueRanges[0].values || !valueRanges[1].values) {

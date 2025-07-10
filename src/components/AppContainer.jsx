@@ -28,8 +28,6 @@ import AuthCallbackHandler from './AuthCallbackHandler';
 
 const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 
-
-
 const theme = createTheme({
   palette: {
     mode: 'dark',
@@ -38,9 +36,11 @@ const theme = createTheme({
 
 export const AppContainer = () => {
   const { token, user, isInitialized, needsReAuth, signIn, ensureValidToken, error: authError } = useContext(AuthContext);
+  console.log('AppContainer: token', token ? 'present' : 'null');
   const navigate = useNavigate();
 
   const { sheetId, setSheetId } = useContext(SheetsContext);
+  console.log('AppContainer: sheetId', sheetId);
 
   const { sheets, fields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex } = useSheetsData(sheetId);
   const { pages, loading: pagesLoading, error: pagesError, refreshPages } = usePagesData(sheetId);
@@ -52,7 +52,6 @@ export const AppContainer = () => {
   const [visibleFieldIds, setVisibleFieldIds] = useState([]);
   const [loadedPageId, setLoadedPageId] = useState(() => localStorage.getItem('loadedPageId') || null);
   const [isAppReady, setIsAppReady] = useState(false);
-  const [booted, setBooted] = useState(false);
   const [orderedFields, setOrderedFields] = useState([]);
   const [columnOrder, setColumnOrder] = useState([]);
   const [isInitialViewLoaded, setIsInitialViewLoaded] = useState(false);
@@ -68,17 +67,12 @@ export const AppContainer = () => {
     setLoadedPageId(page.page_id);
     localStorage.setItem('loadedPageId', page.page_id);
 
-    // Start with the ordered fields from the saved view.
     const baseOrderedFields = page.columnOrder && page.columnOrder.length > 0
       ? page.columnOrder.map(id => fields.find(f => f.id === id)).filter(Boolean)
-      : fields; // Or all fields if no order is saved.
+      : fields;
 
     const baseFieldIds = new Set(baseOrderedFields.map(f => f.id));
-    
-    // Find any fields that exist in the master list but not in the view's order.
     const newFields = fields.filter(f => !baseFieldIds.has(f.id));
-
-    // Append the new fields to the end of the ordered list.
     const finalOrderedFields = [...baseOrderedFields, ...newFields];
     
     setOrderedFields(finalOrderedFields);
@@ -87,14 +81,8 @@ export const AppContainer = () => {
 
   useEffect(() => {
     const ready = isInitialized && !fieldsLoading && !pagesLoading && !needsReAuth;
-    console.log(`AppContainer useEffect: isInitialized=${isInitialized}, fieldsLoading=${fieldsLoading}, pagesLoading=${pagesLoading}, needsReAuth=${needsReAuth}, ready=${ready}`);
-    if (ready && !booted) {
-      setBooted(true);
-      console.log("App is ready!");
-    } else {
-      console.log("App is NOT ready.");
-    }
-  }, [isInitialized, fieldsLoading, pagesLoading, needsReAuth, booted]);
+    setIsAppReady(ready);
+  }, [isInitialized, fieldsLoading, pagesLoading, needsReAuth]);
 
   useEffect(() => {
     if (isAppReady && pages.length > 0 && !isInitialViewLoaded) {
@@ -104,7 +92,6 @@ export const AppContainer = () => {
       if (pageToLoad) {
         handleLoadView(pageToLoad);
       } else if (fields.length > 0) {
-        // Fallback to default field visibility if no page is loaded
         setVisibleFieldIds(fields.map(f => f.id));
         setOrderedFields(fields);
       }
@@ -120,7 +107,7 @@ export const AppContainer = () => {
       filtered = sheets.filter(shot => {
         return activeFilterKeys.every(fieldId => {
           const rule = activeFilters[fieldId];
-          if (!rule) return true; // If filter is unchecked, don't apply it
+          if (!rule) return true;
 
           const shotValue = String(shot[fieldId] || '').toLowerCase();
           const filterValue = String(rule.value || '').toLowerCase();
@@ -165,13 +152,13 @@ export const AppContainer = () => {
 
   const handleFilterChange = useCallback((fieldId, value) => {
     setActiveFilters(prev => {
-      if (fieldId === null) { // Clear all filters
+      if (fieldId === null) {
         return {};
-      } else if (value === null) { // Remove filter for a specific field
+      } else if (value === null) {
         const newFilters = { ...prev };
         delete newFilters[fieldId];
         return newFilters;
-      } else { // Set or update filter for a specific field
+      } else {
         return { ...prev, [fieldId]: value };
       }
     });
@@ -190,14 +177,10 @@ export const AppContainer = () => {
       const newField = await appendField(sheetId, token, setNeedsReAuth, newFieldDetails, fields);
       alert(`Field "${newField.label}" added successfully!`);
 
-      // Instead of a full refresh, which can be slow and reset the UI,
-      // we can optimistically update the local state. This makes the app feel faster.
       const newFields = [...fields, newField];
       setOrderedFields(newFields);
       setVisibleFieldIds(prev => [...prev, newField.id]);
 
-      // We still need to trigger a background refresh to get the updated
-      // idToColIndex map, which is crucial for editing cells in the new column.
       if (refreshData) {
         refreshData();
       }
@@ -226,7 +209,7 @@ export const AppContainer = () => {
 
     try {
       await updateCell(sheetId, token, setNeedsReAuth, range, newValue);
-      refreshData(); // Refresh data after successful save
+      refreshData();
       console.log(`Cell ${range} updated successfully.`);
     } catch (err) {
       console.error("Failed to update cell:", err);
@@ -301,7 +284,7 @@ export const AppContainer = () => {
 
     const handleMouseMove = (moveEvent) => {
       const newWidth = startWidth + (moveEvent.clientX - startX);
-      if (newWidth > 50) { // Minimum column width
+      if (newWidth > 50) {
         setColumnWidths((prev) => ({ ...prevWidths, [fieldId]: newWidth }));
       }
     };
@@ -315,9 +298,12 @@ export const AppContainer = () => {
     window.addEventListener("mouseup", handleMouseUp);
   };
 
-  
+  if (needsReAuth) {
+    signIn();
+    return <FullScreenSpinner />;
+  }
 
-  if (!booted || needsReAuth) {
+  if (!isAppReady) {
     return <FullScreenSpinner />;
   }
 
@@ -326,7 +312,7 @@ export const AppContainer = () => {
       <CssBaseline />
       
         <div className="App bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col" style={{ height: '100dvh', overflow: 'hidden' }}>
-          <GlobalNav sheetId={sheetId} setSheetId={setSheetId} />
+          <GlobalNav sheetId={sheetId} />
           {token && sheetId && ( // Only show project navigation and toolbar if token and sheetId exist
             <>
               <div className="sticky top-[48px] z-20 bg-gray-800">
@@ -362,10 +348,10 @@ export const AppContainer = () => {
               <SheetsDataContext.Provider value={{ sheetId, setSheetId, sheets, fields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex }}>
                 <Routes>
                   <Route path="/signin" element={<LoginButton />} />
-                  <Route path="/select" element={<ProjectSelectPage setSheetId={setSheetId} />} />
+                  <Route path="/select" element={<ProjectSelectPage />} />
                   <Route path="/auth/callback" element={<AuthCallbackHandler />} /> {/* New route */}
                   {!sheetId ? (
-                    <Route path="/" element={<ProjectSelectPage setSheetId={setSheetId} />} />
+                    <Route path="/" element={<ProjectSelectPage />} />
                   ) : (
                     <Route element={<ProtectedRoutes />}>
                       <Route path="/" element={
@@ -396,12 +382,14 @@ export const AppContainer = () => {
           <footer className="sticky bottom-0 bg-gray-200 dark:bg-gray-700 z-10 flex-shrink-0" style={{ height: '24px' }}>
             {/* Status Bar */}
           </footer>
-          <UpdateNonUuidIdsDialog
-            open={isUpdateNonUuidIdsDialogOpen}
-            onClose={() => setUpdateNonUuidIdsDialogOpen(false)}
-            sheets={sheets}
-            fields={fields}
-          />
+          {isUpdateNonUuidIdsDialogOpen && (
+            <UpdateNonUuidIdsDialog
+              open={isUpdateNonUuidIdsDialogOpen}
+              onClose={() => setUpdateNonUuidIdsDialogOpen(false)}
+              sheets={sheets}
+              fields={fields}
+            />
+          )}
         </div>
       
     </ThemeProvider>

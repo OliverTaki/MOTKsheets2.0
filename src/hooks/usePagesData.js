@@ -19,16 +19,22 @@ const usePagesData = (sheetId) => {
   const [error, setError] = useState(null);
 
   const refreshPages = useCallback(async () => {
+    if (!sheetId || !token) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null); // Clear previous errors
     try {
-      const res = await fetchGoogle(`spreadsheets/${sheetId}`, token, { includeGridData: 'true' });
+      const res = await fetchGoogle(`spreadsheets/${sheetId}/values:batchGet`, token, {
+        ranges: [`${import.meta.env.VITE_TAB_NAME_PAGES}!A:Z`],
+      });
 
       if (res.status === 404 || (res.error && (res.error.code === 404 || (res.error.code === 400 && res.error.message.includes("Unable to parse range"))))) {
         console.warn("'PAGES' sheet does not exist or is inaccessible. Using empty pages list.");
 
-      } else if (res.values) {
-        const [header, ...rows] = res.values;
+      } else if (res.valueRanges && res.valueRanges[0] && res.valueRanges[0].values) {
+        const [header, ...rows] = res.valueRanges[0].values;
         if (!header || rows.length === 0) {
   
         } else {

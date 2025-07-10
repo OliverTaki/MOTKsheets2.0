@@ -5,7 +5,7 @@ import { fetchGoogle } from '../utils/google';
 
 export const useDriveSheets = (sheetId = null) => {
   const [sheets, setSheets] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { token, ensureValidToken, setNeedsReAuth } = useContext(AuthContext);
 
@@ -37,7 +37,7 @@ export const useDriveSheets = (sheetId = null) => {
 
   useEffect(() => {
     fetchSheets();
-  }, [token, sheetId]);        // ★ 依存を追加
+  }, [token]);
 
   console.log('[useDriveSheets] called with', sheetId);
 

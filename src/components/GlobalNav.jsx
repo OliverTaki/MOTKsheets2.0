@@ -6,10 +6,11 @@ import { toProjectName } from '../utils/id';
 import { AppBar, Toolbar, Typography, Button, Box, Menu, MenuItem } from '@mui/material';
 import LoginButton from './LoginButton'; // Assuming LoginButton is in the same directory
 import { AuthContext } from '../AuthContext';
+import { SheetsContext } from '../contexts/SheetsContext';
 
 export default function GlobalNav() {
   const navigate = useNavigate();
-  const { sheetId, setSheetId } = useContext(SheetsDataContext);
+  const { sheetId, setSheetId } = useContext(SheetsContext);
 
   // Drive 上の MOTK プロジェクト一覧を取得
   const { sheets, loading, error } = useDriveSheets();
@@ -17,10 +18,6 @@ export default function GlobalNav() {
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
   const { needsReAuth, signIn } = useContext(AuthContext);
-
-  // sheets, sheetId などが必要な場合は useContext(SheetsDataContext) で取得してください
-  // 例:
-  // const { sheets } = useContext(SheetsDataContext);
 
   useEffect(() => {
     if (sheetId && sheets.length > 0) {
@@ -69,7 +66,7 @@ export default function GlobalNav() {
             aria-controls={open ? 'project-dropdown-menu' : undefined}
             aria-haspopup="true"
             aria-expanded={open ? 'true' : undefined}
-            onClick={() => navigate('/select')}
+            onClick={handleMenuClick}
             color="inherit"
             className="px-2 py-1 bg-zinc-700 rounded normal-case"
           >

@@ -16,6 +16,24 @@ const SCOPES =
   'https://www.googleapis.com/auth/spreadsheets ' +
   'https://www.googleapis.com/auth/drive.metadata.readonly';
 
+function parseJwt(token) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(function (c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        })
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    return null;
+  }
+}
+
 /* ──────────── Provider ────────────────────── */
 export const AuthProvider = ({ children, refreshData }) => {
   const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -89,7 +107,6 @@ export const AuthProvider = ({ children, refreshData }) => {
         tokenClient.requestAccessToken({ prompt: 'consent' });
 
       /* Console から強制発火できるデバッグ用 */
-      /* Console から強制発火できるデバッグ用 */
       window.__MOTK_DEBUG = {
         requestAccess: () => {
           console.log('[DEBUG] GIS pop-up forced');
@@ -107,12 +124,23 @@ export const AuthProvider = ({ children, refreshData }) => {
   /* ---- 起動時にローカル token があれば即セット -------------- */
   useEffect(() => {
     const stored = localStorage.getItem(TOKEN_STORAGE_KEY);
-    if (stored && token) {
-      console.log('[Auth] found stored token');
-      setToken(stored);
+    if (stored) {
+      const payload = parseJwt(stored);
+      if (payload && payload.exp * 1000 > Date.now()) {
+        console.log('[Auth] found stored token');
+        setToken(stored);
+        setInit(true);
+      } else {
+        console.log('[Auth] token expired or invalid');
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
+        setToken(null);
+        setReAuth(true);
+      }
+    } else {
+      // If no token, we're still "initialized" enough to show the login page.
       setInit(true);
     }
-  }, [token]);
+  }, []);
 
   /* ---- Context value ------------------------------------------ */
   const ctx = {

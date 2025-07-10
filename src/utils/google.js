@@ -9,7 +9,13 @@ export async function fetchGoogle(endpoint, accessToken, params = {}) {
       : 'https://sheets.googleapis.com/v4/'; // Sheets API
 
   const url = new URL(base + endpoint);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  for (const [k, v] of Object.entries(params)) {
+    if (Array.isArray(v)) {
+      v.forEach(val => url.searchParams.append(k, val));
+    } else {
+      url.searchParams.set(k, v);
+    }
+  }
   const res = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
