@@ -9,11 +9,10 @@ import { AuthContext } from '../AuthContext';
 
 export default function GlobalNav() {
   const navigate = useNavigate();
-  const { token } = useContext(AuthContext);
   const { sheetId, setSheetId } = useContext(SheetsDataContext);
 
-  // 選択された sheetId を使って Drive → Sheets を取得
-  const { sheets, loading, error } = useDriveSheets(token, sheetId);
+  // Drive 上の MOTK プロジェクト一覧を取得
+  const { sheets, loading, error } = useDriveSheets();
   const [currentProjectDisplayName, setCurrentProjectDisplayName] = useState('Select Project');
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);

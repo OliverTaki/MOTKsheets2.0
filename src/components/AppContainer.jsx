@@ -11,6 +11,7 @@ import Toolbar from './Toolbar';
 import LoginButton from './LoginButton';
 import { AuthContext, AuthProvider } from '../AuthContext';
 import { SheetsDataContext } from '../contexts/SheetsDataContext';
+import { SheetsContext } from '../contexts/SheetsContext';
 import ShotDetailPage from './ShotDetailPage';
 import AddShotPage from './AddShotPage'; // Import the new component
 import ProjectSelectPage from '../pages/ProjectSelectPage';
@@ -39,9 +40,7 @@ export const AppContainer = () => {
   const { token, user, isInitialized, needsReAuth, signIn, ensureValidToken, error: authError } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  const [sheetId, setSheetId] = useState(() => {
-    return localStorage.getItem('motk:lastSheetId') || null;
-  });
+  const { sheetId, setSheetId } = useContext(SheetsContext);
 
   const { sheets, fields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex } = useSheetsData(sheetId);
   const { pages, loading: pagesLoading, error: pagesError, refreshPages } = usePagesData(sheetId);
@@ -360,7 +359,7 @@ export const AppContainer = () => {
               </p>
             )}
             {!fieldsError && !pagesError && (
-              <SheetsDataContext.Provider value={{ sheets, fields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex }}>
+              <SheetsDataContext.Provider value={{ sheetId, setSheetId, sheets, fields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex }}>
                 <Routes>
                   <Route path="/signin" element={<LoginButton />} />
                   <Route path="/select" element={<ProjectSelectPage setSheetId={setSheetId} />} />

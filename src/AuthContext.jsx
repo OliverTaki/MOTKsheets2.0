@@ -56,10 +56,10 @@ export const AuthProvider = ({ children, refreshData }) => {
   /* ---- GIS 初期化 -------------------------------------------- */
   useEffect(() => {
     /** step 1: スクリプトタグを確実に読み込む */
-    let gsi  = document.querySelector('script[src*="accounts.google.com/gsi/client"]');
-    if (gsi) {
-      gsi       = document.createElement('script');
-      gsi.src   = 'https://accounts.google.com/gsi/client';
+    let gsi = document.querySelector('script[src*="accounts.google.com/gsi/client"]');
+    if (!gsi) {
+      gsi = document.createElement('script');
+      gsi.src = 'https://accounts.google.com/gsi/client';
       gsi.async = true;
       gsi.defer = true;
       document.head.appendChild(gsi);
@@ -81,7 +81,6 @@ export const AuthProvider = ({ children, refreshData }) => {
             console.error('[Auth] token callback error', resp);
             setReAuth(true);
           }
-          setInit(true);                       // ← 成功・失敗に関わらず初期化完了
         },
       });
 
@@ -97,6 +96,7 @@ export const AuthProvider = ({ children, refreshData }) => {
           tokenClient.requestAccessToken({ prompt: 'consent' });
         },
       };
+      setInit(true);                       // GIS ready
     };
 
     /** step 3: スクリプトロード済なら即 init */
