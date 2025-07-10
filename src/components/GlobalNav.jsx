@@ -7,11 +7,12 @@ import { AppBar, Toolbar, Typography, Button, Box, Menu, MenuItem } from '@mui/m
 import LoginButton from './LoginButton'; // Assuming LoginButton is in the same directory
 import { AuthContext } from '../AuthContext';
 
-export default function GlobalNav({ sheetId, setSheetId }) {
+export default function GlobalNav() {
   const navigate = useNavigate();
   const { token } = useContext(AuthContext);
-  // SheetsDataContext から sheetId を取得して Hook に渡す
-  const { sheetId } = useContext(SheetsDataContext);
+  const { sheetId, setSheetId } = useContext(SheetsDataContext);
+
+  // 選択された sheetId を使って Drive → Sheets を取得
   const { sheets, loading, error } = useDriveSheets(token, sheetId);
   const [currentProjectDisplayName, setCurrentProjectDisplayName] = useState('Select Project');
   const [anchorEl, setAnchorEl] = useState(null);
