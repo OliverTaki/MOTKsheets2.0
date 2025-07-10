@@ -39,5 +39,7 @@ export const useDriveSheets = (token, sheetId) => {
     fetchSheets();
   }, [token, sheetId]);        // ★ 依存を追加
 
+  console.log('[useDriveSheets] called with', sheetId);
+
   return { sheets, loading, error, fetchSheets };
 }
