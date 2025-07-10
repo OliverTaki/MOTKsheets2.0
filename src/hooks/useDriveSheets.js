@@ -3,11 +3,11 @@ import { AuthContext, PROMPT_REQUIRED } from '../AuthContext';
 import { toProjectName } from '../utils/id';
 import { fetchGoogle } from '../utils/google';
 
-export const useDriveSheets = (token, sheetId) => {
+export const useDriveSheets = (sheetId = null) => {
   const [sheets, setSheets] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { ensureValidToken, setNeedsReAuth } = useContext(AuthContext);
+  const { token, ensureValidToken, setNeedsReAuth } = useContext(AuthContext);
 
   const fetchSheets = useCallback(async () => {
     if (!token) {
@@ -20,10 +20,11 @@ export const useDriveSheets = (token, sheetId) => {
       const res = await fetchGoogle('drive/v3/files', token, {
         pageSize: 100,
         fields: 'files(id,name,owners(displayName))',
-        q:
-          "mimeType='application/vnd.google-apps.spreadsheet' " +
-          "and name contains 'MOTK[Project:' " +
-          "and ('me' in owners or 'me' in readers or 'me' in writers)",
+        q: [
+          "mimeType='application/vnd.google-apps.spreadsheet'",
+          "and trashed=false",
+          "and ('me' in owners or 'me' in writers or 'me' in readers)",
+        ].join(' '),
       });
 
       setSheets(res.files ?? []);
