@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDriveSheets } from '../hooks/useDriveSheets';
+import { SheetsDataContext } from '../contexts/SheetsDataContext';
 import { toProjectName } from '../utils/id';
 import { AppBar, Toolbar, Typography, Button, Box, Menu, MenuItem } from '@mui/material';
 import LoginButton from './LoginButton'; // Assuming LoginButton is in the same directory
@@ -9,7 +10,9 @@ import { AuthContext } from '../AuthContext';
 export default function GlobalNav({ sheetId, setSheetId }) {
   const navigate = useNavigate();
   const { token } = useContext(AuthContext);
-  const { loading } = useDriveSheets(token); // ← 戻り値だけ利用
+  // SheetsDataContext から sheetId を取得して Hook に渡す
+  const { sheetId } = useContext(SheetsDataContext);
+  const { sheets, loading, error } = useDriveSheets(token, sheetId);
   const [currentProjectDisplayName, setCurrentProjectDisplayName] = useState('Select Project');
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);

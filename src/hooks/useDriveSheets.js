@@ -3,11 +3,11 @@ import { AuthContext, PROMPT_REQUIRED } from '../AuthContext';
 import { toProjectName } from '../utils/id';
 import { fetchGoogle } from '../utils/google';
 
-export function useDriveSheets() {
+export const useDriveSheets = (token, sheetId) => {
   const [sheets, setSheets] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { ensureValidToken, setNeedsReAuth, token } = useContext(AuthContext);
+  const { ensureValidToken, setNeedsReAuth } = useContext(AuthContext);
 
   const fetchSheets = useCallback(async () => {
     if (!token) {
