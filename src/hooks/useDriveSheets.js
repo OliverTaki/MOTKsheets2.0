@@ -20,11 +20,10 @@ export const useDriveSheets = (sheetId = null) => {
       const res = await fetchGoogle('drive/v3/files', token, {
         pageSize: 100,
         fields: 'files(id,name,owners(displayName))',
-        q: [
-          "mimeType='application/vnd.google-apps.spreadsheet'",
-          "and trashed=false",
-          "and ('me' in owners or 'me' in writers or 'me' in readers)",
-        ].join(' '),
+        q:
+          "mimeType='application/vnd.google-apps.spreadsheet' " +
+          "and name contains 'MOTK[Project:' " +
+          "and ('me' in owners or 'me' in readers or 'me' in writers)",
       });
 
       setSheets(res.files ?? []);
