@@ -6,7 +6,7 @@ const devCsp =
   "script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://accounts.google.com/gsi/client; " +
   "style-src  'self' 'unsafe-inline' https://accounts.google.com/gsi/style; " +
   "frame-src  'self' https://accounts.google.com/gsi/; " +
-  "connect-src 'self' https://accounts.google.com/gsi/ https://www.googleapis.com;";
+  "connect-src 'self' https://accounts.google.com/gsi/ https://www.googleapis.com https://sheets.googleapis.com https://oauth2.googleapis.com;";
 
 export default defineConfig(({ command }) => ({
   plugins: [react()],
