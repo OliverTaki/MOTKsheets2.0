@@ -3,16 +3,12 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 export const SheetsContext = createContext(null);
 
 export const SheetsProvider = ({ children }) => {
-  const [sheetId, setSheetId] = useState(() => {
-    return localStorage.getItem('motk:lastSheetId') || null;
-  });
-
+  const [sheetId, setSheetId] = useState(
+    () => localStorage.getItem('motk:lastSheetId') || null
+  );
   useEffect(() => {
-    if (sheetId) {
+    if (sheetId)
       localStorage.setItem('motk:lastSheetId', sheetId);
-    } else {
-      localStorage.removeItem('motk:lastSheetId');
-    }
   }, [sheetId]);
 
   return (

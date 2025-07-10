@@ -39,11 +39,24 @@ export const AuthProvider = ({ children, refreshData }) => {
   const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   /* ---- state -------------------------------------------------- */
-  const [token, setToken]           = useState(() => localStorage.getItem(TOKEN_STORAGE_KEY));
+  const [token,   setToken]   = useState(() =>
+    JSON.parse(localStorage.getItem('motk:token') || 'null')
+  );
+  const [expires, setExpires] = useState(() =>
+    Number(localStorage.getItem('motk:tokenExp') || '0')
+  );
   const [isInitialized, setInit]    = useState(false);
   const [needsReAuth, setReAuth]    = useState(false);
   const [error, setError]           = useState(null);
   const [gisReady, setGisReady]     = useState(false);
+
+  /* ---- 永続化 ------------------------------------------------------- */
+  useEffect(() => {
+    if (token) {
+      localStorage.setItem('motk:token',    JSON.stringify(token));
+      localStorage.setItem('motk:tokenExp', expires.toString());
+    }
+  }, [token, expires]);
 
   /* ---- GIS スクリプトロード判定 ------------------------------ */
   useEffect(() => {
@@ -63,9 +76,10 @@ export const AuthProvider = ({ children, refreshData }) => {
   const signOut = useCallback(() => {
     if (token) {
       window.google.accounts.oauth2.revoke(token, () => {
-        localStorage.removeItem(TOKEN_STORAGE_KEY);
+        localStorage.removeItem('motk:token');
+        localStorage.removeItem('motk:tokenExp');
         setToken(null);
-        setInit(false);        // ★ ← 初期化を解除
+        setExpires(0);
         setReAuth(true);       // ★ ← ログインパネル再表示
       });
     }
@@ -88,17 +102,10 @@ export const AuthProvider = ({ children, refreshData }) => {
       const tokenClient = window.google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope    : SCOPES,
+        prompt: '',                         // silent refresh
         callback : (resp) => {
-          console.log('[Auth] token callback', resp);
-          if (resp && resp.access_token) {
-            localStorage.setItem(TOKEN_STORAGE_KEY, resp.access_token);
-            setToken(resp.access_token);
-            setReAuth(false);
-            if (refreshData) refreshData();
-          } else {
-            console.error('[Auth] token callback error', resp);
-            setReAuth(true);
-          }
+          setToken(resp.access_token);
+          setExpires(Date.now() + resp.expires_in * 1000);
         },
       });
 
@@ -120,6 +127,26 @@ export const AuthProvider = ({ children, refreshData }) => {
     if (window.google?.accounts?.oauth2) init();
     else gsi.onload = init;
   }, [CLIENT_ID, refreshData]);
+
+  // ---- 使い回すヘルパ ---------
+  const ensureValidToken = useCallback(async (force = false) => {
+    if (force && token && Date.now() < expires - 60_000) {
+      return token;                     // 60 秒マージン
+    }
+    return new Promise((resolve) => {
+      const tokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPES,
+        prompt: '',                         // silent refresh
+        callback: (resp) => {
+          setToken(resp.access_token);
+          setExpires(Date.now() + resp.expires_in * 1000);
+          resolve(resp.access_token);
+        },
+      });
+      tokenClient.requestAccessToken(); // silent => callback 上書き
+    });
+  }, [token, expires, CLIENT_ID]);
 
   /* ---- 起動時にローカル token があれば即セット -------------- */
   useEffect(() => {
@@ -151,6 +178,7 @@ export const AuthProvider = ({ children, refreshData }) => {
     needsReAuth,
     setNeedsReAuth: setReAuth,
     error,
+    ensureValidToken,
   };
 
   return (

@@ -1,17 +1,17 @@
 import { ensureSheetExists } from './sheetUtils';
 import { fetchGoogle } from '../utils/google';
 
-export async function deletePage(spreadsheetId, token, setNeedsReAuth, pageId) {
+export async function deletePage(spreadsheetId, token, setNeedsReAuth, pageId, ensureValidToken) {
   console.log(`Attempting to delete page with ID: ${pageId}`);
   try {
-    const sheetId = await ensureSheetExists(spreadsheetId, token, setNeedsReAuth);
+    const sheetId = await ensureSheetExists(spreadsheetId, token, setNeedsReAuth, ensureValidToken);
     if (!sheetId) {
       console.warn("PAGES sheet not found during deletion attempt. No action taken.");
       return; // Exit gracefully if sheet doesn't exist
     }
 
     // Fetch page IDs
-    const getPagesRes = await fetchGoogle(`spreadsheets/${spreadsheetId}/values/PAGES!A:A`, token);
+    const getPagesRes = await fetchGoogle(`spreadsheets/${spreadsheetId}/values/PAGES!A:A`, token, ensureValidToken);
 
     const pagesData = getPagesRes;
     if (!getPagesRes) {
@@ -58,7 +58,7 @@ export async function deletePage(spreadsheetId, token, setNeedsReAuth, pageId) {
 
     console.log("Sending batch update request to delete rows:", requests);
 
-    const batchUpdateRes = await fetchGoogle(`spreadsheets/${spreadsheetId}:batchUpdate`, token, {
+    const batchUpdateRes = await fetchGoogle(`spreadsheets/${spreadsheetId}:batchUpdate`, token, ensureValidToken, {
       method: 'POST',
       body: { requests: requests },
     });

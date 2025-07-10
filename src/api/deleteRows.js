@@ -1,6 +1,6 @@
 import { fetchGoogle } from '../utils/google';
 
-export async function deleteRows({ sheetId, rowNumbers = [], token, setNeedsReAuth }) {
+export async function deleteRows({ sheetId, rowNumbers = [], token, setNeedsReAuth, ensureValidToken }) {
   if (!rowNumbers.length) return;
 
   try {
@@ -17,7 +17,7 @@ export async function deleteRows({ sheetId, rowNumbers = [], token, setNeedsReAu
         },
       }));
 
-    const res = await fetchGoogle(`spreadsheets/${sheetId}:batchUpdate`, token, {
+    const res = await fetchGoogle(`spreadsheets/${sheetId}:batchUpdate`, token, ensureValidToken, {
       method: 'POST',
       body: { requests },
     });

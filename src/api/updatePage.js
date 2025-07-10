@@ -1,8 +1,8 @@
 import { fetchGoogle } from '../utils/google';
 
-export async function updatePage(spreadsheetId, token, setNeedsReAuth, pageId, pageData) {
+export async function updatePage(spreadsheetId, token, setNeedsReAuth, pageId, pageData, ensureValidToken) {
   try {
-    const getPagesRes = await fetchGoogle(`spreadsheets/${spreadsheetId}/values/PAGES!A:A`, token);
+    const getPagesRes = await fetchGoogle(`spreadsheets/${spreadsheetId}/values/PAGES!A:A`, token, ensureValidToken);
 
     const pagesData = getPagesRes;
     if (!getPagesRes) {
@@ -43,7 +43,7 @@ export async function updatePage(spreadsheetId, token, setNeedsReAuth, pageId, p
       author,
     ];
 
-    const updateRes = await fetchGoogle(`spreadsheets/${spreadsheetId}/values/${range}`, token, {
+    const updateRes = await fetchGoogle(`spreadsheets/${spreadsheetId}/values/${range}`, token, ensureValidToken, {
       method: 'PUT',
       params: { valueInputOption: 'USER_ENTERED' },
       body: { values: [newRow] },

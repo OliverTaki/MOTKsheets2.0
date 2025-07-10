@@ -21,7 +21,7 @@ export const useSheetsData = (sheetId) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchGoogle(`spreadsheets/${sheetId}/values:batchGet`, token, {
+      const res = await fetchGoogle(`spreadsheets/${sheetId}/values:batchGet`, token, ensureValidToken, {
         ranges: ['Shots!A:AZ', 'FIELDS!A:F'],
       });
       console.log('useSheetsData: API response', res);
@@ -88,7 +88,7 @@ export const useSheetsData = (sheetId) => {
       const optionsColumnLetter = 'F';
       const range = `FIELDS!${optionsColumnLetter}${fieldRowIndex}`;
 
-      await updateCell(sheetId, token, setNeedsReAuth, range, updatedOptionsString);
+      await updateCell(sheetId, token, setNeedsReAuth, range, updatedOptionsString, ensureValidToken);
 
       setFields(prevFields => prevFields.map(f =>
         f.id === fieldId ? { ...f, options: updatedOptionsString } : f

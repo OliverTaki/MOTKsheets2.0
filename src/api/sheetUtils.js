@@ -1,8 +1,8 @@
 import { fetchGoogle } from '../utils/google';
 
-export async function ensureSheetExists(spreadsheetId, token, setNeedsReAuth) {
+export async function ensureSheetExists(spreadsheetId, token, setNeedsReAuth, ensureValidToken) {
   try {
-    const getSpreadsheetRes = await fetchGoogle(`spreadsheets/${spreadsheetId}`, token, { fields: 'sheets.properties' });
+    const getSpreadsheetRes = await fetchGoogle(`spreadsheets/${spreadsheetId}`, token, ensureValidToken, { fields: 'sheets.properties' });
 
     const spreadsheet = getSpreadsheetRes;
     if (!getSpreadsheetRes) {
@@ -35,7 +35,7 @@ export async function ensureSheetExists(spreadsheetId, token, setNeedsReAuth) {
       ],
     };
 
-    const addSheetRes = await fetchGoogle(`spreadsheets/${spreadsheetId}:batchUpdate`, token, {
+    const addSheetRes = await fetchGoogle(`spreadsheets/${spreadsheetId}:batchUpdate`, token, ensureValidToken, {
       method: 'POST',
       body: addSheetRequest,
     });

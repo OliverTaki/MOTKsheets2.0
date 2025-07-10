@@ -1,8 +1,8 @@
 import { fetchGoogle } from '../utils/google';
 
-const getSheetIds = async (spreadsheetId, token, setNeedsReAuth) => {
+const getSheetIds = async (spreadsheetId, token, setNeedsReAuth, ensureValidToken) => {
     try {
-        const res = await fetchGoogle(`spreadsheets/${spreadsheetId}`, token, { fields: 'sheets.properties' });
+        const res = await fetchGoogle(`spreadsheets/${spreadsheetId}`, token, ensureValidToken, { fields: 'sheets.properties' });
         const data = res;
         const sheetIdMap = new Map();
         console.log("Sheets found in spreadsheet:", data.sheets.map(s => s.properties.title));
@@ -16,11 +16,11 @@ const getSheetIds = async (spreadsheetId, token, setNeedsReAuth) => {
     }
 };
 
-export const appendField = async (spreadsheetId, token, setNeedsReAuth, newFieldDetails, existingFields) => {
+export const appendField = async (spreadsheetId, token, setNeedsReAuth, newFieldDetails, existingFields, ensureValidToken) => {
     const newFieldId = newFieldDetails.id || newFieldDetails.label.toLowerCase().replace(/\s+/g, '_');
     
     try {
-        const sheetIds = await getSheetIds(spreadsheetId, token, setNeedsReAuth);
+        const sheetIds = await getSheetIds(spreadsheetId, token, setNeedsReAuth, ensureValidToken);
     const fieldsSheetId = sheetIds.get('FIELDS');
     const shotsSheetId = sheetIds.get('SHOTS');
 
@@ -79,7 +79,7 @@ export const appendField = async (spreadsheetId, token, setNeedsReAuth, newField
     ];
 
     const body = { requests: requests };
-    const res = await fetchGoogle(`spreadsheets/${spreadsheetId}:batchUpdate`, token, { method: 'POST', body: JSON.stringify(body) });
+    const res = await fetchGoogle(`spreadsheets/${spreadsheetId}:batchUpdate`, token, ensureValidToken, { method: 'POST', body: JSON.stringify(body) });
 
     return res;
 } catch (e) {

@@ -2,7 +2,6 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import React, { useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
-import ProtectedRoutes from '../routes/ProtectedRoutes';
 import Home from './Home';
 import { useSheetsData } from '../hooks/useSheetsData';
 import { usePagesData } from '../hooks/usePagesData';
@@ -24,7 +23,7 @@ import { deletePage } from '../api/deletePage';
 import { v4 as uuidv4 } from 'uuid';
 import UpdateNonUuidIdsDialog from './UpdateNonUuidIdsDialog';
 import FullScreenSpinner from './FullScreenSpinner';
-import AuthCallbackHandler from './AuthCallbackHandler';
+
 
 const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 
@@ -174,7 +173,7 @@ export const AppContainer = () => {
 
   const handleAddField = useCallback(async (newFieldDetails) => {
     try {
-      const newField = await appendField(sheetId, token, setNeedsReAuth, newFieldDetails, fields);
+      const newField = await appendField(sheetId, token, setNeedsReAuth, newFieldDetails, fields, ensureValidToken);
       alert(`Field "${newField.label}" added successfully!`);
 
       const newFields = [...fields, newField];
@@ -208,7 +207,7 @@ export const AppContainer = () => {
     const range = `Shots!${columnLetter}${sheetRowIndex}`;
 
     try {
-      await updateCell(sheetId, token, setNeedsReAuth, range, newValue);
+      await updateCell(sheetId, token, setNeedsReAuth, range, newValue, ensureValidToken);
       refreshData();
       console.log(`Cell ${range} updated successfully.`);
     } catch (err) {
@@ -233,7 +232,7 @@ export const AppContainer = () => {
     }
     const currentView = getCurrentView();
     const existingPage = pages.find(p => p.page_id === loadedPageId);
-    await updatePage(sheetId, token, setNeedsReAuth, loadedPageId, { ...existingPage, ...currentView });
+    await updatePage(sheetId, token, setNeedsReAuth, loadedPageId, { ...existingPage, ...currentView }, ensureValidToken);
     alert('View saved successfully!');
     refreshPages();
   }, [loadedPageId, pages, getCurrentView, refreshPages, sheetId, ensureValidToken]);
@@ -241,7 +240,7 @@ export const AppContainer = () => {
   const handleSaveViewAs = useCallback(async (title) => {
     const page_id = uuidv4();
     const currentView = { ...getCurrentView(), page_id, title };
-    await appendPage(sheetId, token, setNeedsReAuth, currentView);
+    await appendPage(sheetId, token, setNeedsReAuth, currentView, ensureValidToken);
     setLoadedPageId(page_id);
     alert(`View "${title}" saved successfully!`);
     refreshPages();
@@ -253,7 +252,7 @@ export const AppContainer = () => {
       return;
     }
     if (window.confirm('Are you sure you want to delete this view?')) {
-      await deletePage(sheetId, token, setNeedsReAuth, pageId);
+      await deletePage(sheetId, token, setNeedsReAuth, pageId, ensureValidToken);
       if (loadedPageId === pageId) {
         setLoadedPageId(null);
         localStorage.removeItem('loadedPageId');
@@ -349,13 +348,8 @@ export const AppContainer = () => {
                 <Routes>
                   <Route path="/signin" element={<LoginButton />} />
                   <Route path="/select" element={<ProjectSelectPage />} />
-                  <Route path="/auth/callback" element={<AuthCallbackHandler />} /> {/* New route */}
-                  {!sheetId ? (
-                    <Route path="/" element={<ProjectSelectPage />} />
-                  ) : (
-                    <Route element={<ProtectedRoutes />}>
-                      <Route path="/" element={
-                    <Home
+                  
+                  <Route path="/" element={sheetId ? <Home
                       sheetId={sheetId}
                       setSheetId={setSheetId}
                       processedShots={processedShots}
@@ -369,12 +363,9 @@ export const AppContainer = () => {
                       handleColResizeMouseDown={handleColResizeMouseDown}
                       sheets={sheets}
                       fields={fields}
-                    />
-                  } />
-                      <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={orderedFields} idToColIndex={idToColIndex} />} />
-                      <Route path="/shots/new" element={<AddShotPage />} />
-                    </Route>
-                  )}
+                    /> : <ProjectSelectPage />} />
+                  <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={orderedFields} idToColIndex={idToColIndex} />} />
+                  <Route path="/shots/new" element={<AddShotPage />} />
                 </Routes>
               </SheetsDataContext.Provider>
             )}

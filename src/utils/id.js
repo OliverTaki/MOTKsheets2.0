@@ -13,6 +13,9 @@ export function isValidUUID(uuid) {
 }
 
 export const toProjectName = (file) => {
+  if (!file || !file.name) {
+    return ''; // Return empty string or a default name if file or file.name is undefined
+  }
   const m = file.name.match(/^MOTK\[Project:([^\]]+)\]/i);
   return m ? m[1].trim() : file.name;
 };

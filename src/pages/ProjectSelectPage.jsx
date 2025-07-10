@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDriveSheets } from '../hooks/useDriveSheets';
 import { toProjectName } from '../utils/id';
@@ -10,11 +10,10 @@ export default function ProjectSelectPage() {
   const navigate = useNavigate();
   const { sheetId, setSheetId } = useContext(SheetsContext);
 
-  const handleSelect = (event) => {
-    const selectedId = event.target.value;
-    setSheetId(selectedId);
-    navigate('/', { replace: true });
-  };
+  // state が確定したのを確認してから遷移
+  useEffect(() => {
+    if (sheetId) navigate('/');
+  }, [sheetId, navigate]);
 
   if (loading) return <div className="p-4">Loading project list…</div>;
   if (error)
@@ -35,7 +34,7 @@ export default function ProjectSelectPage() {
           id="project-select"
           value={sheets.some(s => s.id === sheetId) ? sheetId : ''}
           label="Project"
-          onChange={handleSelect}
+          onChange={e => setSheetId(e.target.value)}
         >
           {sheets.length === 0 && (
             <MenuItem value="" disabled>

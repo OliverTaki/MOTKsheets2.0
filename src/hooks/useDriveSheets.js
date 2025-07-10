@@ -17,7 +17,7 @@ export const useDriveSheets = (sheetId = null) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchGoogle('drive/v3/files', token, {
+      const res = await fetchGoogle('drive/v3/files', token, ensureValidToken, {
         pageSize: 100,
         fields: 'files(id,name,owners(displayName))',
         q:
@@ -33,7 +33,7 @@ export const useDriveSheets = (sheetId = null) => {
     } finally {
       setLoading(false);
     }
-  }, [token, setNeedsReAuth]);
+  }, [token, ensureValidToken, setNeedsReAuth]);
 
   useEffect(() => {
     fetchSheets();

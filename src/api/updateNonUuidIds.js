@@ -6,13 +6,14 @@ import { apiFetch } from '../utils/api';
  * @param {string} spreadsheetId 
  * @returns {Promise<Map<string, number>>}
  */
-const getSheetIds = async (spreadsheetId, token, setNeedsReAuth) => {
+const getSheetIds = async (spreadsheetId, token, setNeedsReAuth, ensureValidToken) => {
     try {
         const response = await apiFetch(
             `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties`,
             {},
             token,
-            setNeedsReAuth
+            setNeedsReAuth,
+            ensureValidToken
         );
         if (!response.ok) {
             const errorData = await response.json();
@@ -66,9 +67,9 @@ export const getNonUuidIds = async (spreadsheetId, sheets, fields) => {
     }
 };
 
-export const updateNonUuidIds = async (spreadsheetId, token, setNeedsReAuth, sheets, fields, idsToUpdate) => {
+export const updateNonUuidIds = async (spreadsheetId, token, setNeedsReAuth, sheets, fields, idsToUpdate, ensureValidToken) => {
     const requests = [];
-    const sheetIds = await getSheetIds(spreadsheetId, token, setNeedsReAuth);
+    const sheetIds = await getSheetIds(spreadsheetId, token, setNeedsReAuth, ensureValidToken);
     const shotsSheetId = sheetIds.get('SHOTS');
     const fieldsSheetId = sheetIds.get('FIELDS');
 
@@ -136,7 +137,8 @@ export const updateNonUuidIds = async (spreadsheetId, token, setNeedsReAuth, she
                 body: JSON.stringify(body)
             },
             token,
-            setNeedsReAuth
+            setNeedsReAuth,
+            ensureValidToken
         );
 
         if (!response.ok) {
