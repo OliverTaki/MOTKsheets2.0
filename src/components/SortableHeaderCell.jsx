@@ -23,25 +23,36 @@ export default React.memo(function SortableHeaderCell({
   };
 
   return (
-    <TableCell
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}       // ★ 追加 ― onPointerDown 等
-      style={style}
-    >
+    <TableCell ref={setNodeRef} style={style}>
+      {/* ──   Drag Handle   ───────────────────────── */}
+      <div
+        {...attributes}      // role / tabIndex / aria
+        {...listeners}       // onPointerDown 等（★ ここだけに付与）
+        style={{
+          position:'absolute',
+          left: 4,
+          top: 0, bottom: 0,
+          width: 12,
+          cursor:'grab',
+          zIndex: 30,
+        }}
+        onClick={e=>e.stopPropagation()}
+      />
+
+      {/* ラベル本体 */}
       {field.label}
-      {/* ── 列幅リサイズ用ハンドル ── */}
+
+      {/* ──   Resize Handle   ─────────────────────── */}
       <div
         style={{
           position:'absolute', right:0, top:0, bottom:0, width:8,
-          cursor:'col-resize', zIndex:20
+          cursor:'col-resize', zIndex:20,
         }}
-        onMouseDown={(e) => {
-          e.stopPropagation();
+        onMouseDown={e=>{
+          e.stopPropagation();               // ★ Drag開始を阻止
           handleColResizeMouseDown(e, field.id);
         }}
-        onClick={(e)=>e.stopPropagation()}
+        onPointerDown={e=>e.stopPropagation()}  // iPad 等 pointer 系端末向け
       />
     </TableCell>
   );

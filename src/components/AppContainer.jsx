@@ -41,6 +41,10 @@ export const AppContainer = () => {
 
   const { sheetId, setSheetId } = useContext(SheetsContext);
 
+  if (!sheetId) {
+    return <div>プロジェクトをロード中…</div>;
+  }
+
   /* ---------- 必須データフックはここで先に呼び出す ---------- */
   const {
     sheets, setShots,
