@@ -42,13 +42,11 @@ export const AppContainer = () => {
   const { sheetId, setSheetId } = useContext(SheetsContext);
 
   if (!sheetId) {
-    return <div>Loading project…</div>;
+    return <FullScreenSpinner />;
   }
 
   const { sheets, setShots, fields, setFields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex, updateIdToColIndex } = useSheetsData(sheetId);
   const { pages, loading: pagesLoading, error: pagesError, refreshPages } = usePagesData(sheetId);
-  console.log('AppContainer: token', token ? 'present' : 'null');
-  console.log('AppContainer: sheetId', sheetId);
 
   const [columnWidths, setColumnWidths] = useState({});
   const [activeFilters, setActiveFilters] = useState({});
