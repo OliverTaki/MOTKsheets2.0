@@ -241,41 +241,44 @@ export default React.memo(function ShotTable(props) {
               <TableRow key={shot.shot_id}>
                 {fields
                   .filter((f) => visibleFieldIds.includes(f.id))
-                  .map((f) => (
-                    <TableCell
-                      key={f.id}
-                      sx={{
-                        width: columnWidths[f.id] ?? 150,
-                        borderRight: '1px solid rgba(224, 224, 224, 1)',
-                        borderBottom: '1px solid rgba(224, 224, 224, 1)',
-                      }}
-                    >
-                      {editingCell?.shotId === shot.shot_id && editingCell?.fieldId === f.id ? (
-                          renderEditableCell(f, cellValue, handleCellChange, handleCellBlur, handleCellKeyDown)
-                        ) : (
-                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            {f.type === "checkbox" && f.editable ? (
-                              <Checkbox
-                                checked={shot[f.id] === 'TRUE'}
-                                onChange={(e) => onCellSave(shot.shot_id, f.id, e.target.checked ? 'TRUE' : 'FALSE')}
-                                sx={{ p: 0.5 }}
-                              />
-                            ) : (
-                              renderCell(shot, f)
-                            )}
-                            {f.editable && f.type !== "checkbox" && (
-                              <EditIcon
-                                sx={{ fontSize: 16, cursor: 'pointer', ml: 1 }}
-                                onClick={(e) => {
-                                  e.stopPropagation(); // Prevent triggering cell click again
-                                  handleCellClick(shot.shot_id, f.id, shot[f.id], f.editable, f.type);
-                                }}
-                              />
-                            )}
-                          </Box>
-                        )}
-                    </TableCell>
-                  ))}
+                  .map((f) => {
+                    const isEditing = editingCell?.shotId === shot.shot_id && editingCell?.fieldId === f.id;
+                    return (
+                      <TableCell
+                        key={f.id}
+                        sx={{
+                          width: columnWidths[f.id] ?? 150,
+                          borderRight: '1px solid rgba(224, 224, 224, 1)',
+                          borderBottom: '1px solid rgba(224, 224, 224, 1)',
+                        }}
+                      >
+                        {isEditing
+                          ? renderEditableCell(f, cellValue, handleCellChange, handleCellBlur, handleCellKeyDown)
+                          : (
+                            <Box sx={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                              {f.type === 'checkbox'
+                                ? <Checkbox
+                                    checked={shot[f.id] === 'TRUE'}
+                                    onChange={(e)=>onCellSave(shot.shot_id, f.id, e.target.checked ? 'TRUE':'FALSE')}
+                                    disabled={f.editable}
+                                    sx={{ p:0.5 }}
+                                  />
+                                : renderCell(shot, f)
+                              }
+                              {f.editable && f.type == 'checkbox' && (
+                                <EditIcon
+                                  sx={{ fontSize:16, cursor:'pointer', ml:1 }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCellClick(shot.shot_id, f.id, shot[f.id], f.editable, f.type);
+                                  }}
+                                />
+                              )}
+                            </Box>
+                          )}
+                      </TableCell>
+                    );
+                  })}
               </TableRow>
             ))}
           </TableBody>
