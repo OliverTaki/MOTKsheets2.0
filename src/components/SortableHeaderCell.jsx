@@ -27,25 +27,21 @@ export default React.memo(function SortableHeaderCell({
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
-      component="th"
-      scope="col"
+      {...listeners}       // ★ 追加 ― onPointerDown 等
+      style={style}
     >
       {field.label}
-      <span
+      {/* ── 列幅リサイズ用ハンドル ── */}
+      <div
         style={{
-          position: "absolute",
-          right: 0,
-          top: 0,
-          bottom: 0,
-          width: "10px", // Make the resize handle wider for easier clicking
-          cursor: "col-resize",
+          position:'absolute', right:0, top:0, bottom:0, width:8,
+          cursor:'col-resize', zIndex:20
         }}
         onMouseDown={(e) => {
           e.stopPropagation();
           handleColResizeMouseDown(e, field.id);
         }}
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e)=>e.stopPropagation()}
       />
     </TableCell>
   );
