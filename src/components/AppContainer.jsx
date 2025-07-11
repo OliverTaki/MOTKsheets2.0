@@ -332,20 +332,20 @@ export const AppContainer = () => {
       cancelAnimationFrame(rafId.current);
       rafId.current = requestAnimationFrame(() => {
         if (tableRef.current) {
-          // update header cell width (already present)
-          const headerEl = tableRef.current.querySelector(
-            `th[data-col="${idRef.current}"]`,
-          );
-          if (headerEl) {
-            headerEl.style.setProperty(
+          // update the column-width var on the TABLE so <th> *and* <td> see it
+          const tableEl = tableRef.current.querySelector('table');
+          if (tableEl) {
+            tableEl.style.setProperty(
               `--w-${idRef.current}`,
               `${latestW.current}px`,
             );
+
+            /* keep overall table width in sync so right edge tracks:
+               remove this block if you prefer horizontal scroll instead */
+            const delta = latestW.current - startWidth;
+            tableEl.style.width =
+              `${tableStartWidthRef.current + delta}px`;
           }
-          //  keep total table width in sync *during* drag
-          const delta = latestW.current - startWidth;
-          tableRef.current.style.width =
-            `${tableStartWidthRef.current + delta}px`;
         }
         rafId.current = null;
       });
