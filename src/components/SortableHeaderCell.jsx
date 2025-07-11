@@ -20,7 +20,14 @@ export default React.memo(function SortableHeaderCell({
   };
 
   return (
-    <TableCell ref={setNodeRef} style={style}>
+    <TableCell
+      ref={setNodeRef}
+      style={{
+        ...style,
+        width: `var(--w-${field.id}, ${columnWidths[field.id] ?? 150}px)`,
+      }}
+      data-col={field.id}
+    >
       {/* ── Drag handle（左側 12px 固定）──────── */}
       <div
         {...attributes}

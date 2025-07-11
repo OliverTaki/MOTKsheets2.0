@@ -60,6 +60,11 @@ export const AppContainer = () => {
   const [isInitialViewLoaded, setIsInitialViewLoaded] = useState(false);
   const [isUpdateNonUuidIdsDialogOpen, setUpdateNonUuidIdsDialogOpen] = useState(false);
   const sheetsRef = useRef(sheets);
+  const tableRef = useRef(null);
+  const idRef = useRef(null);
+  const rafId = useRef(null);
+  const latestW = useRef(null);
+  const tableStartWidthRef = useRef(0);
 
   useEffect(() => {
     sheetsRef.current = sheets;
@@ -318,16 +323,42 @@ export const AppContainer = () => {
   const handleColResizeMouseDown = (e, id) => {
     const startX = e.clientX;
     const startWidth = columnWidths[id] ?? 150;
+    tableStartWidthRef.current = tableRef.current?.offsetWidth ?? 0;  // remember table width
+    idRef.current = id;
+    latestW.current = startWidth;
+
     const onMove = (ev) => {
-      const newW = Math.max(60, startWidth + ev.clientX - startX);
-      requestAnimationFrame(() =>
-        setColumnWidths((prev) => ({ ...prev, [id]: newW }))
-      );
+      latestW.current = Math.max(60, startWidth + ev.clientX - startX);
+      cancelAnimationFrame(rafId.current);
+      rafId.current = requestAnimationFrame(() => {
+        if (tableRef.current) {
+          // update header cell width (already present)
+          const headerEl = tableRef.current.querySelector(
+            `th[data-col="${idRef.current}"]`,
+          );
+          if (headerEl) {
+            headerEl.style.setProperty(
+              `--w-${idRef.current}`,
+              `${latestW.current}px`,
+            );
+          }
+          //  keep total table width in sync *during* drag
+          const delta = latestW.current - startWidth;
+          tableRef.current.style.width =
+            `${tableStartWidthRef.current + delta}px`;
+        }
+        rafId.current = null;
+      });
     };
+
     const onUp = () => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
+      setColumnWidths((prev) => ({ ...prev, [idRef.current]: latestW.current }));
+      idRef.current = null;
+      latestW.current = null;
     };
+
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
   };
@@ -398,6 +429,7 @@ export const AppContainer = () => {
                       handleColResizeMouseDown={handleColResizeMouseDown}
                       sheets={sheets} // Ensure sheets prop is passed and triggers re-render
                       fields={fields}
+                      ref={tableRef}
                     /> : <ProjectSelectPage />} />
                   <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={orderedFields} idToColIndex={idToColIndex} />} />
                   <Route path="/shots/new" element={<AddShotPage />} />

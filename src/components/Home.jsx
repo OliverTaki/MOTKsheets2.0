@@ -1,9 +1,9 @@
-import React, { memo } from 'react';
+import React, { memo, forwardRef } from 'react';
 import ProjectSelectPage from '../pages/ProjectSelectPage';
 import ShotTable from './ShotTable';
 import { useLocation } from 'react-router-dom';
 
-const Home = memo(({
+const Home = memo(forwardRef(({
   sheetId,
   setSheetId,
   processedShots,
@@ -17,7 +17,7 @@ const Home = memo(({
   handleColResizeMouseDown,
   sheets,
   fields
-}) => {
+}, ref) => {
   const location = useLocation();
 
   if (!sheetId) {
@@ -25,7 +25,7 @@ const Home = memo(({
   }
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }} ref={ref}>
       <ShotTable
         shots={sheets}
         fields={orderedFields}
@@ -50,6 +50,6 @@ const Home = memo(({
     prevProps.columnWidths === nextProps.columnWidths &&
     prevProps.onCellSave === nextProps.onCellSave
   );
-});
+}));
 
 export default Home;

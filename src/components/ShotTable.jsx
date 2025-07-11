@@ -15,7 +15,7 @@ import {
 } from "@dnd-kit/sortable";
 import SortableHeaderCell from "./SortableHeaderCell";
 
-export default React.memo(function ShotTable(props) {
+export default function ShotTable(props) {
   const {
     shots = [],
     fields: rawFields = [],
@@ -40,13 +40,9 @@ export default React.memo(function ShotTable(props) {
   );
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 4 },
-    })
+    useSensor(PointerSensor, { activationConstraint: { distance: 3 } })
   );
   const HEAD_H = 56;
-
-  
 
   const [editingCell, setEditingCell] = useState(null); // { shotId, fieldId }
   const [cellValue, setCellValue] = useState("");
@@ -229,7 +225,7 @@ export default React.memo(function ShotTable(props) {
                   <TableCell
                     key={fieldId}
                     sx={{
-                      width: columnWidths[fieldId] ?? 150,
+                      width: `var(--w-${fieldId}, ${columnWidths[fieldId] ?? 150}px)`,
                       borderRight: '1px solid rgba(224, 224, 224, 1)',
                       borderBottom: '1px solid rgba(224, 224, 224, 1)',
                     }}
@@ -251,7 +247,7 @@ export default React.memo(function ShotTable(props) {
                       <TableCell
                         key={f.id}
                         sx={{
-                          width: columnWidths[f.id] ?? 150,
+                          width: `var(--w-${f.id}, ${columnWidths[f.id] ?? 150}px)`,
                           borderRight: '1px solid rgba(224, 224, 224, 1)',
                           borderBottom: '1px solid rgba(224, 224, 224, 1)',
                         }}
@@ -306,4 +302,4 @@ export default React.memo(function ShotTable(props) {
       </TableContainer>
     </DndContext>
   );
-});
+}
