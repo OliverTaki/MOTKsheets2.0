@@ -32,11 +32,12 @@ export const useSheetsData = (sheetId) => {
       }
 
       const shotsDataValues = valueRanges[0].values;
+      console.log('useSheetsData: shotsDataValues', shotsDataValues);
       const fieldsDataValues = valueRanges[1].values;
 
       const shotsHeader = shotsDataValues?.[0] || [];
-      const shotIdUuid = shotsHeader?.[0];
-      const shotCodeUuid = shotsHeader?.[1];
+      const shotIdUuid = shotsHeader?.[0] || 'shot_id'; // Fallback to a default ID if undefined
+      const shotCodeUuid = shotsHeader?.[1] || 'shot_code'; // Fallback to a default ID if undefined
 
       const parsedFields = parseFields(fieldsDataValues);
       const finalFields = [
@@ -115,11 +116,17 @@ export const useSheetsData = (sheetId) => {
 
   return {
     sheets: shots, // Renamed shots to sheets for consistency with AuthContext
+    setShots, // Expose setShots for optimistic updates
     fields,
+    setFields, // Expose setFields for optimistic updates
     loading,
     error,
     refreshData,
     updateFieldOptions,
     idToColIndex,
+    updateIdToColIndex: (id, index) => {
+      setIdToColIndex(prev => ({ ...prev, [id]: index }));
+    },
+    updateCell: (range, value) => updateCell(sheetId, token, setNeedsReAuth, range, value, ensureValidToken),
   };
 };

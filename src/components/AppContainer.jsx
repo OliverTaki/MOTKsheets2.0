@@ -1,6 +1,7 @@
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import React, { useState, useEffect, useContext, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useContext, useCallback, useMemo, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import Home from './Home';
 import { useSheetsData } from '../hooks/useSheetsData';
@@ -34,14 +35,14 @@ const theme = createTheme({
 });
 
 export const AppContainer = () => {
-  const { token, user, isInitialized, needsReAuth, signIn, ensureValidToken, error: authError } = useContext(AuthContext);
+  const { token, user, isInitialized, needsReAuth, signIn, ensureValidToken, setNeedsReAuth, error: authError } = useContext(AuthContext);
   console.log('AppContainer: token', token ? 'present' : 'null');
   const navigate = useNavigate();
 
   const { sheetId, setSheetId } = useContext(SheetsContext);
   console.log('AppContainer: sheetId', sheetId);
 
-  const { sheets, fields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex } = useSheetsData(sheetId);
+  const { sheets, setShots, fields, setFields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex, updateIdToColIndex } = useSheetsData(sheetId);
   const { pages, loading: pagesLoading, error: pagesError, refreshPages } = usePagesData(sheetId);
 
   const [columnWidths, setColumnWidths] = useState({});
@@ -55,6 +56,11 @@ export const AppContainer = () => {
   const [columnOrder, setColumnOrder] = useState([]);
   const [isInitialViewLoaded, setIsInitialViewLoaded] = useState(false);
   const [isUpdateNonUuidIdsDialogOpen, setUpdateNonUuidIdsDialogOpen] = useState(false);
+  const sheetsRef = useRef(sheets);
+
+  useEffect(() => {
+    sheetsRef.current = sheets;
+  }, [sheets]);
 
   const handleLoadView = useCallback((page) => {
     if (!page) return;
@@ -176,31 +182,54 @@ export const AppContainer = () => {
       const newField = await appendField(sheetId, token, setNeedsReAuth, newFieldDetails, fields, ensureValidToken);
       alert(`Field "${newField.label}" added successfully!`);
 
-      const newFields = [...fields, newField];
-      setOrderedFields(newFields);
-      setVisibleFieldIds(prev => [...prev, newField.id]);
+      // Optimistically update fields state
+      setFields(prevFields => {
+        const updatedFields = [...prevFields, newField];
+        // Also update orderedFields and visibleFieldIds to reflect the new field immediately
+        setOrderedFields(updatedFields);
+        setVisibleFieldIds(prevVisible => [...prevVisible, newField.id]);
 
-      if (refreshData) {
-        refreshData();
-      }
+        // Update idToColIndex for the new field
+        updateIdToColIndex(newField.id, fields.length); // fields.length is the new column index
+
+        return updatedFields;
+      });
+
+      // No need to refreshData() here, as setFields updates the UI
+      // and idToColIndex will be updated on next full data fetch (e.g., page load)
+      // If idToColIndex is critical for immediate editing of the *new* column,
+      // a partial update to idToColIndex would be needed here.
+      // For now, relying on next full fetch for idToColIndex consistency.
 
     } catch (err) {
       console.error("Failed to add field:", err);
       alert(`Error: ${err.message}`);
     }
-  }, [fields, refreshData, sheetId, ensureValidToken]);
+  }, [fields, setFields, sheetId, ensureValidToken, token, setNeedsReAuth]);
 
   const handleCellSave = useCallback(async (shotId, fieldId, newValue) => {
-    const originalRowIndex = sheets.findIndex(s => s.shot_id === shotId);
+    const currentSheets = sheetsRef.current; // Use ref to get current sheets
+    const originalRowIndex = currentSheets.findIndex(s => s.shot_id === shotId);
     if (originalRowIndex === -1) {
       console.error("Could not find shot to update");
       return;
     }
-    const sheetRowIndex = originalRowIndex + 3;
 
+    const originalValue = currentSheets[originalRowIndex][fieldId];
+
+    // Optimistically update the UI
+    const updatedShots = [...currentSheets];
+    updatedShots[originalRowIndex] = { ...updatedShots[originalRowIndex], [fieldId]: newValue };
+    ReactDOM.flushSync(() => {
+      setShots(updatedShots);
+    });
+
+    const sheetRowIndex = originalRowIndex + 3;
     const sheetColumnIndex = idToColIndex[fieldId];
     if (sheetColumnIndex === undefined) {
       console.error("Could not find column for fieldId:", fieldId);
+      // Revert optimistic update
+      setShots(currentSheets);
       return;
     }
     const columnLetter = String.fromCharCode('A'.charCodeAt(0) + sheetColumnIndex);
@@ -208,13 +237,20 @@ export const AppContainer = () => {
 
     try {
       await updateCell(sheetId, token, setNeedsReAuth, range, newValue, ensureValidToken);
-      refreshData();
       console.log(`Cell ${range} updated successfully.`);
     } catch (err) {
       console.error("Failed to update cell:", err);
-      alert(`Error: ${err.message}`);
+      alert(`Error: ${err.message}`); // Show alert on failure
+      // Revert optimistic update on failure
+      const revertedShots = [...currentSheets];
+      revertedShots[originalRowIndex] = { ...revertedShots[originalRowIndex], [fieldId]: originalValue };
+      setShots(revertedShots);
+
+      if (err.message.includes("401")) {
+        setNeedsReAuth(true);
+      }
     }
-  }, [sheets, sheetId, idToColIndex, refreshData, ensureValidToken]);
+  }, [setShots, sheetId, idToColIndex, ensureValidToken, token, setNeedsReAuth]);
 
   const getCurrentView = () => ({
     columnWidths,
@@ -361,7 +397,7 @@ export const AppContainer = () => {
                       onUpdateFieldOptions={updateFieldOptions}
                       onColumnOrderChange={handleColumnOrderChange}
                       handleColResizeMouseDown={handleColResizeMouseDown}
-                      sheets={sheets}
+                      sheets={sheets} // Ensure sheets prop is passed and triggers re-render
                       fields={fields}
                     /> : <ProjectSelectPage />} />
                   <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={orderedFields} idToColIndex={idToColIndex} />} />

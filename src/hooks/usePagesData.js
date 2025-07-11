@@ -26,9 +26,10 @@ const usePagesData = (sheetId) => {
     setLoading(true);
     setError(null); // Clear previous errors
     try {
-      const res = await fetchGoogle(`spreadsheets/${sheetId}/values:batchGet`, token, {
-        ranges: [`${import.meta.env.VITE_TAB_NAME_PAGES}!A:Z`],
+      const res = await fetchGoogle(`spreadsheets/${sheetId}/values:batchGet`, token, ensureValidToken, {
+        ranges: [`PAGES!A:Z`],
       });
+      console.log('usePagesData: API response', res);
 
       if (res.status === 404 || (res.error && (res.error.code === 404 || (res.error.code === 400 && res.error.message.includes("Unable to parse range"))))) {
         console.warn("'PAGES' sheet does not exist or is inaccessible. Using empty pages list.");
@@ -36,7 +37,7 @@ const usePagesData = (sheetId) => {
       } else if (res.valueRanges && res.valueRanges[0] && res.valueRanges[0].values) {
         const [header, ...rows] = res.valueRanges[0].values;
         if (!header || rows.length === 0) {
-  
+          setPages([]);
         } else {
           const pageIdCol = header.indexOf('page_id');
           const titleCol = header.indexOf('title');

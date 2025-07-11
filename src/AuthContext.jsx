@@ -110,14 +110,35 @@ export const AuthProvider = ({ children, refreshData }) => {
       });
 
       // signInRef は “関数” に戻す（既存 UI 互換）
-      signInRef.current = () =>
-        tokenClient.requestAccessToken({ prompt: 'consent' });
+      signInRef.current = () => {
+        try {
+          tokenClient.requestAccessToken({ prompt: 'consent' });
+        } catch (e) {
+          console.error("Error requesting access token:", e);
+          if (e.type === 'popup_blocked_by_browser') {
+            setError(POPUP_BLOCKED);
+            setReAuth(true);
+          } else {
+            setError(e.message || 'Authentication failed');
+          }
+        }
+      };
 
       /* Console から強制発火できるデバッグ用 */
       window.__MOTK_DEBUG = {
         requestAccess: () => {
           console.log('[DEBUG] GIS pop-up forced');
-          tokenClient.requestAccessToken({ prompt: 'consent' });
+          try {
+            tokenClient.requestAccessToken({ prompt: 'consent' });
+          } catch (e) {
+            console.error("Error forcing access token request:", e);
+            if (e.type === 'popup_blocked_by_browser') {
+              setError(POPUP_BLOCKED);
+              setReAuth(true);
+            } else {
+              setError(e.message || 'Authentication failed');
+            }
+          }
         },
       };
       setInit(true);                       // GIS ready
@@ -133,20 +154,45 @@ export const AuthProvider = ({ children, refreshData }) => {
     if (force && token && Date.now() < expires - 60_000) {
       return token;                     // 60 秒マージン
     }
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const tokenClient = window.google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
         prompt: '',                         // silent refresh
         callback: (resp) => {
-          setToken(resp.access_token);
-          setExpires(Date.now() + resp.expires_in * 1000);
-          resolve(resp.access_token);
+          if (resp.error) {
+            console.error("Silent token refresh failed:", resp.error);
+            if (resp.error === 'popup_blocked_by_browser') {
+              setError(POPUP_BLOCKED);
+              setReAuth(true);
+            } else if (resp.error === 'user_interaction_required') {
+              setError(PROMPT_REQUIRED);
+              setReAuth(true);
+            } else {
+              setError(resp.error);
+            }
+            reject(new Error(resp.error));
+          } else {
+            setToken(resp.access_token);
+            setExpires(Date.now() + resp.expires_in * 1000);
+            resolve(resp.access_token);
+          }
         },
       });
-      tokenClient.requestAccessToken(); // silent => callback 上書き
+      try {
+        tokenClient.requestAccessToken(); // silent => callback 上書き
+      } catch (e) {
+        console.error("Error during silent token request:", e);
+        if (e.type === 'popup_blocked_by_browser') {
+          setError(POPUP_BLOCKED);
+          setReAuth(true);
+        } else {
+          setError(e.message || 'Authentication failed');
+        }
+        reject(e);
+      }
     });
-  }, [token, expires, CLIENT_ID]);
+  }, [token, expires, CLIENT_ID, setReAuth]);
 
   /* ---- 起動時にローカル token があれば即セット -------------- */
   useEffect(() => {

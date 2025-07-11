@@ -4,8 +4,11 @@ export const updateCell = async (spreadsheetId, token, setNeedsReAuth, range, va
     try {
         const res = await fetchGoogle(`spreadsheets/${spreadsheetId}/values/${range}`, token, ensureValidToken, {
             method: 'PUT',
-            params: { valueInputOption: 'USER_ENTERED' },
-            body: { values: [[value]] },
+            valueInputOption: 'USER_ENTERED',
+            body: JSON.stringify({ values: [[value]] }),
+            headers: {
+                'Content-Type': 'application/json'
+            }
         });
 
         return res;

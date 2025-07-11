@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from 'uuid';
 import { fetchGoogle } from '../utils/google';
 
 const getSheetIds = async (spreadsheetId, token, setNeedsReAuth, ensureValidToken) => {
@@ -17,7 +18,7 @@ const getSheetIds = async (spreadsheetId, token, setNeedsReAuth, ensureValidToke
 };
 
 export const appendField = async (spreadsheetId, token, setNeedsReAuth, newFieldDetails, existingFields, ensureValidToken) => {
-    const newFieldId = newFieldDetails.id || newFieldDetails.label.toLowerCase().replace(/\s+/g, '_');
+    const newFieldId = newFieldDetails.id || uuidv4(); // Use uuidv4 for unique ID
     
     try {
         const sheetIds = await getSheetIds(spreadsheetId, token, setNeedsReAuth, ensureValidToken);
@@ -39,7 +40,7 @@ export const appendField = async (spreadsheetId, token, setNeedsReAuth, newField
                             { userEnteredValue: { stringValue: newFieldDetails.label } },
                             { userEnteredValue: { stringValue: newFieldDetails.type } },
                             { userEnteredValue: { stringValue: newFieldDetails.editable ? 'TRUE' : 'FALSE' } },
-                            { userEnteredValue: { stringString: 'FALSE' } }, // requiredは常にFALSEで追加
+                            { userEnteredValue: { stringValue: 'FALSE' } }, // requiredは常にFALSEで追加
                             { userEnteredValue: { stringValue: newFieldDetails.options || '' } },
                         ]
                     }
@@ -78,10 +79,31 @@ export const appendField = async (spreadsheetId, token, setNeedsReAuth, newField
         }
     ];
 
+    if (newFieldDetails.type === 'checkbox') {
+        requests.push({
+            setDataValidation: {
+                range: {
+                    sheetId: shotsSheetId,
+                    startRowIndex: 2, // Start from the first data row (after headers)
+                    endRowIndex: 1000, // Apply to a reasonable number of rows
+                    startColumnIndex: existingFields.length,
+                    endColumnIndex: existingFields.length + 1,
+                },
+                rule: {
+                    condition: {
+                        type: 'BOOLEAN',
+                    },
+                    strict: true,
+                    showCustomUi: true,
+                },
+            },
+        });
+    }
+
     const body = { requests: requests };
     const res = await fetchGoogle(`spreadsheets/${spreadsheetId}:batchUpdate`, token, ensureValidToken, { method: 'POST', body: JSON.stringify(body) });
 
-    return res;
+    return { id: newFieldId, label: newFieldDetails.label, type: newFieldDetails.type, editable: newFieldDetails.editable, options: newFieldDetails.options };
 } catch (e) {
     console.error("Error in appendField:", e);
     throw e;

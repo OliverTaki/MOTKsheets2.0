@@ -15,6 +15,7 @@ export function parseFields(rawData) {
     }
 
     const normalizedHeader = header.map(cell => String(cell || '').trim().toLowerCase());
+    console.log('Normalized Header:', normalizedHeader);
 
     // ユーザーのシートに合わせて、検索する列名を 'field_id' から 'fields_id' に修正しました
     let idIndex = normalizedHeader.indexOf('fields_id');

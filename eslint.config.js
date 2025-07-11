@@ -21,9 +21,7 @@ export default tseslint.config(
     },
     rules: {
       'no-undef': 'error',
-      'import/no-commonjs': 'error',
       'no-constant-binary-expression': 'error',
-      'no-dupe-imports': 'error',
       'no-redeclare': 'error',
       'no-unexpected-multiline': 'error',
       'no-restricted-exports': [
@@ -33,6 +31,7 @@ export default tseslint.config(
         }
       ],
       ...reactHooks.configs.recommended.rules,
+      ...importPlugin.configs.recommended.rules,
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },
