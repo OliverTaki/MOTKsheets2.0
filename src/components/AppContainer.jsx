@@ -312,25 +312,22 @@ export const AppContainer = () => {
     }
   };
 
-  const handleColResizeMouseDown = (e, fieldId) => {
-    e.preventDefault();
-    const startX = e.clientX;
+  const handleColResizeMouseDown = (fieldId, startX) => {
     const startWidth = columnWidths[fieldId] ?? 150;
 
-    const handleMouseMove = (moveEvent) => {
-      const newWidth = startWidth + (moveEvent.clientX - startX);
-      if (newWidth > 50) {
-        setColumnWidths((prev) => ({ ...prevWidths, [fieldId]: newWidth }));
-      }
+    const onMouseMove = (e) => {
+      const delta = e.clientX - startX;
+      const newWidth = Math.max(50, startWidth + delta);
+      setColumnWidths(prev => ({ ...prev, [fieldId]: newWidth }));
     };
 
-    const handleMouseUp = () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
   };
 
   if (needsReAuth) {
