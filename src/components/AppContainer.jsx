@@ -42,8 +42,12 @@ export const AppContainer = () => {
   const { sheetId, setSheetId } = useContext(SheetsContext);
   console.log('AppContainer: sheetId', sheetId);
 
-  const { sheets, setShots, fields, setFields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex, updateIdToColIndex } = useSheetsData(sheetId || null);
-  const { pages, loading: pagesLoading, error: pagesError, refreshPages } = usePagesData(sheetId || null);
+  // Hooks should not be called if sheetId is not yet available.
+  if (!sheetId) {
+    // You might want to render a loading state or something similar here
+    // For now, just preventing the hooks from running with null.
+    return <FullScreenSpinner />;
+  }
 
   const [columnWidths, setColumnWidths] = useState({});
   const [activeFilters, setActiveFilters] = useState({});

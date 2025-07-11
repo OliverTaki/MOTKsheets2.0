@@ -272,14 +272,14 @@ export default React.memo(function ShotTable(props) {
                                   onChange={e =>
                                     onCellSave(shot.shot_id, f.id, e.target.checked ? 'TRUE' : 'FALSE')
                                   }
-                                  disabled={!f.editable} // ← 修正: editable=true なら操作可
+                                  disabled={!f.editable}
                                   sx={{ p: 0.5 }}
                                 />
                               ) : (
                                 renderCell(shot, f)
                               )}
 
-                              {f.editable && f.type !== 'checkbox' && ( // ← 修正: チェックボックス列には鉛筆アイコン不要
+                              {f.editable && f.type !== 'checkbox' && (
                                 <EditIcon
                                   sx={{ fontSize:16, cursor:'pointer', ml:1 }}
                                   onClick={e => {
