@@ -1,8 +1,9 @@
+import React from 'react';
 import { TableCell } from "@mui/material";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-export default function SortableHeaderCell({
+export default React.memo(function SortableHeaderCell({
   field,
   columnWidths,
   handleColResizeMouseDown,
@@ -48,4 +49,4 @@ export default function SortableHeaderCell({
       />
     </TableCell>
   );
-}
+})

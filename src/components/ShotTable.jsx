@@ -39,7 +39,11 @@ export default React.memo(function ShotTable(props) {
     [visibleFieldIds, columnWidths]
   );
 
-  const sensors = useSensors(useSensor(PointerSensor));
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 4 },
+    })
+  );
   const HEAD_H = 56;
 
   

@@ -42,8 +42,8 @@ export const AppContainer = () => {
   const { sheetId, setSheetId } = useContext(SheetsContext);
   console.log('AppContainer: sheetId', sheetId);
 
-  const { sheets, setShots, fields, setFields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex, updateIdToColIndex } = useSheetsData(sheetId);
-  const { pages, loading: pagesLoading, error: pagesError, refreshPages } = usePagesData(sheetId);
+  const { sheets, setShots, fields, setFields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex, updateIdToColIndex } = useSheetsData(sheetId || null);
+  const { pages, loading: pagesLoading, error: pagesError, refreshPages } = usePagesData(sheetId || null);
 
   const [columnWidths, setColumnWidths] = useState({});
   const [activeFilters, setActiveFilters] = useState({});
