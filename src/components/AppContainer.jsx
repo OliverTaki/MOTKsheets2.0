@@ -40,14 +40,24 @@ export const AppContainer = () => {
   const navigate = useNavigate();
 
   const { sheetId, setSheetId } = useContext(SheetsContext);
-  console.log('AppContainer: sheetId', sheetId);
 
-  // Hooks should not be called if sheetId is not yet available.
-  if (!sheetId) {
-    // You might want to render a loading state or something similar here
-    // For now, just preventing the hooks from running with null.
-    return <FullScreenSpinner />;
-  }
+  /* ---------- 必須データフックはここで先に呼び出す ---------- */
+  const {
+    sheets, setShots,
+    fields, setFields,
+    loading: fieldsLoading, error: fieldsError,
+    refreshData, updateFieldOptions,
+    idToColIndex, updateIdToColIndex
+  } = useSheetsData(sheetId);          // ← sheetId が null でも hook 内で no-op
+
+  const {
+    pages, loading: pagesLoading,
+    error: pagesError, refreshPages
+  } = usePagesData(sheetId);
+
+  /* ---------- ここから下で sheets / fields を安全に参照 ---------- */
+  console.log('AppContainer: token', token ? 'present' : 'null');
+  console.log('AppContainer: sheetId', sheetId);
 
   const [columnWidths, setColumnWidths] = useState({});
   const [activeFilters, setActiveFilters] = useState({});

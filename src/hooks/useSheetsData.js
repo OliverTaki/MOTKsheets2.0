@@ -6,6 +6,8 @@ import { updateCell } from '../api/updateCell';
 import { fetchGoogle } from '../utils/google';
 
 export const useSheetsData = (sheetId) => {
+  const initial = { sheets: [], fields: [], loading: false, error: null, setShots:()=>{}, setFields:()=>{}, idToColIndex:{}, updateIdToColIndex:()=>{} };
+  if (!sheetId) return initial;
   const { needsReAuth, ensureValidToken, setNeedsReAuth, token } = useContext(AuthContext);
   const [shots, setShots] = useState([]);
   const [fields, setFields] = useState([]);
