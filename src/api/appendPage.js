@@ -1,55 +1,13 @@
-import { ensureSheetExists } from './sheetUtils';
+import { fetchGoogle } from '../utils/google';
 
-const apiKey = import.meta.env.VITE_SHEETS_API_KEY;
-
-export async function appendPage(spreadsheetId, token, pageData) {
-  await ensureSheetExists(spreadsheetId, token);
-
-  const {
-    page_id,
-    title,
-    columnWidths,
-    columnOrder,
-    filterSettings,
-    visibleFieldIds,
-    sortOrder,
-    author,
-  } = pageData;
-
-  const newRow = [
-    page_id,
-    title,
-    JSON.stringify(columnWidths),
-    JSON.stringify(columnOrder),
-    JSON.stringify(filterSettings),
-    JSON.stringify(visibleFieldIds),
-    JSON.stringify(sortOrder),
-    author,
-  ];
-
-  const range = 'PAGES!A1';
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}:append?valueInputOption=USER_ENTERED&key=${apiKey}`;
-
+export async function appendPage(spreadsheetId, token, setNeedsReAuth, pageData, ensureValidToken) {
   try {
-    const response = await fetch(url, {
+    await fetchGoogle(`spreadsheets/${spreadsheetId}/values/PAGES:append`, token, ensureValidToken, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        values: [newRow],
-      }),
+      params: { valueInputOption: 'USER_ENTERED', insertDataOption: 'INSERT_ROWS' },
+      body: { values: [pageData] },
     });
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error.message);
-    }
-    return data;
-  } catch (err) {
-    console.error('Error appending page:', err);
-    throw new Error('Failed to save the new page to the sheet.');
+  } catch (e) {
+    throw e;
   }
 }
-
-

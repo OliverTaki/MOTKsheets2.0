@@ -7,7 +7,13 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix"
+    ]
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -21,6 +27,7 @@
     "@mui/x-date-pickers": "^8.7.0",
     "@react-oauth/google": "^0.12.2",
     "dayjs": "^1.11.13",
+    "gapi-script": "^1.2.0",
     "jwt-decode": "^4.0.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
@@ -31,14 +38,19 @@
   "devDependencies": {
     "@eslint/js": "^9.25.0",
     "@tailwindcss/postcss": "^4.1.10",
+    "@types/google.accounts": "^0.0.17",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react": "^4.6.0",
     "@vitejs/plugin-react-swc": "^3.9.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.25.0",
+    "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^16.0.0",
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.7",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.10",
     "typescript": "~5.8.3",

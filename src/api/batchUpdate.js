@@ -1,3 +1,5 @@
+import { fetchGoogle } from '../utils/google';
+
 // src/api/batchUpdate.js
 
 /**
@@ -5,29 +7,20 @@
  *
  * @param {Object[]} requests - array of { range:string, values:any[][] }
  * @param {string} sheetId - Spreadsheet ID
- * @param {string} token   - OAuth access_token
- * @param {string} apiKey  - API key (optional, token takes priority)
  */
-export async function batchUpdate({ requests, sheetId, token, apiKey }) {
+export async function batchUpdate({ requests, sheetId, token, setNeedsReAuth, ensureValidToken }) {
   if (!sheetId) throw new Error('sheetId required');
-  if (!token && !apiKey) throw new Error('token or apiKey required');
   if (!requests?.length) return;
 
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values:batchUpdate`;
+  try {
+    const res = await fetchGoogle(`spreadsheets/${sheetId}:batchUpdate`, token, ensureValidToken, {
+      method: 'POST',
+      body: { requests: requests },
+    });
 
-  const res = await fetch(apiKey ? `${url}?key=${apiKey}` : url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({ data: requests, valueInputOption: 'USER_ENTERED' }),
-  });
-
-  if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(`batchUpdate failed: ${res.status} ${msg}`);
+    return res;
+  } catch (e) {
+    console.error("Error in batchUpdate:", e);
+    throw e;
   }
-
-  return res.json();
 }

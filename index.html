@@ -1,16 +1,19 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
+    <meta charset="utf-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MOTK Sheets 2.0</title>
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://accounts.google.com 'unsafe-inline' 'unsafe-eval'; object-src 'none'; base-uri 'self';">
-    <!-- 新しいGoogle Identity Services (GIS) ライブラリを読み込みます -->
+    <title>MOTK Dev</title>
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; frame-src 'self' https://accounts.google.com/gsi/; connect-src 'self' https://accounts.google.com/gsi/ https://www.googleapis.com https://sheets.googleapis.com;"
+    />
+    <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
     <div id="root"></div>
+    <!-- ⬇️  the ONLY <script type="module"> tag Vite must see -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

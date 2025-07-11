@@ -6,6 +6,7 @@ export default function SortableHeaderCell({
   field,
   columnWidths,
   handleColResizeMouseDown,
+  isLast,
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
     id: field.id,
@@ -17,6 +18,7 @@ export default function SortableHeaderCell({
     width: columnWidths[field.id] ?? 150,
     cursor: "grab",
     position: "relative", // Added for positioning the resize handle
+    borderRight: '1px solid rgba(224, 224, 224, 1)',
   };
 
   return (

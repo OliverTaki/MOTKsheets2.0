@@ -1,14 +1,14 @@
-const apiKey = import.meta.env.VITE_SHEETS_API_KEY;
+import { fetchGoogle } from '../utils/google';
 
-export async function updatePage(spreadsheetId, token, pageId, pageData) {
+export async function updatePage(spreadsheetId, token, setNeedsReAuth, pageId, pageData, ensureValidToken) {
   try {
-    const getPagesUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/PAGES!A:A?key=${apiKey}`;
-    const getPagesResponse = await fetch(getPagesUrl, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    const pagesData = await getPagesResponse.json();
+    const getPagesRes = await fetchGoogle(`spreadsheets/${spreadsheetId}/values/PAGES!A:A`, token, ensureValidToken);
+
+    const pagesData = getPagesRes;
+    if (!getPagesRes) {
+      throw new Error(`Failed to fetch page data: ${getPagesRes.status}`);
+    }
+
     const rows = pagesData.values;
     if (!rows) {
       throw new Error('No data found in PAGES sheet.');
@@ -21,7 +21,6 @@ export async function updatePage(spreadsheetId, token, pageId, pageData) {
 
     const sheetRowIndex = rowIndex + 1;
     const range = `PAGES!A${sheetRowIndex}:H${sheetRowIndex}`;
-    const updateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?valueInputOption=USER_ENTERED&key=${apiKey}`;
 
     const {
       title,
@@ -44,21 +43,13 @@ export async function updatePage(spreadsheetId, token, pageId, pageData) {
       author,
     ];
 
-    const response = await fetch(updateUrl, {
+    const updateRes = await fetchGoogle(`spreadsheets/${spreadsheetId}/values/${range}`, token, ensureValidToken, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        values: [newRow],
-      }),
+      params: { valueInputOption: 'USER_ENTERED' },
+      body: { values: [newRow] },
     });
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error.message);
-    }
-    return data;
+
+    return updateRes;
   } catch (err) {
     console.error('Error updating page:', err);
     throw new Error('Failed to update the page in the sheet.');

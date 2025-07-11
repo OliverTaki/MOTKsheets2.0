@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
+import { usePagesData } from '../hooks/usePagesData';
 import {
   Button,
   Dialog,
@@ -11,6 +12,8 @@ import {
   IconButton,
   TextField,
   Box,
+  CircularProgress,
+  Typography
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 
@@ -21,8 +24,8 @@ const ManageViewsDialog = ({
   onSaveAs,
   onDelete,
   loadedPageId,
-  pages, // Receive pages as a prop
 }) => {
+  const { pages, loading, error } = usePagesData(); // Get pages from hook
   const [newPageName, setNewPageName] = useState('');
 
   const handleSaveAs = () => {
@@ -51,21 +54,28 @@ const ManageViewsDialog = ({
             Save As
           </Button>
         </Box>
-        <List>
-          {pages.map((page) => (
-            <ListItem
-              key={page.page_id} // Added key prop
-              selected={page.page_id === loadedPageId}
-              secondaryAction={
-                <IconButton edge="end" aria-label="delete" onClick={() => onDelete(page.page_id)}>
-                  <DeleteIcon />
-                </IconButton>
-              }
-            >
-              <ListItemText primary={page.title} />
-            </ListItem>
-          ))}
-        </List>
+        {loading && <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}><CircularProgress /></Box>}
+        {error && <Typography color="error" sx={{ my: 2 }}>Error loading views: {error.message}</Typography>}
+        {!loading && !error && Array.isArray(pages) && pages.length === 0 && (
+          <Typography variant="body2" color="text.secondary" sx={{ my: 2 }}>No saved views found.</Typography>
+        )}
+        {!loading && !error && Array.isArray(pages) && pages.length > 0 && (
+          <List>
+            {pages.map((page) => (
+              <ListItem
+                key={page.page_id}
+                selected={page.page_id === loadedPageId}
+                secondaryAction={
+                  <IconButton edge="end" aria-label="delete" onClick={() => onDelete(page.page_id)}>
+                    <DeleteIcon />
+                  </IconButton>
+                }
+              >
+                <ListItemText primary={page.title} />
+              </ListItem>
+            ))}
+          </List>
+        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Close</Button>

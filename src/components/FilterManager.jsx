@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
+import { SheetsDataContext } from '../contexts/SheetsDataContext';
 import Button from '@mui/material/Button';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
@@ -14,7 +15,7 @@ import Select from '@mui/material/Select';
 import TextField from '@mui/material/TextField';
 import Box from '@mui/material/Box';
 
-const FilterManager = ({ fields, activeFilters, onFilterChange }) => {
+const FilterManager = ({ activeFilters, onFilterChange, fields = [] }) => {
     const [anchorEl, setAnchorEl] = useState(null);
     const open = Boolean(anchorEl);
 

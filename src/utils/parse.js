@@ -15,6 +15,7 @@ export function parseFields(rawData) {
     }
 
     const normalizedHeader = header.map(cell => String(cell || '').trim().toLowerCase());
+    console.log('Normalized Header:', normalizedHeader);
 
     // ユーザーのシートに合わせて、検索する列名を 'field_id' から 'fields_id' に修正しました
     let idIndex = normalizedHeader.indexOf('fields_id');
@@ -38,7 +39,7 @@ export function parseFields(rawData) {
         label: row[labelIndex],
         type: row[typeIndex] || 'text',
         editable: row[editableIndex] ? row[editableIndex].toUpperCase() === 'TRUE' : false, // editable列をパース
-        options: optionsIndex !== -1 ? row[optionsIndex] : null,
+        options: optionsIndex !== -1 && row[optionsIndex] ? row[optionsIndex].split(',').map(s => s.trim()) : null,
     })).filter(field => field.id && String(field.id).trim() !== '');
 }
 

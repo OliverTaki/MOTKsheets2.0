@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useMemo } from 'react';
 import {
   Button,
   Dialog,
@@ -16,12 +16,15 @@ import {
   Box,
 } from '@mui/material';
 import { AuthContext } from '../AuthContext';
+import { SheetsDataContext } from '../contexts/SheetsDataContext';
 import { getNonUuidIds, updateNonUuidIds } from '../api/updateNonUuidIds';
 
 const spreadsheetId = import.meta.env.VITE_SHEETS_ID;
 
-const UpdateNonUuidIdsDialog = ({ open, onClose }) => {
-  const { token, sheets, fields, refreshData } = useContext(AuthContext);
+const UpdateNonUuidIdsDialog = ({ open, onClose, sheets = [], fields: fieldsProp = [] }) => {
+  const { token, sheetId, ensureValidToken, setNeedsReAuth } = useContext(AuthContext);
+  const { refreshData } = useContext(SheetsDataContext);
+  const memoFields = useMemo(() => fieldsProp, [fieldsProp]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [nonUuidShotIds, setNonUuidShotIds] = useState([]);
@@ -32,17 +35,17 @@ const UpdateNonUuidIdsDialog = ({ open, onClose }) => {
   const [updateSuccess, setUpdateSuccess] = useState(false);
 
   // Find the UUIDs for shot_code and shot_name from the fields array
-  const shotCodeField = fields.find(f => f.label === 'Shot Code');
+  const shotCodeField = memoFields.find(f => f.label === 'Shot Code');
   const shotCodeUuid = shotCodeField ? shotCodeField.id : null;
 
-  const shotNameField = fields.find(f => f.label === 'Shot Name');
+  const shotNameField = memoFields.find(f => f.label === 'Shot Name');
   const shotNameUuid = shotNameField ? shotNameField.id : null;
 
   useEffect(() => {
     console.log("UpdateNonUuidIdsDialog: useEffect triggered.");
     const fetchIds = async () => {
       console.log("UpdateNonUuidIdsDialog: fetchIds called. open:", open, "token:", token ? "present" : "missing", "sheets:", sheets ? "present" : "missing", "fields:", fields ? "present" : "missing");
-      if (!open || !token || !sheets || !fields) {
+      if (!token || !sheets || !memoFields || !sheetId) {
         console.log("UpdateNonUuidIdsDialog: fetchIds returning early due to missing dependencies.");
         return;
       }
@@ -51,7 +54,7 @@ const UpdateNonUuidIdsDialog = ({ open, onClose }) => {
       setLoading(true);
       setError(null);
       try {
-        const { nonUuidShotIds, nonUuidFieldIds } = await getNonUuidIds(spreadsheetId, token, sheets, fields);
+        const { nonUuidShotIds, nonUuidFieldIds } = await getNonUuidIds(sheetId, sheets, memoFields);
         setNonUuidShotIds(nonUuidShotIds);
         setNonUuidFieldIds(nonUuidFieldIds);
         setSelectedIds(new Set([...nonUuidShotIds, ...nonUuidFieldIds])); // Select all by default
@@ -62,8 +65,10 @@ const UpdateNonUuidIdsDialog = ({ open, onClose }) => {
         setLoading(false);
       }
     };
-    fetchIds();
-  }, [open, token, sheets, fields]);
+    if (open) {
+      fetchIds();
+    }
+  }, [open, token, sheets, memoFields]);
 
   const handleToggle = (id) => {
     setSelectedIds((prevSelected) => {
@@ -94,12 +99,12 @@ const UpdateNonUuidIdsDialog = ({ open, onClose }) => {
     setUpdateError(null);
     setUpdateSuccess(false);
     try {
-      await updateNonUuidIds(spreadsheetId, token, sheets, fields, Array.from(selectedIds));
+      await updateNonUuidIds(sheetId, token, setNeedsReAuth, sheets, memoFields, Array.from(selectedIds));
       setUpdateSuccess(true);
       // Refresh data in AppContainer after successful update
       if (refreshData) refreshData();
       // Re-fetch IDs to show updated state (should be empty if all updated)
-      const { nonUuidShotIds: newShotIds, nonUuidFieldIds: newFieldIds } = await getNonUuidIds(spreadsheetId, token, sheets, fields);
+      const { nonUuidShotIds: newShotIds, nonUuidFieldIds: newFieldIds } = await getNonUuidIds(sheetId, sheets, memoFields);
       setNonUuidShotIds(newShotIds);
       setNonUuidFieldIds(newFieldIds);
       setSelectedIds(new Set([...newShotIds, ...newFieldIds]));
@@ -160,7 +165,7 @@ const UpdateNonUuidIdsDialog = ({ open, onClose }) => {
                 <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>Field IDs:</Typography>
               )}
               {nonUuidFieldIds.map((id) => {
-                const field = fields.find(f => f.id === id);
+                const field = memoFields.find(f => f.id === id);
                 console.log(`Processing field ID: ${id}, Field object:`, field);
                 const display = field ? (field.label || `(No label for ${id})`) : `(Field ID: ${id})`;
                 return (

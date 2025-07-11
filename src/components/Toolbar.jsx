@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { SheetsDataContext } from '../contexts/SheetsDataContext';
 import FilterManager from './FilterManager';
 import FieldManager from './FieldManager';
 import ManageViewsDialog from './ManageViewsDialog';
@@ -9,8 +10,6 @@ import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import AddIcon from '@mui/icons-material/Add';
 
 const Toolbar = ({
-    fields,
-    pages,
     activeFilters,
     onFilterChange,
     allShots,
@@ -27,6 +26,10 @@ const Toolbar = ({
     onDeleteView,
     loadedPageId,
     onOpenUpdateNonUuidIdsDialog,
+    pages = [], // Add pages to props with default empty array
+    pagesLoading, // Add pagesLoading to props
+    pagesError, // Add pagesError to props
+    fields = [],
 }) => {
     const navigate = useNavigate();
     const [isManageViewsDialogOpen, setManageViewsDialogOpen] = useState(false);
@@ -47,21 +50,28 @@ const Toolbar = ({
 
     return (
         <>
-            <div className="flex flex-wrap items-center justify-between mb-4 gap-4">
-                <div className="flex flex-wrap items-center justify-between mb-4 gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-4 p-4 shadow rounded-lg z-20 bg-gray-800">
+                <div className="flex flex-wrap items-center justify-between gap-4">
                     {/* Page Selector */}
                     <FormControl variant="outlined" size="small" sx={{ minWidth: 150 }}>
                         <InputLabel id="page-select-label">View</InputLabel>
                         <Select
                             labelId="page-select-label"
                             id="page-select"
-                            value={loadedPageId || ''}
+                            value={loadedPageId && pages.some(p => p.page_id === loadedPageId) ? loadedPageId : ''}
                             onChange={handlePageChange}
                             label="View"
                         >
-                            {pages.map(page => (
-                                <MenuItem key={page.page_id} value={page.page_id}>{page.title}</MenuItem>
-                            ))}
+                            {pagesLoading && <MenuItem disabled>Loading views...</MenuItem>}
+                            {pagesError && <MenuItem disabled className="text-red-400">Error loading views</MenuItem>}
+                            {!pagesLoading && !pagesError && (!Array.isArray(pages) || pages.length === 0) && (
+                                <MenuItem disabled>No views found</MenuItem>
+                            )}
+                            {Array.isArray(pages) && pages.length > 0 && (
+                                pages.map(page => (
+                                    <MenuItem key={page.page_id} value={page.page_id}>{page.title}</MenuItem>
+                                ))
+                            )}
                         </Select>
                     </FormControl>
 

@@ -1,25 +1,34 @@
 import { isValidUUID } from '../utils/id';
+import { apiFetch } from '../utils/api';
 
 /**
  * スプレッドシートのメタデータを取得し、シート名からシートIDへのマップを返します。
  * @param {string} spreadsheetId 
- * @param {string} token 
  * @returns {Promise<Map<string, number>>}
  */
-const getSheetIds = async (spreadsheetId, token) => {
-    const response = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties`,
-        {
-            headers: { 'Authorization': `Bearer ${token}` }
+const getSheetIds = async (spreadsheetId, token, setNeedsReAuth, ensureValidToken) => {
+    try {
+        const response = await apiFetch(
+            `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties`,
+            {},
+            token,
+            setNeedsReAuth,
+            ensureValidToken
+        );
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error?.message || 'Could not fetch spreadsheet metadata.');
         }
-    );
-    if (!response.ok) throw new Error('Could not fetch spreadsheet metadata.');
-    const data = await response.json();
-    const sheetIdMap = new Map();
-    data.sheets.forEach(sheet => {
-        sheetIdMap.set(sheet.properties.title.toUpperCase(), sheet.properties.sheetId);
-    });
-    return sheetIdMap;
+        const data = await response.json();
+        const sheetIdMap = new Map();
+        data.sheets.forEach(sheet => {
+            sheetIdMap.set(sheet.properties.title.toUpperCase(), sheet.properties.sheetId);
+        });
+        return sheetIdMap;
+    } catch (e) {
+        console.error("Error in getSheetIds:", e);
+        throw e;
+    }
 };
 
 /**
@@ -30,32 +39,37 @@ const getSheetIds = async (spreadsheetId, token) => {
  * @param {Array<object>} fields フィールド定義の配列
  * @returns {Promise<object>} Google Sheets APIからのレスポ1ンス
  */
-export const getNonUuidIds = async (spreadsheetId, token, sheets, fields) => {
-    console.log("getNonUuidIds: Received sheets data:", sheets);
-    console.log("getNonUuidIds: Received fields data:", fields);
-    const nonUuidShotIds = [];
-    const nonUuidFieldIds = [];
+export const getNonUuidIds = async (spreadsheetId, sheets, fields) => {
+    try {
+        console.log("getNonUuidIds: Received sheets data:", sheets);
+        console.log("getNonUuidIds: Received fields data:", fields);
+        const nonUuidShotIds = [];
+        const nonUuidFieldIds = [];
 
-    sheets.forEach((shot) => {
-        console.log(`Checking shot ID: ${shot.shot_id}, isValidUUID: ${isValidUUID(shot.shot_id)}`);
-        if (!isValidUUID(shot.shot_id) || shot.shot_id === '') {
-            nonUuidShotIds.push(shot.shot_id);
-        }
-    });
+        sheets.forEach((shot) => {
+            console.log(`Checking shot ID: ${shot.shot_id}, isValidUUID: ${isValidUUID(shot.shot_id)}`);
+            if (!isValidUUID(shot.shot_id) || shot.shot_id === '') {
+                nonUuidShotIds.push(shot.shot_id);
+            }
+        });
 
-    fields.forEach((field) => {
-        console.log(`Checking field ID: ${field.id}, isValidUUID: ${isValidUUID(field.id)}`);
-        if (!isValidUUID(field.id) || field.id === '') {
-            nonUuidFieldIds.push(field.id);
-        }
-    });
+        fields.forEach((field) => {
+            console.log(`Checking field ID: ${field.id}, isValidUUID: ${isValidUUID(field.id)}`);
+            if (!isValidUUID(field.id) || field.id === '') {
+                nonUuidFieldIds.push(field.id);
+            }
+        });
 
-    return { nonUuidShotIds, nonUuidFieldIds };
+        return { nonUuidShotIds, nonUuidFieldIds };
+    } catch (e) {
+        console.error("Error in getNonUuidIds:", e);
+        throw e;
+    }
 };
 
-export const updateNonUuidIds = async (spreadsheetId, token, sheets, fields, idsToUpdate) => {
+export const updateNonUuidIds = async (spreadsheetId, token, setNeedsReAuth, sheets, fields, idsToUpdate, ensureValidToken) => {
     const requests = [];
-    const sheetIds = await getSheetIds(spreadsheetId, token);
+    const sheetIds = await getSheetIds(spreadsheetId, token, setNeedsReAuth, ensureValidToken);
     const shotsSheetId = sheetIds.get('SHOTS');
     const fieldsSheetId = sheetIds.get('FIELDS');
 
@@ -112,23 +126,30 @@ export const updateNonUuidIds = async (spreadsheetId, token, sheets, fields, ids
     }
 
     const body = { requests };
-    const response = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`,
-        {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
+    try {
+        const response = await apiFetch(
+            `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(body)
             },
-            body: JSON.stringify(body)
+            token,
+            setNeedsReAuth,
+            ensureValidToken
+        );
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Google Sheets API Error:', errorData);
+            throw new Error(errorData.error?.message || 'Failed to update non-UUID IDs.');
         }
-    );
 
-    if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Google Sheets API Error:', errorData);
-        throw new Error(errorData.error?.message || 'Failed to update non-UUID IDs.');
+        return response.json();
+    } catch (e) {
+        console.error("Error in updateNonUuidIds:", e);
+        throw e;
     }
-
-    return response.json();
 };

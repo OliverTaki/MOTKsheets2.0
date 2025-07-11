@@ -19,6 +19,7 @@
 10. [Roadmap](#roadmap)
 11. [Contributing](#contributing)
 12. [License](#license)
+13. [Google Sheets Setup](#google-sheets-setup)
 
 ---
 
@@ -147,7 +148,7 @@ docs/                  # screenshots, diagrams
 1. `useSheetsData` fetches:
    • **data tab** (`Sheet1!A1:Z`) → rows → `shots`
    • **field definition tab** (optional) → input *type*, enum *options* → `fields`
-2. AuthContext stores the **OAuth token** (sessionStorage, 1 hr lifetime).
+2. AuthContext stores the **OAuth token** (sessionStorage, 1 hr lifetime) and automatically refreshes it when needed.
 3. **Editing flow**:
    `ShotTable` ✏ → local `onCellSave` (optimistic) → `updateCell()` → Sheets API `PUT`
    *On failure, UI rolls back by full page reload.*
@@ -184,3 +185,20 @@ Please stick to the existing ESLint rules (`npm run lint`) and keep PRs focused.
 ## License <a id="license"></a>
 
 MIT © 2025 **Oliver Taki** & contributors
+
+---
+
+## Google Sheets Setup <a id="google-sheets-setup"></a>
+
+### プロジェクトシートの命名規則
+- 新規プロジェクトを作成する際はファイル名を
+    **MOTK[Project:<任意のプロジェクト名>]**
+    としてください（例: MOTK[Project:Oliver02]）。
+- 中括弧 [] 内の <ProjectName> が UI に表示されます。
+
+#### シート ID の優先順位
+1. ユーザーが /select で選択したシート
+2. `localStorage["motk:lastSheetId:<googleSub>"]`
+3. `.env` で設定した `VITE_SHEETS_ID`（初期値 / デモ用）
+
+切替後は全データフックが自動で再読込されます。

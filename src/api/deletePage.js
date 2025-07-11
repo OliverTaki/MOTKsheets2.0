@@ -1,29 +1,22 @@
 import { ensureSheetExists } from './sheetUtils';
-const apiKey = import.meta.env.VITE_SHEETS_API_KEY;
+import { fetchGoogle } from '../utils/google';
 
-export async function deletePage(spreadsheetId, token, pageId) {
+export async function deletePage(spreadsheetId, token, setNeedsReAuth, pageId, ensureValidToken) {
   console.log(`Attempting to delete page with ID: ${pageId}`);
   try {
-    const sheetId = await ensureSheetExists(spreadsheetId, token);
+    const sheetId = await ensureSheetExists(spreadsheetId, token, setNeedsReAuth, ensureValidToken);
     if (!sheetId) {
       console.warn("PAGES sheet not found during deletion attempt. No action taken.");
       return; // Exit gracefully if sheet doesn't exist
     }
 
-    const range = 'PAGES!A:A'; // Assuming page_id is in column A
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}`;
-    console.log(`Fetching page IDs from: ${url}`);
+    // Fetch page IDs
+    const getPagesRes = await fetchGoogle(`spreadsheets/${spreadsheetId}/values/PAGES!A:A`, token, ensureValidToken);
 
-    const getPagesResponse = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    const pagesData = await getPagesResponse.json();
-    if (!getPagesResponse.ok) {
-      console.error("Error fetching page data:", pagesData);
-      throw new Error(`Failed to fetch page data: ${pagesData.error.message}`);
+    const pagesData = getPagesRes;
+    if (!getPagesRes) {
+      console.error("Error fetching page data:", getPagesRes);
+      throw new Error(`Failed to fetch page data: ${getPagesRes.status}`);
     }
 
     const rows = pagesData.values;
@@ -37,7 +30,8 @@ export async function deletePage(spreadsheetId, token, pageId) {
 
     const rowsToDelete = [];
     for (let i = 0; i < rows.length; i++) {
-      if (rows[i][0] === pageId) {
+      // Trim whitespace from the pageId read from the sheet before comparison
+      if (rows[i][0] && rows[i][0].trim() === pageId) {
         rowsToDelete.push(i); // Store the 0-based index
       }
     }
@@ -62,26 +56,15 @@ export async function deletePage(spreadsheetId, token, pageId) {
       },
     }));
 
-    const batchUpdateUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`;
     console.log("Sending batch update request to delete rows:", requests);
 
-    const response = await fetch(batchUpdateUrl, {
+    const batchUpdateRes = await fetchGoogle(`spreadsheets/${spreadsheetId}:batchUpdate`, token, ensureValidToken, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(requests),
+      body: { requests: requests },
     });
 
-    const data = await response.json();
-    if (!response.ok) {
-      console.error("Batch update failed:", data);
-      throw new Error(data.error.message || 'Failed to delete the page from the sheet.');
-    }
-
-    console.log("Page(s) deleted successfully. Response:", data);
-    return data;
+    console.log("Page(s) deleted successfully. Response:", batchUpdateRes);
+    return batchUpdateRes;
   } catch (err) {
     console.error('Caught error in deletePage:', err);
     throw new Error(`Failed to delete the page from the sheet: ${err.message}`);

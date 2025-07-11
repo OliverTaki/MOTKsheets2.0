@@ -2,7 +2,7 @@
 import React, { useMemo, useState } from "react";
 import {
   Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Paper, TextField, Select, MenuItem
+  TableHead, TableRow, Paper, TextField, Select, MenuItem, Checkbox
 } from "@mui/material";
 import Box from "@mui/material/Box";
 import EditIcon from '@mui/icons-material/Edit';
@@ -15,7 +15,7 @@ import {
 } from "@dnd-kit/sortable";
 import SortableHeaderCell from "./SortableHeaderCell";
 
-export default function ShotTable(props) {
+export default React.memo(function ShotTable(props) {
   const {
     shots = [],
     fields: rawFields = [],
@@ -25,6 +25,7 @@ export default function ShotTable(props) {
     handleDragEnd,
     handleColResizeMouseDown,
     onCellSave, // Ensure onCellSave is destructured
+    handleCellSave, // Add handleCellSave to destructured props
   } = props;
 
   const fields = Array.isArray(rawFields) ? rawFields : Object.values(rawFields);
@@ -41,22 +42,35 @@ export default function ShotTable(props) {
   const sensors = useSensors(useSensor(PointerSensor));
   const HEAD_H = 56;
 
-  const cellSx = {
-    border: "1px solid rgba(224, 224, 224, 1)",
-  };
+  
 
   const [editingCell, setEditingCell] = useState(null); // { shotId, fieldId }
   const [cellValue, setCellValue] = useState("");
 
-  const handleCellClick = (shotId, fieldId, currentValue, isEditable) => {
+  const handleCellClick = (shotId, fieldId, currentValue, isEditable, fieldType) => {
     if (isEditable) {
       setEditingCell({ shotId, fieldId });
-      setCellValue(currentValue);
+      // Ensure cellValue is always a string for text, select, date fields
+      if (fieldType === 'text' || fieldType === 'select' || fieldType === 'date') {
+        setCellValue(String(currentValue || ''));
+      } else {
+        setCellValue(currentValue); // For checkbox, it's 'TRUE'/'FALSE'
+      }
     }
   };
 
   const handleCellChange = (e) => {
-    setCellValue(e.target.value);
+    // Check if 'e' is an event object (has a target property and value/checked)
+    if (e && typeof e === 'object' && e.target) {
+      if (typeof e.target.value !== 'undefined') {
+        setCellValue(e.target.value);
+      } else if (typeof e.target.checked !== 'undefined') {
+        setCellValue(e.target.checked ? 'TRUE' : 'FALSE');
+      }
+    } else {
+      // 'e' is already the value (e.g., from Checkbox's onChange passing 'TRUE'/'FALSE')
+      setCellValue(e);
+    }
   };
 
   const handleCellBlur = () => {
@@ -75,6 +89,65 @@ export default function ShotTable(props) {
     if (e.key === "Escape") {
       setEditingCell(null); // Cancel editing
       setCellValue("");
+    }
+  };
+
+  const renderEditableCell = (field, value, onChange, onBlur, onKeyDown) => {
+    switch (field.type) {
+      case "select":
+        return (
+          <Select
+            value={value}
+            onChange={onChange}
+            onBlur={onBlur}
+            autoFocus
+            fullWidth
+            variant="standard"
+            sx={{ '& .MuiInputBase-input': { p: 0.5 } }}
+          >
+            {Array.isArray(field.options) && field.options.map((option) => (
+              <MenuItem key={typeof option === 'object' ? option.value : option} value={typeof option === 'object' ? option.value : option}> 
+                {typeof option === 'object' ? option.label : option}
+              </MenuItem>
+            ))}
+          </Select>
+        );
+      case "date":
+        return (
+          <TextField
+            type="date"
+            value={value}
+            onChange={onChange}
+            onBlur={onBlur}
+            onKeyDown={onKeyDown}
+            autoFocus
+            fullWidth
+            variant="standard"
+            sx={{ '& .MuiInputBase-input': { p: 0.5 } }}
+          />
+        );
+      case "checkbox":
+        return (
+          <Checkbox
+            checked={value === 'TRUE'}
+            onChange={(e) => onChange(e.target.checked ? 'TRUE' : 'FALSE')}
+            onBlur={onBlur}
+            sx={{ p: 0.5 }}
+          />
+        );
+      default:
+        return (
+          <TextField
+            value={value}
+            onChange={onChange}
+            onBlur={onBlur}
+            onKeyDown={onKeyDown}
+            autoFocus
+            fullWidth
+            variant="standard"
+            sx={{ '& .MuiInputBase-input': { p: 0.5 } }}
+          />
+        );
     }
   };
 
@@ -99,6 +172,10 @@ export default function ShotTable(props) {
       );
     }
 
+    if (field.type === "checkbox") {
+      return <Checkbox checked={value === 'TRUE'} disabled sx={{ p: 0.5 }} />;
+    }
+
     // default: render as text
     return value;
   };
@@ -109,140 +186,120 @@ export default function ShotTable(props) {
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
     >
-      <Box sx={{ overflowX: "auto" }}>
-        <TableContainer
-          component={Paper}
-          sx={{            
-            display: "inline-block",
-            overflow: "visible",
-            width: `${tableWidth}px`,
-          }}
-        >
-          <Table stickyHeader sx={{ borderCollapse: "collapse" }}>
-            <TableHead>
-              <SortableContext
-                items={visibleFieldIds}
-                strategy={horizontalListSortingStrategy}
+      <TableContainer component={Paper} sx={{ height: 'calc(100dvh - 165px)', overflow: 'auto' }}>
+        <Table stickyHeader sx={{ borderCollapse: "separate", borderSpacing: "0", width: tableWidth }}>
+          <TableHead sx={{ position: "sticky", top: 0, bgcolor: "background.paper", zIndex: 15 }}>
+            <SortableContext
+              items={visibleFieldIds}
+              strategy={horizontalListSortingStrategy}
+            >
+              <TableRow
+                sx={{
+                  bgcolor: "background.paper",
+                }}
               >
-                <TableRow
-                  sx={{                    
-                    position: "sticky",
-                    top: 0, // Stick to the top of the container
-                    zIndex: 2,
-                    bgcolor: "background.paper",
-                  }}
-                >
-                  {fields.map(
-                    (f) =>
-                      visibleFieldIds.includes(f.id) && (
-                        <SortableHeaderCell
-                          key={f.id}
-                          field={f}
-                          columnWidths={columnWidths}
-                          handleColResizeMouseDown={handleColResizeMouseDown}
-                          sx={cellSx}
-                        />
-                      )
-                  )}
-                </TableRow>
-              </SortableContext>
-              {showFilters && (
-                <TableRow
-                  sx={{
-                    position: "sticky",
-                    top: `${HEAD_H}px`,
-                    zIndex: 1,
-                    bgcolor: "background.paper",
-                  }}
-                >
-                  {visibleFieldIds.map((fieldId) => (
-                    <TableCell
-                      key={fieldId}
-                      sx={{ ...cellSx, width: columnWidths[fieldId] ?? 150, p: 0.5 }}
-                    >
-                      {/* filter input here */}
-                    </TableCell>
+                {fields
+                  .filter((f) => visibleFieldIds.includes(f.id))
+                  .map((f) => (
+                    <SortableHeaderCell
+                      key={f.id}
+                      field={f}
+                      columnWidths={columnWidths}
+                      handleColResizeMouseDown={handleColResizeMouseDown}
+                      isLast={visibleFieldIds.indexOf(f.id) === visibleFieldIds.length - 1}
+                      sx={{
+                        borderRight: '1px solid rgba(224, 224, 224, 1)',
+                        borderBottom: '1px solid rgba(224, 224, 224, 1)',
+                      }}
+                    />
                   ))}
-                </TableRow>
-              )}
-            </TableHead>
-            <TableBody>
-              {shots.map((shot) => (
-                <TableRow key={shot.shot_id}>
-                  {fields.map(
-                    (f) =>
-                      visibleFieldIds.includes(f.id) && (
-                        <TableCell
-                          key={f.id}
-                          sx={{ ...cellSx, width: columnWidths[f.id] ?? 150 }}
-                        >
-                          {editingCell?.shotId === shot.shot_id && editingCell?.fieldId === f.id ? (
-                            f.type === "select" ? (
-                              <Select
-                                value={cellValue}
-                                onChange={handleCellChange}
-                                onBlur={handleCellBlur}
-                                autoFocus
-                                fullWidth
-                                variant="standard"
-                                InputProps={{ disableUnderline: true }}
-                                sx={{ '& .MuiInputBase-input': { p: 0.5 } }}
-                              >
-                                {f.options.map((option) => (
-                                  <MenuItem key={option} value={option}>
-                                    {option}
-                                  </MenuItem>
-                                ))}
-                              </Select>
-                            ) : f.type === "date" ? (
-                              <TextField
-                                type="date"
-                                value={cellValue}
-                                onChange={handleCellChange}
-                                onBlur={handleCellBlur}
-                                onKeyDown={handleCellKeyDown}
-                                autoFocus
-                                fullWidth
-                                variant="standard"
-                                InputProps={{ disableUnderline: true }}
-                                sx={{ '& .MuiInputBase-input': { p: 0.5 } }}
-                              />
-                            ) : (
-                              <TextField
-                                value={cellValue}
-                                onChange={handleCellChange}
-                                onBlur={handleCellBlur}
-                                onKeyDown={handleCellKeyDown}
-                                autoFocus
-                                fullWidth
-                                variant="standard"
-                                InputProps={{ disableUnderline: true }}
-                                sx={{ '& .MuiInputBase-input': { p: 0.5 } }}
-                              />
+              </TableRow>
+            </SortableContext>
+            {showFilters && (
+              <TableRow
+                sx={{
+                  bgcolor: "background.paper",
+                }}
+              >
+                {visibleFieldIds.map((fieldId) => (
+                  <TableCell
+                    key={fieldId}
+                    sx={{
+                      width: columnWidths[fieldId] ?? 150,
+                      borderRight: '1px solid rgba(224, 224, 224, 1)',
+                      borderBottom: '1px solid rgba(224, 224, 224, 1)',
+                    }}
+                  >
+                    {/* filter input here */}
+                  </TableCell>
+                ))}
+              </TableRow>
+            )}
+          </TableHead>
+          <TableBody>
+            {shots.map((shot) => (
+              <TableRow key={shot.shot_id}>
+                {fields
+                  .filter((f) => visibleFieldIds.includes(f.id))
+                  .map((f) => {
+                    const isEditing = editingCell?.shotId === shot.shot_id && editingCell?.fieldId === f.id;
+                    return (
+                      <TableCell
+                        key={f.id}
+                        sx={{
+                          width: columnWidths[f.id] ?? 150,
+                          borderRight: '1px solid rgba(224, 224, 224, 1)',
+                          borderBottom: '1px solid rgba(224, 224, 224, 1)',
+                        }}
+                      >
+                        {isEditing
+                          ? renderEditableCell(
+                              f,
+                              cellValue,
+                              handleCellChange,
+                              handleCellBlur,
+                              handleCellKeyDown,
                             )
-                          ) : (
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                              {renderCell(shot, f)}
-                              {f.editable && (
+                          : (
+                            <Box sx={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                              {f.type === 'checkbox' ? (
+                                <Checkbox
+                                  checked={shot[f.id] === 'TRUE'}
+                                  onChange={e =>
+                                    onCellSave(shot.shot_id, f.id, e.target.checked ? 'TRUE' : 'FALSE')
+                                  }
+                                  disabled={!f.editable} // ← 修正: editable=true なら操作可
+                                  sx={{ p: 0.5 }}
+                                />
+                              ) : (
+                                renderCell(shot, f)
+                              )}
+
+                              {f.editable && f.type !== 'checkbox' && ( // ← 修正: チェックボックス列には鉛筆アイコン不要
                                 <EditIcon
-                                  sx={{ fontSize: 16, cursor: 'pointer', ml: 1 }}
-                                  onClick={(e) => {
-                                    e.stopPropagation(); // Prevent triggering cell click again
-                                    handleCellClick(shot.shot_id, f.id, shot[f.id], f.editable);
+                                  sx={{ fontSize:16, cursor:'pointer', ml:1 }}
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    handleCellClick(
+                                      shot.shot_id,
+                                      f.id,
+                                      shot[f.id],
+                                      f.editable,
+                                      f.type,
+                                    );
                                   }}
                                 />
                               )}
                             </Box>
                           )}
-                        </TableCell>
-                      )
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Box>
+                      </TableCell>
+                    );
+                  })}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
     </DndContext>
   );
-}
+});
