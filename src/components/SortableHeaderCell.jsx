@@ -14,45 +14,48 @@ export default React.memo(function SortableHeaderCell({
   });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: CSS.Translate.toString(transform),
     transition,
-    width: columnWidths[field.id] ?? 150,
-    cursor: "grab",
-    position: "relative", // Added for positioning the resize handle
-    borderRight: '1px solid rgba(224, 224, 224, 1)',
+    position: 'relative',
   };
 
   return (
     <TableCell ref={setNodeRef} style={style}>
-      {/* ──   Drag Handle   ───────────────────────── */}
+      {/* ── Drag handle（左側 12px 固定）──────── */}
       <div
-        {...attributes}      // role / tabIndex / aria
-        {...listeners}       // onPointerDown 等（★ ここだけに付与）
+        {...attributes}
+        {...listeners}
         style={{
-          position:'absolute',
-          left: 4,
-          top: 0, bottom: 0,
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          bottom: 0,
           width: 12,
-          cursor:'grab',
+          cursor: 'grab',
           zIndex: 30,
         }}
-        onClick={e=>e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       />
 
-      {/* ラベル本体 */}
-      {field.label}
+      {/* ラベル領域 */}
+      <span style={{ paddingLeft: 14 }}>{field.label}</span>
 
-      {/* ──   Resize Handle   ─────────────────────── */}
+      {/* ── Resize handle（右端 8px）──────────── */}
       <div
         style={{
-          position:'absolute', right:0, top:0, bottom:0, width:8,
-          cursor:'col-resize', zIndex:20,
+          position: 'absolute',
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: 8,
+          cursor: 'col-resize',
+          zIndex: 20,
         }}
-        onMouseDown={e=>{
-          e.stopPropagation();               // ★ Drag開始を阻止
+        onMouseDown={(e) => {
+          e.stopPropagation();      // ← DnD を抑止
           handleColResizeMouseDown(e, field.id);
         }}
-        onPointerDown={e=>e.stopPropagation()}  // iPad 等 pointer 系端末向け
+        onPointerDown={(e) => e.stopPropagation()} // touch / pen 端末用
       />
     </TableCell>
   );

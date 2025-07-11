@@ -42,24 +42,11 @@ export const AppContainer = () => {
   const { sheetId, setSheetId } = useContext(SheetsContext);
 
   if (!sheetId) {
-    return <div>プロジェクトをロード中…</div>;
+    return <div>Loading project…</div>;
   }
 
-  /* ---------- 必須データフックはここで先に呼び出す ---------- */
-  const {
-    sheets, setShots,
-    fields, setFields,
-    loading: fieldsLoading, error: fieldsError,
-    refreshData, updateFieldOptions,
-    idToColIndex, updateIdToColIndex
-  } = useSheetsData(sheetId);          // ← sheetId が null でも hook 内で no-op
-
-  const {
-    pages, loading: pagesLoading,
-    error: pagesError, refreshPages
-  } = usePagesData(sheetId);
-
-  /* ---------- ここから下で sheets / fields を安全に参照 ---------- */
+  const { sheets, setShots, fields, setFields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex, updateIdToColIndex } = useSheetsData(sheetId);
+  const { pages, loading: pagesLoading, error: pagesError, refreshPages } = usePagesData(sheetId);
   console.log('AppContainer: token', token ? 'present' : 'null');
   console.log('AppContainer: sheetId', sheetId);
 
@@ -330,22 +317,21 @@ export const AppContainer = () => {
     }
   };
 
-  const handleColResizeMouseDown = (fieldId, startX) => {
-    const startWidth = columnWidths[fieldId] ?? 150;
-
-    const onMouseMove = (e) => {
-      const delta = e.clientX - startX;
-      const newWidth = Math.max(50, startWidth + delta);
-      setColumnWidths(prev => ({ ...prev, [fieldId]: newWidth }));
+  const handleColResizeMouseDown = (e, id) => {
+    const startX = e.clientX;
+    const startWidth = columnWidths[id] ?? 150;
+    const onMove = (ev) => {
+      const newW = Math.max(60, startWidth + ev.clientX - startX);
+      requestAnimationFrame(() =>
+        setColumnWidths((prev) => ({ ...prev, [id]: newW }))
+      );
     };
-
-    const onMouseUp = () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
     };
-
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
   };
 
   if (needsReAuth) {
