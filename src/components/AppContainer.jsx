@@ -1,6 +1,6 @@
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import React, { useState, useEffect, useContext, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useContext, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import Home from './Home';
@@ -65,10 +65,23 @@ export const AppContainer = () => {
   const rafId = useRef(null);
   const latestW = useRef(null);
   const tableStartWidthRef = useRef(0);
+  const colRefs = useRef({});
 
   useEffect(() => {
     sheetsRef.current = sheets;
   }, [sheets]);
+
+  useLayoutEffect(() => {
+    if (!tableRef.current) return;
+    const tableEl = tableRef.current.querySelector('table');
+    if (!tableEl) return;
+    const refs = {};
+    tableEl.querySelectorAll('col[data-col]').forEach(col => {
+      const id = col.getAttribute('data-col');
+      if (id) refs[id] = col;
+    });
+    colRefs.current = refs;
+  }, [orderedFields, visibleFieldIds]);
 
   const handleLoadView = useCallback((page) => {
     if (!page) return;
@@ -326,23 +339,19 @@ export const AppContainer = () => {
     tableStartWidthRef.current = tableRef.current?.offsetWidth ?? 0;  // remember table width
     idRef.current = id;
     latestW.current = startWidth;
+    const tableEl = tableRef.current?.querySelector('table');
+    const colEl = colRefs.current[id];
 
     const onMove = (ev) => {
       latestW.current = Math.max(60, startWidth + ev.clientX - startX);
       cancelAnimationFrame(rafId.current);
       rafId.current = requestAnimationFrame(() => {
-        if (tableRef.current) {
-          const tableEl = tableRef.current.querySelector('table');
-          if (tableEl) {
-            const colEl = tableEl.querySelector(`col[data-col="${idRef.current}"]`);
-            if (colEl) colEl.style.width = `${latestW.current}px`;
-
-            /* keep overall table width in sync so right edge tracks:
-               remove this block if you prefer horizontal scroll instead */
-            const delta = latestW.current - startWidth;
-            tableEl.style.width =
-              `${tableStartWidthRef.current + delta}px`;
-          }
+        if (colEl) colEl.style.width = `${latestW.current}px`;
+        if (tableEl) {
+          /* keep overall table width in sync so right edge tracks:
+             remove this block if you prefer horizontal scroll instead */
+          const delta = latestW.current - startWidth;
+          tableEl.style.width = `${tableStartWidthRef.current + delta}px`;
         }
         rafId.current = null;
       });
