@@ -1,4 +1,4 @@
-// src/components/ShotTable.tsx
+// src/components/ShotTableDG.tsx
 import React, { useMemo } from 'react';
 import {
   DataGrid,
@@ -10,8 +10,8 @@ import {
 } from '@mui/x-data-grid';
 import { Box } from '@mui/material';
 
-type Field = { id: string; headerName: string; type?: 'string' | 'number' | 'date' | 'boolean'; };
-type Shot = { shot_id: string; [key: string]: any; };
+type Field = { id: string; headerName: string; type?: 'string' | 'number' | 'date' | 'boolean' };
+type Shot = { shot_id: string; [key: string]: any };
 
 type ShotTableProps = {
   shots: Shot[];
@@ -21,7 +21,7 @@ type ShotTableProps = {
   onColumnResize?: (params: GridColumnResizeParams) => void;
 };
 
-export default function ShotTable({
+export default function ShotTableDG({
   shots,
   fields,
   onCellSave,
@@ -56,12 +56,12 @@ export default function ShotTable({
 
   // Handle column reorder
   const handleColumnOrderChange = (params: GridColumnOrderChangeParams) => {
-    onColumnOrderChange && onColumnOrderChange(params);
+    if (onColumnOrderChange) onColumnOrderChange(params);
   };
 
   // Handle column resizing
   const handleColumnResize = (params: GridColumnResizeParams) => {
-    onColumnResize && onColumnResize(params);
+    if (onColumnResize) onColumnResize(params);
   };
 
   return (
