@@ -332,13 +332,10 @@ export const AppContainer = () => {
       cancelAnimationFrame(rafId.current);
       rafId.current = requestAnimationFrame(() => {
         if (tableRef.current) {
-          // update the column-width var on the TABLE so <th> *and* <td> see it
           const tableEl = tableRef.current.querySelector('table');
           if (tableEl) {
-            tableEl.style.setProperty(
-              `--w-${idRef.current}`,
-              `${latestW.current}px`,
-            );
+            const colEl = tableEl.querySelector(`col[data-col="${idRef.current}"]`);
+            if (colEl) colEl.style.width = `${latestW.current}px`;
 
             /* keep overall table width in sync so right edge tracks:
                remove this block if you prefer horizontal scroll instead */

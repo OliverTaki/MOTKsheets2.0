@@ -188,6 +188,16 @@ export default function ShotTable(props) {
     >
       <TableContainer component={Paper} sx={{ height: 'calc(100dvh - 165px)', overflow: 'auto' }}>
         <Table stickyHeader sx={{ borderCollapse: "separate", borderSpacing: "0", width: tableWidth }}>
+          <colgroup>
+            {fields.map((f) => (
+              <col
+                key={f.id}
+                data-col={f.id}
+                /* default width via CSS var; will be overwritten at runtime */
+                style={{ width: `var(--w-${f.id}, ${columnWidths[f.id] ?? 150}px)` }}
+              />
+            ))}
+          </colgroup>
           <TableHead sx={{ position: "sticky", top: 0, bgcolor: "background.paper", zIndex: 15 }}>
             <SortableContext
               items={visibleFieldIds}

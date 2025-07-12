@@ -2,7 +2,7 @@
 
 **Project:** `motksheets2-frontend`
 
-**Last Session Date:** 2025-07-08
+**Last Session Date:** 2025-07-12
 
 ## Summary of Progress
 
@@ -10,6 +10,8 @@ We have been working on implementing a "Pages" feature that allows users to save
 
 ### Key Features and Bug Fixes:
 
+*   **Project Selection:** The application can select projects from Google Sheets.
+*   **Field Types:** Supports checkbox and date field types.
 *   **View Management:**
     *   A dropdown menu in the `Toolbar` allows users to load saved pages.
     *   A "Manage Views" dialog provides functionality for saving, renaming, and deleting views.
@@ -58,9 +60,21 @@ The application is in a stable state. The core functionality of the "Pages" feat
 ### 3. Non-UUID ID Update Refactoring
 *   Reviewed and confirmed the existing implementation for identifying and updating non-UUIDs in `updateNonUuidIds.js` and `UpdateNonUuidIdsDialog.jsx`.
 
+### 4. New Component and Page Integration
+*   Integrated `AuthCallbackHandler.jsx`, `ErrorBoundary.jsx`, `FullScreenSpinner.jsx`, `GlobalNav.jsx`, `Home.jsx`, `ReAuthDialog.jsx` components.
+*   Integrated `ProjectSelectPage.jsx` and `ShotsPage.jsx` pages.
+*   Integrated `ProtectedRoutes.jsx` for route protection.
+*   Integrated `SheetsContext.jsx` and `SheetsDataContext.jsx` for context management.
+*   Integrated `useDriveSheets.js` hook.
+*   Integrated `api.js` and `google.js` utilities.
+
+## Current Focus: Optimization
+
+*   **Column Resizing Performance:** The current column resizing implementation is slow and affects all columns, leading to a poor user experience. This needs to be optimized.
+
 ## Next Steps
 
-Our immediate priority is to continue refining the UI and addressing any further feedback.
+Our immediate priority is to address the column resizing performance issue and continue refining the UI and addressing any further feedback.
 
 ## Project Structure
 
@@ -96,25 +110,42 @@ Our immediate priority is to continue refining the UI and addressing any further
 │   ├── components
 │   │   ├── AddShotPage.jsx
 │   │   ├── AppContainer.jsx
+│   │   ├── AuthCallbackHandler.jsx
+│   │   ├── ErrorBoundary.jsx
 │   │   ├── FieldManager.jsx
 │   │   ├── FilterManager.jsx
+│   │   ├── FullScreenSpinner.jsx
+│   │   ├── GlobalNav.jsx
+│   │   ├── Home.jsx
 │   │   ├── LoginButton.jsx
 │   │   ├── ManageViewsDialog.jsx
 │   │   ├── MissingIdDialog.jsx
 │   │   ├── PageView.jsx
+│   │   ├── ReAuthDialog.jsx
 │   │   ├── SavedFilters.jsx
 │   │   ├── ShotDetailPage.jsx
 │   │   ├── ShotTable.jsx
 │   │   ├── SortableHeaderCell.jsx
 │   │   ├── Toolbar.jsx
 │   │   └── UpdateNonUuidIdsDialog.jsx
+│   ├── contexts
+│   │   ├── SheetsContext.jsx
+│   │   └── SheetsDataContext.jsx
 │   ├── hooks
+│   │   ├── useDriveSheets.js
 │   │   ├── usePagesData.js
 │   │   └── useSheetsData.js
 │   ├── mock
 │   │   ├── fields.json
 │   │   └── shots.json
-│   ├── utils
+│   ├── pages
+│   │   ├── ProjectSelectPage.jsx
+│   │   └── ShotsPage.jsx
+│   ├── routes
+│   │   └── ProtectedRoutes.jsx
+│   └── utils
+│   │   ├── api.js
+│   │   ├── google.js
 │   │   ├── id.js
 │   │   ├── idGenerator.js
 │   │   ├── missingIdHandler.js
