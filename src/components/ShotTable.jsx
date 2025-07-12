@@ -187,7 +187,15 @@ export default function ShotTable(props) {
       onDragEnd={handleDragEnd}
     >
       <TableContainer component={Paper} sx={{ height: 'calc(100dvh - 165px)', overflow: 'auto' }}>
-        <Table stickyHeader sx={{ borderCollapse: "separate", borderSpacing: "0", width: tableWidth }}>
+        <Table
+          stickyHeader
+          sx={{
+            borderCollapse: "separate",
+            borderSpacing: "0",
+            width: tableWidth,
+            tableLayout: "fixed",
+          }}
+        >
           <colgroup>
             {fields.map((f) => (
               <col

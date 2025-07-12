@@ -323,26 +323,25 @@ export const AppContainer = () => {
   const handleColResizeMouseDown = (e, id) => {
     const startX = e.clientX;
     const startWidth = columnWidths[id] ?? 150;
-    tableStartWidthRef.current = tableRef.current?.offsetWidth ?? 0;  // remember table width
+
+    const tableEl = tableRef.current?.querySelector('table');
+    const colEl = tableEl?.querySelector(`col[data-col="${id}"]`);
+
+    tableStartWidthRef.current = tableEl?.offsetWidth ?? 0;
     idRef.current = id;
     latestW.current = startWidth;
 
     const onMove = (ev) => {
       latestW.current = Math.max(60, startWidth + ev.clientX - startX);
-      cancelAnimationFrame(rafId.current);
+      if (rafId.current) return;
       rafId.current = requestAnimationFrame(() => {
-        if (tableRef.current) {
-          const tableEl = tableRef.current.querySelector('table');
-          if (tableEl) {
-            const colEl = tableEl.querySelector(`col[data-col="${idRef.current}"]`);
-            if (colEl) colEl.style.width = `${latestW.current}px`;
+        if (colEl) colEl.style.width = `${latestW.current}px`;
 
-            /* keep overall table width in sync so right edge tracks:
-               remove this block if you prefer horizontal scroll instead */
-            const delta = latestW.current - startWidth;
-            tableEl.style.width =
-              `${tableStartWidthRef.current + delta}px`;
-          }
+        /* keep overall table width in sync so right edge tracks:
+           remove this block if you prefer horizontal scroll instead */
+        if (tableEl) {
+          const delta = latestW.current - startWidth;
+          tableEl.style.width = `${tableStartWidthRef.current + delta}px`;
         }
         rafId.current = null;
       });
