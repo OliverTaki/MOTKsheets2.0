@@ -42,14 +42,14 @@ export default function GlobalNav() {
   }, [sheetId, sheets, setSheetId]);
 
   return (
-    <AppBar position="static" sx={{ bgcolor: '#202020', height: '48px', justifyContent: 'center' }}>
+    <AppBar position="static" sx={{ bgcolor: '#202020', height: '48px', justifyContent: 'left' }}>
       <Toolbar variant="dense" sx={{ minHeight: '48px' }}>
         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-          MOTK Dev
+          MOTK
         </Typography>
 
         {token && (
-          <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'left' }}>
             <Typography variant="subtitle1" component="div" sx={{ mr: 2 }}>
               Project: {sheetId ? toProjectName(sheets.find(s => s.id === sheetId) || {}) : 'None Selected'}
             </Typography>
