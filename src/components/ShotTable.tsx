@@ -4,7 +4,6 @@ import { DataGrid } from '@mui/x-data-grid';
 import type {
   GridColDef,
   GridRowsProp,
-  GridCellEditCommitParams,
   GridColumnOrderChangeParams,
   GridColumnResizeParams,
 } from '@mui/x-data-grid';
@@ -56,29 +55,42 @@ export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChan
     (window as any).dbgFields = fields;
   }, [shots, rows, fields]);
 
-  // Define columns with inline editors
+  // Define columns with inline editors and borders
   const columns: GridColDef[] = useMemo(
     () =>
       fields.map((f) => {
-        // Common column base
         const base: GridColDef = {
           field: f.id,
           headerName: f.label ?? f.id,
-          width: 160,
+          width: 180,
+          sortable: true,
+          resizable: true,
         };
         switch (f.type) {
           case 'date':
             return {
               ...base,
-              renderCell: (params) => (
-                <input
-                  type="date"
-                  value={String(safe(params.row, f.id))}
-                  onChange={(e) => onCellSave(String(params.id), f.id, e.target.value)}
-                  style={{ width: '100%', height: '100%', border: 'none', background: 'transparent' }}
-                />
-              ),
+              renderCell: (params) => {
+                const value = String(safe(params.row, f.id));
+                // input only saves on blur or Enter
+                return (
+                  <input
+                    type="date"
+                    defaultValue={value}
+                    onBlur={(e) => onCellSave(String(params.id), f.id, e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.currentTarget.blur(); } }}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      border: 'none',
+                      background: 'transparent',
+                      color: 'inherit',
+                    }}
+                  />
+                );
+              },
             };
+
           case 'select':
             return {
               ...base,
@@ -88,6 +100,7 @@ export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChan
                   onChange={(e) => onCellSave(String(params.id), f.id, e.target.value)}
                   variant="standard"
                   fullWidth
+                  sx={{ color: 'inherit' }}
                 >
                   {f.options?.map((opt) => {
                     const value = typeof opt === 'object' ? opt.value : opt;
@@ -143,15 +156,55 @@ export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChan
           default:
             return {
               ...base,
-              renderCell: (params) => <span>{String(safe(params.row, f.id))}</span>,
+              renderCell: (params) => {
+                const value = String(safe(params.row, f.id));
+                return (
+                  <input
+                    type="text"
+                    defaultValue={value}
+                    onBlur={(e) => onCellSave(String(params.id), f.id, e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.currentTarget.blur(); } }}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      border: 'none',
+                      background: 'transparent',
+                      color: 'inherit',
+                    }}
+                  />
+                );
+              },
             };
+
         }
       }),
     [fields, onCellSave]
   );
 
   return (
-    <Box sx={{ height: 'calc(100dvh - 165px)', width: '100%' }}>
+    <Box
+      sx={{
+        height: 'calc(100dvh - 165px)',
+        width: '100%',
+        '& .MuiDataGrid-root': {
+          border: '1px solid rgba(224,224,224,1)',
+        },
+        '& .MuiDataGrid-cell': {
+          borderBottom: '1px solid rgba(224,224,224,1)',
+          borderRight: '1px solid rgba(224,224,224,1)',
+        },
+        '& .MuiDataGrid-columnHeaders': {
+          borderBottom: '1px solid rgba(224,224,224,1)',
+          '& .MuiDataGrid-columnHeader': {
+            borderRight: '1px solid rgba(224,224,224,1)',
+          },
+        },
+
+        '& .MuiDataGrid-columnHeaders': {
+          borderBottom: '1px solid rgba(224,224,224,1)',
+        },
+      }}
+    >
       <DataGrid
         rows={rows}
         columns={columns}
