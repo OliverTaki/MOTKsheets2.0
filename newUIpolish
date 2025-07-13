@@ -1,0 +1,17 @@
+newUIpolish
+現状：リサイズがシンプルに出来て、編集もできる。text編集で英語でスペースいれると編集が終わってしまう。firldがないcolumnにライン要らない。
+
+1.Pagesタブ読んで表示する。（ソート、カラムサイズ、filter、表示Fields、field順）　
+2.PagesタブにSaveと名前をつけてSAVEする機能を復活。　
+3.viewを選べるように　
+4.adnewshotを復活させる。　
+5.multilayerfiltersを再実装、これは新しいボタンになると思う。field　rowのfilterを多重にかけれるように。
+6.ADD FIELDを復活　
+7.deleteFields　実装　
+8.TEXTを折り返して表示。hightをそれに合わせてへんこう。　
+9.shotdetailpageふっかつ　
+10.Footerはsyottotable自体にあるからもう一つの外側のは要らない。　
+11.複数のショットを選べるようにする
+12.fieldsの並び替え復活
+
+順番は重要ではない。効率的な順番であればいい。

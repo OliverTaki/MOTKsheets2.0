@@ -46,8 +46,8 @@
 
 | Layer      | Choice                     | Notes                                   |
 | ---------- | -------------------------- | --------------------------------------- |
-| Front‑end  | **React 18**, Vite 6       | Fast HMR, JSX/TSX native                |
-| Styling    | Tailwind CSS 4¹            | Utility‑first, no CSS‑in‑JS             |
+| Front‑end  | **React 18**, Vite 6, **MUI DataGrid** | **Strictly use MUI DataGrid for tables.** See `GEMINI.md` for the full rationale. |
+| Styling    | **MUI DataGrid** + Tailwind CSS 4¹ | **Strictly use MUI DataGrid for tables.** Utility‑first for general layout. |
 | Auth       | `@react-oauth/google`      | Uses PKCE flow; token cached in session |
 | Data Layer | **Google Sheets REST API** | Direct calls from browser (no server)   |
 | State      | React state + Context      | Global auth context, per‑page state     |
@@ -158,13 +158,20 @@ docs/                  # screenshots, diagrams
 
 ## Roadmap <a id="roadmap"></a>
 
-* [x] Optimistic cell editing
-* [ ] Field definition sheet (<kbd>type</kbd>/<kbd>options</kbd>)
-* [ ] Dropdown validation for enum cells
-* [ ] Global filter panel + preset save
-* [ ] Append row / append column UI
-* [ ] Netlify/Vercel deploy guide
-* [ ] Cypress E2E tests
+* [x] **Core UI Engine:** Replaced custom table with MUI DataGrid for performance and stability.
+* [x] **Basic Editing & Sorting:** Cell editing and column sorting are functional.
+* [ ] **Phase 1: Stabilize & Polish**
+  * [ ] Fix text editing bugs (e.g., spacebar issue).
+  * [ ] Implement text wrapping and automatic row height.
+  * [ ] Enable multi-row selection.
+* [ ] **Phase 2: View Management**
+  * [ ] Load, apply, and save custom views (columns, sorting, filters).
+  * [ ] Re-implement view selection UI.
+* [ ] **Phase 3: Data Operations**
+  * [ ] Restore "Add/Delete/Manage Fields" functionality.
+  * [ ] Restore "Add Shot" and "Shot Detail" pages.
+* [ ] **Phase 4: Advanced Filtering**
+  * [ ] Implement a multi-layer filtering system.
 
 ---
 

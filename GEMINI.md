@@ -1,160 +1,122 @@
-# Gemini CLI Session Notes
+# Project Development Rules & UI Strategy
 
-**Project:** `motksheets2-frontend`
+This document outlines the core development principles for the `motksheets2-frontend` project, effective as of the `newUIpolish` implementation.
 
-**Last Session Date:** 2025-07-12
+---
 
-## Summary of Progress
+## 1. Core UI Architecture: MUI DataGrid Community
 
-We have been working on implementing a "Pages" feature that allows users to save and load different view configurations for the main shot table. We have also been addressing several layout and functionality issues.
+**Strict Rule:** All table-based data visualization and interaction **must** be implemented using the **MUI DataGrid Community** library (`@mui/x-data-grid`).
 
-### Key Features and Bug Fixes:
+**Guiding Principle:** The primary goal is to maximize maintainability and minimize future bugs by adhering as closely as possible to the official MUI DataGrid implementation.
 
-*   **Project Selection:** The application can select projects from Google Sheets.
-*   **Field Types:** Supports checkbox and date field types.
-*   **View Management:**
-    *   A dropdown menu in the `Toolbar` allows users to load saved pages.
-    *   A "Manage Views" dialog provides functionality for saving, renaming, and deleting views.
-    *   The application uses the browser's `localStorage` to remember and automatically reload the last used view.
-*   **Column Customization:**
-    *   Users can reorder columns by dragging and dropping the column headers.
-    *   Users can resize columns by dragging the edge of the column header.
-*   **Bug Fixes:**
-    *   Addressed a critical issue where the application would crash if the "PAGES" sheet contained corrupted data. The application now safely handles these errors and loads with the valid pages.
-    *   Fixed a conflict between column resizing and reordering, where both actions would happen at the same time.
-    *   Corrected the table height so that it is determined by its content, not the window size.
-    *   Fixed a bug where newly added fields were not appearing in the "Manage Fields" menu when an old view was loaded.
-    *   Fixed a bug where adding a new field would reset the current view.
-    *   Fixed a bug where the application would not load the saved view on reload.
-    *   Fixed a bug where the `FIELDS` sheet was not being parsed correctly, causing new fields to be ignored.
-    *   **Fixed Double Scrollbar Issue:** Resolved the problem of two scrollbars appearing on the shot table by adjusting the height calculations and overflow properties in `AppContainer.jsx` and `ShotTable.jsx` to ensure a single, consistent scrollbar for the table content.
-    *   Implemented advanced filtering with type-specific operators and inputs (checkbox lists for select fields, text input for image fields).
-*   **Fixed Date Editing:** Resolved issues with date input fields, allowing users to type dates in MM/DD/YYYY format with automatic slash insertion, and ensuring correct saving to Google Sheets in YYYY-MM-DD format.
-*   **Layout and Scrolling:**
-    *   The global header, project navigation bar, and toolbar are now fixed at the top.
-    *   The table data rows now scroll vertically and horizontally, while the table header remains sticky.
-    *   The table now correctly displays only the fields selected in the "Manage Fields" menu.
-*   **UI/UX Enhancements (Current Session):**
-    *   Ensured vertical lines are present between all columns in the table header and body, including the filter row.
-    *   Adjusted the height of image fields in the table for better visual balance.
-    *   Corrected toolbar positioning to be directly below the project navigation.
-    *   Ensured consistent background color for the main content area.
-    *   Refined the placement of "Project: Oliver01" to be in a dedicated project navigation bar, separate from the global header and toolbar.
+**Implementation Requirement:** The DataGrid component should be wrapped in a thin, simple React component. This wrapper's responsibilities are strictly limited to:
+1.  Mapping `shots` and `fields` props to the `rows` and `columns` expected by DataGrid.
+2.  Connecting the DataGrid's event handlers (e.g., `onCellEditCommit`, `onColumnOrderChange`) to the application's data-saving and state management logic.
+3.  Applying basic styling via MUI's `Box` component or `sx` prop to align with the application's theme.
+4.  Implementing approved workarounds for features not available in the Community tier (e.g., a custom filter state model).
 
-## Current Status and Known Issues
+**Rationale for Sticking with MUI DataGrid:**
+While other free libraries like AG Grid Community offer more features out-of-the-box, we have committed to MUI DataGrid for the following reasons:
+*   **Alignment with Project Goals:** Our primary goal is to minimize custom UI code. MUI DataGrid, as a "batteries-included" component, aligns perfectly with this. Headless libraries like TanStack Table would violate this principle.
+*   **Viable Workarounds:** We have confirmed that all our required features (including multi-column filtering and sorting) are achievable within the Community version through clever, minimal workarounds that do not require extensive custom code.
+*   **Cost of Change:** Switching libraries at this stage would incur significant rework, including learning a new API and completely re-styling the component. The cost of switching outweighs the benefit of avoiding our planned workarounds.
+*   **Consistency:** Sticking with MUI ensures a consistent look, feel, and development experience across the entire application.
 
-The application is in a stable state. The core functionality of the "Pages" feature is in place, and the major layout and scrolling issues have been resolved.
+**Prohibited:**
+*   Custom, complex cell rendering logic that reimplements features already available in DataGrid or its Pro/Premium versions.
+*   Direct DOM manipulation for features like resizing or reordering.
+*   Diverging from the standard DataGrid API without a compelling, documented reason.
 
-## Completed Tasks (Current Session):
+This approach ensures that we leverage a well-maintained, performant, and feature-rich library, reducing our own code complexity and maintenance burden.
 
-### 1. Implemented the "Add Shot" Page
-*   Created a form with dynamic fields based on sheet data.
-*   Integrated with `appendRow.js` for adding new shots.
-*   Implemented state management and redirection after shot addition.
+---
 
-### 2. Implemented the "Shot Detail" Page
-*   Enhanced `ShotDetailPage.jsx` to display and allow editing of all shot fields.
-*   Integrated with `updateCell.js` for data updates using `idToColIndex` for accurate column mapping.
-*   Ensured proper state management for changes.
+## 2. `newUIpolish` Implementation Details
 
-### 3. Non-UUID ID Update Refactoring
-*   Reviewed and confirmed the existing implementation for identifying and updating non-UUIDs in `updateNonUuidIds.js` and `UpdateNonUuidIdsDialog.jsx`.
+The `newUIpolish` initiative successfully replaced the previous custom table with MUI DataGrid. The following summarizes the implementation strategy that now serves as the template for future development.
 
-### 4. New Component and Page Integration
-*   Integrated `AuthCallbackHandler.jsx`, `ErrorBoundary.jsx`, `FullScreenSpinner.jsx`, `GlobalNav.jsx`, `Home.jsx`, `ReAuthDialog.jsx` components.
-*   Integrated `ProjectSelectPage.jsx` and `ShotsPage.jsx` pages.
-*   Integrated `ProtectedRoutes.jsx` for route protection.
-*   Integrated `SheetsContext.jsx` and `SheetsDataContext.jsx` for context management.
-*   Integrated `useDriveSheets.js` hook.
-*   Integrated `api.js` and `google.js` utilities.
+### 2.1. Dependencies
 
-## Current Focus: Optimization
-
-*   **Column Resizing Performance:** The current column resizing implementation is slow and affects all columns, leading to a poor user experience. This needs to be optimized.
-
-## Next Steps
-
-Our immediate priority is to address the column resizing performance issue and continue refining the UI and addressing any further feedback.
-
-## Project Structure
-
+The core UI is built upon the following libraries:
+```bash
+@mui/x-data-grid
+@mui/material
+@emotion/react
+@emotion/styled
 ```
-.
-├── GEMINI.md
-├── README.md
-├── eslint.config.js
-├── index.html
-├── package-lock.json
-├── package.json
-├── postcss.config.cjs
-├── public
-│   └── vite.svg
-├── src
-│   ├── App.jsx
-│   ├── AuthContext.jsx
-│   ├── index.css
-│   ├── main.jsx
-│   ├── theme.css
-│   ├── vite-env.d.ts
-│   ├── api
-│   │   ├── appendField.js
-│   │   ├── appendPage.js
-│   │   ├── appendRow.js
-│   │   ├── batchUpdate.js
-│   │   ├── deletePage.js
-│   │   ├── deleteRows.js
-│   │   ├── sheetUtils.js
-│   │   ├── updateCell.js
-│   │   ├── updateNonUuidIds.js
-│   │   └── updatePage.js
-│   ├── components
-│   │   ├── AddShotPage.jsx
-│   │   ├── AppContainer.jsx
-│   │   ├── AuthCallbackHandler.jsx
-│   │   ├── ErrorBoundary.jsx
-│   │   ├── FieldManager.jsx
-│   │   ├── FilterManager.jsx
-│   │   ├── FullScreenSpinner.jsx
-│   │   ├── GlobalNav.jsx
-│   │   ├── Home.jsx
-│   │   ├── LoginButton.jsx
-│   │   ├── ManageViewsDialog.jsx
-│   │   ├── MissingIdDialog.jsx
-│   │   ├── PageView.jsx
-│   │   ├── ReAuthDialog.jsx
-│   │   ├── SavedFilters.jsx
-│   │   ├── ShotDetailPage.jsx
-│   │   ├── ShotTable.jsx
-│   │   ├── SortableHeaderCell.jsx
-│   │   ├── Toolbar.jsx
-│   │   └── UpdateNonUuidIdsDialog.jsx
-│   ├── contexts
-│   │   ├── SheetsContext.jsx
-│   │   └── SheetsDataContext.jsx
-│   ├── hooks
-│   │   ├── useDriveSheets.js
-│   │   ├── usePagesData.js
-│   │   └── useSheetsData.js
-│   ├── mock
-│   │   ├── fields.json
-│   │   └── shots.json
-│   ├── pages
-│   │   ├── ProjectSelectPage.jsx
-│   │   └── ShotsPage.jsx
-│   ├── routes
-│   │   └── ProtectedRoutes.jsx
-│   └── utils
-│   │   ├── api.js
-│   │   ├── google.js
-│   │   ├── id.js
-│   │   ├── idGenerator.js
-│   │   ├── missingIdHandler.js
-│   │   ├── parse.js
-│   │   └── sheetSync.js
-│   └── vite-env.d.ts
-├── tailwind.config.cjs
-├── tsconfig.app.json
-├── tsconfig.json
-├── tsconfig.node.json
-└── vite.config.ts
-```
+
+### 2.2. Implementation (`ShotTable.tsx`)
+
+The canonical implementation is `src/components/ShotTable.tsx`. It serves as the minimal wrapper for the DataGrid.
+
+### 2.3. Validation and Benchmarking
+
+The new UI has been validated against the following core requirements:
+*   **Functionality:** Correctly handles cell editing, column sorting, resizing, and reordering.
+*   **Performance:** Provides a smooth user experience (~60 FPS) during intensive operations like column resizing, a significant improvement over the previous implementation.
+
+---
+
+## 3. Project Documentation
+
+This `GEMINI.md` is the single source of truth for these development rules. The `README.md` provides a high-level overview for new contributors. All other design documents related to the old UI are now obsolete.
+
+---
+
+## 4. Development Strategy & Roadmap
+
+The following is a strategic plan for reimplementing features on top of the new MUI DataGrid UI. Tasks are grouped into phases to ensure an efficient and stable development process.
+
+### Phase 1: Core Table Stabilization & UI Polish (Highest Priority)
+Focus: Solidify the core user experience of the data table.
+
+1.  **Fix Text Editing Bug:** Resolve the issue where entering a space character prematurely ends cell editing.
+2.  **Enable Text Wrapping & Auto Row Height:** Implement text wrapping within cells and allow row height to adjust dynamically based on content.
+3.  **Enable Multi-Shot Selection:** Activate checkbox selection to allow users to select multiple rows.
+4.  **UI Cleanup:** Remove the redundant outer footer and ensure column divider lines are displayed correctly.
+
+### Phase 2: View Management Revival
+Focus: Restore the ability for users to save, load, and manage their customized table views.
+
+1.  **Load & Apply Views:** Re-implement the logic to read view configurations (visible fields, column order/size, sort, filters) from the `PAGES` sheet and apply them to the DataGrid.
+2.  **View Selector UI:** Re-implement the dropdown menu in the toolbar for selecting saved views.
+3.  **Save View Functionality:** Restore the "Save View" feature, allowing users to name and save the current table configuration.
+
+### Phase 3: Core Data Operations
+Focus: Bring back essential features for managing shots and fields.
+
+1.  **Shot Detail Page:** Re-enable the shot detail page, accessible upon clicking a row.
+2.  **Add New Shot:** Restore the "Add New Shot" functionality.
+3.  **Field Management:**
+    *   Restore the "Add Field" feature.
+    *   Implement a new "Delete Field" feature.
+    *   Ensure field reordering is functional (persisted as part of a view).
+
+### Phase 4: Advanced Filtering
+Focus: Implement a powerful, multi-layered filtering system.
+
+1.  **Multi-Layer Filter UI & Logic:** Design and implement a new UI for creating and applying multiple, combined filter conditions to the table.
+
+---
+
+## 5. Development Workflow & Principles
+
+To ensure the project remains maintainable, efficient, and aligned with our core architecture, all development must adhere to the following principles:
+
+*   **Prioritize MUI Standard Features:** Before writing any custom code, thoroughly research MUI DataGrid's official documentation to find a built-in solution. The goal is to solve problems with configuration, not custom implementation.
+*   **Functionality First, then Refactor:** While we must adhere to the MUI-first principle, delivering functionality is the priority. If a standard MUI solution is not immediately apparent and becomes a bottleneck, a temporary, simple workaround may be implemented.
+*   **Permission for Deviation:** Any deviation from the standard MUI DataGrid API that is deemed necessary to unblock development **must be explicitly proposed and approved before implementation.** A clear justification and a plan for future refactoring back to a standard solution will be required.
+*   **Simplicity is Key:** Most upcoming tasks are re-implementations of existing features. The solutions should be direct and simple. Avoid over-engineering. Keep dependencies to a minimum.
+*   **Iterative Milestones:** Each phase in the roadmap will be treated as a milestone. We will focus on completing one phase at a time to ensure steady, verifiable progress.
+*   **Continuous Review:** All code, especially temporary workarounds, should be periodically reviewed with the goal of aligning it more closely with standard MUI practices.
+
+### MUI DataGrid Resources
+
+To facilitate research and adherence to standard practices, refer to these official resources:
+
+*   **Official Documentation:** [MUI X Data Grid Docs](https://mui.com/x/react-data-grid/)
+*   **Features Overview:** [Data Grid - Features](https://mui.com/x/react-data-grid/#features)
+*   **Column Configuration:** [Data Grid - Columns](https://mui.com/x/react-data-grid/columns/)
+*   **Editing API:** [Data Grid - Editing](https://mui.com/x/react-data-grid/editing/)
+*   **State Management:** [Data Grid - Controlled state](https://mui.com/x/react-data-grid/state/)
