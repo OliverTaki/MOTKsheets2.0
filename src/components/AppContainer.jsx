@@ -387,37 +387,39 @@ export const AppContainer = () => {
             )}
             {!fieldsError && !pagesError && (
               <SheetsDataContext.Provider value={{ sheetId, setSheetId, sheets, fields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex }}>
-                <Routes>
-                  <Route path="/signin" element={<LoginButton />} />
-                  <Route path="/select" element={<ProjectSelectPage />} />
-                  
-                  <Route path="/" element={sheetId ? <Home
-                      sheetId={sheetId}
-                      setSheetId={setSheetId}
-                      processedShots={processedShots}
-                      orderedFields={orderedFields}
-                      visibleFieldIds={visibleFieldIds}
-                      columnWidths={columnWidths}
-                      onColumnResize={handleColumnResize}
-                      onCellSave={handleCellSave}
-                      onUpdateFieldOptions={updateFieldOptions}
-                      onColumnOrderChange={handleColumnOrderChange}
-                      handleColResizeMouseDown={handleColResizeMouseDown}
-                      sheets={sheets} // Ensure sheets prop is passed and triggers re-render
-                      fields={fields}
-                      pages={pages}
-                      pagesLoading={pagesLoading}
-                      pagesError={pagesError}
-                      loadPage={handleLoadView}
-                      savePage={handleSaveView}
-                      savePageAs={handleSaveViewAs}
-                      deletePage={handleDeleteView}
-                      loadedPageId={loadedPageId}
-                      ref={tableRef}
-                    /> : <ProjectSelectPage />} />
-                  <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={orderedFields} idToColIndex={idToColIndex} />} />
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <Routes>
+                    <Route path="/signin" element={<LoginButton />} />
+                    <Route path="/select" element={<ProjectSelectPage />} />
+                    
+                    <Route path="/" element={sheetId ? <Home
+                        sheetId={sheetId}
+                        setSheetId={setSheetId}
+                        processedShots={processedShots}
+                        orderedFields={orderedFields}
+                        visibleFieldIds={visibleFieldIds}
+                        columnWidths={columnWidths}
+                        onColumnResize={handleColumnResize}
+                        onCellSave={handleCellSave}
+                        onUpdateFieldOptions={updateFieldOptions}
+                        onColumnOrderChange={handleColumnOrderChange}
+                        handleColResizeMouseDown={handleColResizeMouseDown}
+                        sheets={sheets} // Ensure sheets prop is passed and triggers re-render
+                        fields={fields}
+                        pages={pages}
+                        pagesLoading={pagesLoading}
+                        pagesError={pagesError}
+                        loadPage={handleLoadView}
+                        savePage={handleSaveView}
+                        savePageAs={handleSaveViewAs}
+                        deletePage={handleDeleteView}
+                        loadedPageId={loadedPageId}
+                        ref={tableRef}
+                      /> : <ProjectSelectPage />} />
+                    <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={orderedFields} idToColIndex={idToColIndex} />} />
                   <Route path="/shots/new" element={<AddShotPage />} />
                 </Routes>
+                </div>
               </SheetsDataContext.Provider>
             )}
           </main>

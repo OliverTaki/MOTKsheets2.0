@@ -1,6 +1,6 @@
 // src/components/ShotTable.tsx
 import React, { useMemo, useEffect } from 'react';
-import { DataGrid, useGridApiContext, useGridApiRef, GridToolbar } from '@mui/x-data-grid';
+import { DataGrid, useGridApiContext } from '@mui/x-data-grid';
 import type {
   GridColDef,
   GridRowsProp,
@@ -9,9 +9,9 @@ import type {
   GridCellEditCommitParams,
   GridRowParams,
   GridRowId,
-  GridApi,
 } from '@mui/x-data-grid';
-import { Box, TextField, Checkbox } from '@mui/material';
+import { Box, TextField, Checkbox, IconButton } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
 import type {
   GridRenderEditCellParams,
 } from '@mui/x-data-grid';
@@ -67,20 +67,12 @@ interface Props {
   onCellSave: (id: string, field: string, value: any) => void;
   onColumnOrderChange?: (p: GridColumnOrderChangeParams) => void;
   onColumnResize?: (p: GridColumnResizeParams) => void;
-  onApiRef?: (apiRef: React.MutableRefObject<GridApi>) => void;
 }
 
 const safe = (row: any, key: string) => (row && row[key] !== undefined && row[key] !== null ? row[key] : '');
 
-export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChange, onColumnResize, onApiRef }: Props) {
+export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChange, onColumnResize }: Props) {
   const [selectionModel, setSelectionModel] = React.useState<GridRowId[]>([]);
-  const apiRef = useGridApiRef();
-
-  useEffect(() => {
-    if (onApiRef) {
-      onApiRef(apiRef);
-    }
-  }, [apiRef, onApiRef]);
   
   // Build rows, ensuring every field key exists and coercing types for the grid
   const rows: GridRowsProp = useMemo(
@@ -137,15 +129,13 @@ export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChan
           width: 180,
           sortable: true,
           resizable: true,
-          editable: false, // Set editable to false by default
+          editable: true,
         };
         switch (f.type) {
           case 'date':
             return {
               ...base,
               type: 'date',
-              editable: true,
-              // The grid expects Date objects for the date type
               valueGetter: (params) => (params.value ? new Date(params.value) : null),
               renderCell: (params) => {
                 return params.value ? new Date(params.value).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '';
@@ -155,8 +145,6 @@ export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChan
             return {
               ...base,
               type: 'singleSelect',
-              editable: true,
-              // The grid expects valueOptions in a specific format
               valueOptions: f.options?.map((opt) => {
                 return typeof opt === 'object' ? opt : { value: opt, label: opt };
               }),
@@ -165,7 +153,6 @@ export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChan
             return {
               ...base,
               type: 'boolean',
-              editable: true,
               renderCell: (params) => (
                 <Checkbox
                   checked={params.value}
@@ -180,7 +167,7 @@ export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChan
               ...base,
               sortable: false,
               filterable: false,
-              editable: false, // Images are not editable
+              editable: false,
               renderCell: (params) => {
                 const url = safe(params.row, f.id);
                 return typeof url === 'string' && url.startsWith('http') ? (
@@ -194,13 +181,11 @@ export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChan
             return {
               ...base,
               type: 'number',
-              editable: true,
             };
           default: // 'string'
             return {
               ...base,
               type: 'string',
-              editable: true,
               renderEditCell: (params) => <CustomEditComponent {...params} />,
             };
         }
@@ -211,7 +196,7 @@ export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChan
   return (
     <Box
       sx={{
-        height: 'calc(100vh - 150px)', // Adjust this value as needed
+        height: 'calc(100vh - 89px)',
         width: '100%',
         '& .MuiDataGrid-root': {
           border: '1px solid rgba(224,224,224,1)',
@@ -219,7 +204,6 @@ export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChan
         '& .MuiDataGrid-cell': {
           borderBottom: '1px solid rgba(224,224,224,1)',
           borderRight: '1px solid rgba(224,224,224,1)',
-          // Enable text wrapping
           whiteSpace: 'normal',
           wordWrap: 'break-word',
         },
@@ -235,7 +219,6 @@ export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChan
       }}
     >
       <DataGrid
-        apiRef={apiRef}
         rows={rows}
         columns={columns}
         getRowId={(r) => r.id}
@@ -243,14 +226,18 @@ export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChan
         onColumnResize={onColumnResize}
         onCellEditCommit={handleCellEditCommit}
         experimentalFeatures={{ newEditingApi: true }}
-        // Enable auto-height and multi-selection
         getRowHeight={() => 'auto'}
         checkboxSelection
         onSelectionModelChange={(newSelectionModel) => {
           setSelectionModel(newSelectionModel as GridRowId[]);
         }}
         selectionModel={selectionModel}
-        
+        onCellClick={(params, event) => {
+          // Prevent row selection when clicking on a cell
+          if (params.field !== '__check__') {
+            event.stopPropagation();
+          }
+        }}
       />
     </Box>
   );

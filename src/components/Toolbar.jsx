@@ -1,6 +1,5 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SheetsDataContext } from '../contexts/SheetsDataContext';
 import FilterManager from './FilterManager';
 import FieldManager from './FieldManager';
 import ManageViewsDialog from './ManageViewsDialog';
@@ -8,9 +7,6 @@ import { Select, MenuItem, FormControl, InputLabel, IconButton, Button } from '@
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import AddIcon from '@mui/icons-material/Add';
-import ViewColumnIcon from '@mui/icons-material/ViewColumn';
-import FilterListIcon from '@mui/icons-material/FilterList';
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
 
 const Toolbar = ({
     activeFilters,
@@ -29,11 +25,10 @@ const Toolbar = ({
     onDeleteView,
     loadedPageId,
     onOpenUpdateNonUuidIdsDialog,
-    pages = [], // Add pages to props with default empty array
-    pagesLoading, // Add pagesLoading to props
-    pagesError, // Add pagesError to props
+    pages = [],
+    pagesLoading,
+    pagesError,
     fields = [],
-    gridApiRef,
 }) => {
     const navigate = useNavigate();
     const [isManageViewsDialogOpen, setManageViewsDialogOpen] = useState(false);
@@ -71,11 +66,9 @@ const Toolbar = ({
                             {!pagesLoading && !pagesError && (!Array.isArray(pages) || pages.length === 0) && (
                                 <MenuItem disabled>No views found</MenuItem>
                             )}
-                            {Array.isArray(pages) && pages.length > 0 && (
-                                pages.map(page => (
-                                    <MenuItem key={page.page_id} value={page.page_id}>{page.title}</MenuItem>
-                                ))
-                            )}
+                            {Array.isArray(pages) && pages.map(page => (
+                                <MenuItem key={page.page_id} value={page.page_id}>{page.title}</MenuItem>
+                            ))}
                         </Select>
                     </FormControl>
 
@@ -118,27 +111,6 @@ const Toolbar = ({
                         onVisibilityChange={onVisibilityChange}
                         onAddField={onAddField}
                     />
-                    <Button
-                        startIcon={<ViewColumnIcon />}
-                        onClick={() => gridApiRef?.current?.showPreferences('columns')}
-                        disabled={!gridApiRef}
-                    >
-                        Columns
-                    </Button>
-                    <Button
-                        startIcon={<FilterListIcon />}
-                        onClick={() => gridApiRef?.current?.showFilterPanel()}
-                        disabled={!gridApiRef}
-                    >
-                        Filters
-                    </Button>
-                    <Button
-                        startIcon={<FileDownloadIcon />}
-                        onClick={() => gridApiRef?.current?.exportDataAsCsv()}
-                        disabled={!gridApiRef}
-                    >
-                        Export
-                    </Button>
                 </div>
                 
                 <div className="flex items-center gap-4">
