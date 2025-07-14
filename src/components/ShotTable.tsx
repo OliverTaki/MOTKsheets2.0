@@ -1,6 +1,6 @@
 // src/components/ShotTable.tsx
 import React, { useMemo, useEffect } from 'react';
-import { DataGrid, useGridApiContext } from '@mui/x-data-grid';
+import { DataGrid, useGridApiContext, useGridApiRef } from '@mui/x-data-grid';
 import type {
   GridColDef,
   GridRowsProp,
@@ -73,6 +73,7 @@ const safe = (row: any, key: string) => (row && row[key] !== undefined && row[ke
 
 export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChange, onColumnResize }: Props) {
   const [selectionModel, setSelectionModel] = React.useState<GridRowId[]>([]);
+  const apiRef = useGridApiRef();
   
   // Build rows, ensuring every field key exists and coercing types for the grid
   const rows: GridRowsProp = useMemo(
@@ -117,6 +118,8 @@ export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChan
     } else {
       onCellSave(String(params.id), params.field, params.value);
     }
+    // Force the row to re-evaluate its height
+    apiRef.current.resetRowHeights([params.id]);
   };
 
   // Define columns using MUI's native editing features
@@ -194,31 +197,15 @@ export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChan
   );
 
   return (
-    <Box
-      sx={{
-        height: 'calc(100vh - 89px)',
-        width: '100%',
-        '& .MuiDataGrid-root': {
-          border: '1px solid rgba(224,224,224,1)',
-        },
-        '& .MuiDataGrid-cell': {
-          borderBottom: '1px solid rgba(224,224,224,1)',
-          borderRight: '1px solid rgba(224,224,224,1)',
-          whiteSpace: 'normal',
-          wordWrap: 'break-word',
-        },
-        '& .MuiDataGrid-columnHeaders': {
-          borderBottom: '1px solid rgba(224,224,224,1)',
-          '& .MuiDataGrid-columnHeader': {
-            borderRight: '1px solid rgba(224,224,224,1)',
-          },
-        },
-        '& .MuiDataGrid-columnHeader:last-of-type, & .MuiDataGrid-cell:last-of-type': {
-          borderRight: 'none',
-        },
-      }}
-    >
+    <Box sx={{ height: 'calc(100vh - 89px)', width: '100%' }}>
       <DataGrid
+        sx={{
+          '& .MuiDataGrid-cell': {
+            whiteSpace: 'normal',
+            wordWrap: 'break-word',
+          },
+        }}
+        apiRef={apiRef}
         rows={rows}
         columns={columns}
         getRowId={(r) => r.id}
