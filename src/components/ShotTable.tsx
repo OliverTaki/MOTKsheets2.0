@@ -67,13 +67,19 @@ interface Props {
   onCellSave: (id: string, field: string, value: any) => void;
   onColumnOrderChange?: (p: GridColumnOrderChangeParams) => void;
   onColumnResize?: (p: GridColumnResizeParams) => void;
+  columnVisibilityModel?: Record<string, boolean>;
 }
 
 const safe = (row: any, key: string) => (row && row[key] !== undefined && row[key] !== null ? row[key] : '');
 
-export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChange, onColumnResize }: Props) {
+export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChange, onColumnResize, columnVisibilityModel }: Props) {
   const [selectionModel, setSelectionModel] = React.useState<GridRowId[]>([]);
   const apiRef = useGridApiRef();
+  const [internalVisibilityModel, setInternalVisibilityModel] = React.useState(columnVisibilityModel);
+
+  useEffect(() => {
+    setInternalVisibilityModel(columnVisibilityModel);
+  }, [columnVisibilityModel]);
   
   // Build rows, ensuring every field key exists and coercing types for the grid
   const rows: GridRowsProp = useMemo(
@@ -249,6 +255,8 @@ export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChan
             event.stopPropagation();
           }
         }}
+        columnVisibilityModel={internalVisibilityModel}
+        onColumnVisibilityModelChange={(newModel) => setInternalVisibilityModel(newModel)}
       />
     </Box>
   );

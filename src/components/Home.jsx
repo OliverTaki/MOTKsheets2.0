@@ -55,6 +55,9 @@ const Home = forwardRef(({
         onCellSave={onCellSave}
         onUpdateFieldOptions={onUpdateFieldOptions}
         onColumnOrderChange={onColumnOrderChange}
+        handleDragEnd={onColumnOrderChange}
+        handleColResizeMouseDown={handleColResizeMouseDown}
+        columnVisibilityModel={fields.reduce((acc, field) => ({ ...acc, [field.id]: visibleFieldIds.includes(field.id) }), {})}
       />
     </div>
   );

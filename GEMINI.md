@@ -33,9 +33,9 @@ Here is the strategic plan to restore functionality, organized into logical phas
 - [x] **Text Wrapping:** Implement automatic text wrapping in cells and adjust row height accordingly.
 - [x] **Multi-Row Selection:** Enable checkbox-based multi-row selection.
 - [x] **MUI Native Features:** Implement the native DataGrid toolbar for searching, the column menu for visibility, and the export menu.
-- [ ] **Multi-Column Sorting:** Implement multi-column sorting to allow for grouping-like behavior (e.g., sort by Episode, then by Shot Number).
-- [ ] **UI Fix:** Remove unnecessary column lines.
-- [ ] **Footer:** Remove the redundant external footer.
+- [x] **Multi-Column Sorting:** Implemented multi-column sorting.
+- [x] **UI Fix:** Restored default MUI styling, removing unnecessary column lines.
+- [x] **Footer:** Restored default MUI footer with pagination.
 
 ### Phase 2: View Management (Pages)
 *Goal: Restore the ability to save, load, and manage different table configurations.*
