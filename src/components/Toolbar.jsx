@@ -8,6 +8,9 @@ import { Select, MenuItem, FormControl, InputLabel, IconButton, Button } from '@
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import AddIcon from '@mui/icons-material/Add';
+import ViewColumnIcon from '@mui/icons-material/ViewColumn';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 
 const Toolbar = ({
     activeFilters,
@@ -30,6 +33,7 @@ const Toolbar = ({
     pagesLoading, // Add pagesLoading to props
     pagesError, // Add pagesError to props
     fields = [],
+    gridApiRef,
 }) => {
     const navigate = useNavigate();
     const [isManageViewsDialogOpen, setManageViewsDialogOpen] = useState(false);
@@ -114,6 +118,27 @@ const Toolbar = ({
                         onVisibilityChange={onVisibilityChange}
                         onAddField={onAddField}
                     />
+                    <Button
+                        startIcon={<ViewColumnIcon />}
+                        onClick={() => gridApiRef?.current?.showPreferences('columns')}
+                        disabled={!gridApiRef}
+                    >
+                        Columns
+                    </Button>
+                    <Button
+                        startIcon={<FilterListIcon />}
+                        onClick={() => gridApiRef?.current?.showFilterPanel()}
+                        disabled={!gridApiRef}
+                    >
+                        Filters
+                    </Button>
+                    <Button
+                        startIcon={<FileDownloadIcon />}
+                        onClick={() => gridApiRef?.current?.exportDataAsCsv()}
+                        disabled={!gridApiRef}
+                    >
+                        Export
+                    </Button>
                 </div>
                 
                 <div className="flex items-center gap-4">

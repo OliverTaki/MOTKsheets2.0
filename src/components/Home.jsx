@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useState } from 'react';
 import ProjectSelectPage from '../pages/ProjectSelectPage';
 import ShotTable from './ShotTable';
 import Toolbar from './Toolbar';
@@ -28,6 +28,7 @@ const Home = forwardRef(({
   loadedPageId
 }, ref) => {
   const location = useLocation();
+  const [gridApiRef, setGridApiRef] = useState(null);
 
   if (!sheetId) {
     return <ProjectSelectPage setSheetId={setSheetId} />;
@@ -45,8 +46,10 @@ const Home = forwardRef(({
         onSaveViewAs={savePageAs}
         onDeleteView={deletePage}
         loadedPageId={loadedPageId}
+        gridApiRef={gridApiRef}
       />
       <ShotTable
+        onApiRef={setGridApiRef}
         shots={sheets}
         fields={orderedFields}
         visibleFieldIds={visibleFieldIds}

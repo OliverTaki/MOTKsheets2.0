@@ -15,9 +15,12 @@ This approach ensures long-term maintainability, stability, and leverages a robu
 
 ## Current State & Known Issues
 
--   Column resizing and cell editing are functional.
--   **Bug:** Entering a space during text cell editing incorrectly finalizes the edit.
--   **UI:** Vertical grid lines are rendered in columns that do not have a field assigned.
+-   **[DONE]** ~~**Bug:** Entering a space during text cell editing incorrectly finalizes the edit.~~
+-   **[DONE]** Text wrapping in cells is functional.
+-   **[DONE]** Checkbox-based multi-row selection is enabled.
+-   **[WIP]** Implement MUI's native column menu, filtering, and export features.
+-   **[WIP]** Restore checkbox-only row selection behavior.
+-   **[WIP]** Make all columns non-editable by default, with a clear editing mechanism.
 -   **Performance:** Column resizing performance needs to be monitored, as it was a previous bottleneck.
 
 ## Roadmap
@@ -26,9 +29,10 @@ Here is the strategic plan to restore functionality, organized into logical phas
 
 ### Phase 1: Core Table Polish & Functionality
 *Goal: Fix immediate usability bugs and restore essential table interactions.*
-- [ ] **Bug Fix:** Correct the text editor behavior where a space finalizes the edit.
-- [ ] **Text Wrapping:** Implement automatic text wrapping in cells and adjust row height accordingly.
-- [ ] **Multi-Row Selection:** Enable checkbox-based multi-row selection.
+- [x] **Bug Fix:** Correct the text editor behavior where a space finalizes the edit.
+- [x] **Text Wrapping:** Implement automatic text wrapping in cells and adjust row height accordingly.
+- [x] **Multi-Row Selection:** Enable checkbox-based multi-row selection.
+- [ ] **MUI Native Features:** Implement the native DataGrid toolbar for searching, the column menu for visibility, and the export menu.
 - [ ] **Multi-Column Sorting:** Implement multi-column sorting to allow for grouping-like behavior (e.g., sort by Episode, then by Shot Number).
 - [ ] **UI Fix:** Remove unnecessary column lines.
 - [ ] **Footer:** Remove the redundant external footer.

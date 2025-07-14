@@ -1,6 +1,6 @@
 // src/components/ShotTable.tsx
 import React, { useMemo, useEffect } from 'react';
-import { DataGrid, useGridApiContext } from '@mui/x-data-grid';
+import { DataGrid, useGridApiContext, useGridApiRef, GridToolbar } from '@mui/x-data-grid';
 import type {
   GridColDef,
   GridRowsProp,
@@ -9,9 +9,9 @@ import type {
   GridCellEditCommitParams,
   GridRowParams,
   GridRowId,
+  GridApi,
 } from '@mui/x-data-grid';
-import { Box, TextField, Checkbox, IconButton } from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
+import { Box, TextField, Checkbox } from '@mui/material';
 import type {
   GridRenderEditCellParams,
 } from '@mui/x-data-grid';
@@ -67,12 +67,20 @@ interface Props {
   onCellSave: (id: string, field: string, value: any) => void;
   onColumnOrderChange?: (p: GridColumnOrderChangeParams) => void;
   onColumnResize?: (p: GridColumnResizeParams) => void;
+  onApiRef?: (apiRef: React.MutableRefObject<GridApi>) => void;
 }
 
 const safe = (row: any, key: string) => (row && row[key] !== undefined && row[key] !== null ? row[key] : '');
 
-export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChange, onColumnResize }: Props) {
+export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChange, onColumnResize, onApiRef }: Props) {
   const [selectionModel, setSelectionModel] = React.useState<GridRowId[]>([]);
+  const apiRef = useGridApiRef();
+
+  useEffect(() => {
+    if (onApiRef) {
+      onApiRef(apiRef);
+    }
+  }, [apiRef, onApiRef]);
   
   // Build rows, ensuring every field key exists and coercing types for the grid
   const rows: GridRowsProp = useMemo(
@@ -227,6 +235,7 @@ export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChan
       }}
     >
       <DataGrid
+        apiRef={apiRef}
         rows={rows}
         columns={columns}
         getRowId={(r) => r.id}
@@ -241,6 +250,7 @@ export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChan
           setSelectionModel(newSelectionModel as GridRowId[]);
         }}
         selectionModel={selectionModel}
+        
       />
     </Box>
   );
