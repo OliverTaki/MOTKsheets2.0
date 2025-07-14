@@ -78,7 +78,7 @@ const Toolbar = ({
                     {/* Filter Manager */}
                     <FilterManager
                         fields={fields}
-                        activeFilters={activeFilters}
+                        activeFilters={activeFilters || {}}
                         onFilterChange={onFilterChange}
                         allShots={allShots}
                     />

@@ -41,12 +41,9 @@ export const AppContainer = () => {
 
   const { sheetId, setSheetId } = useContext(SheetsContext);
 
-  if (!sheetId) {
-    return <FullScreenSpinner />;
-  }
-
-  const { sheets, setShots, fields, setFields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex, updateIdToColIndex } = useSheetsData(sheetId);
-  const { pages, loading: pagesLoading, error: pagesError, refreshPages } = usePagesData(sheetId);
+  // Only call data hooks if sheetId is present
+  const { sheets, setShots, fields, setFields, loading: fieldsLoading, error: fieldsError, refreshData, updateFieldOptions, idToColIndex, updateIdToColIndex } = sheetId ? useSheetsData(sheetId) : { sheets: [], setShots: () => {}, fields: [], setFields: () => {}, loading: true, error: null, refreshData: () => {}, updateFieldOptions: () => {}, idToColIndex: {}, updateIdToColIndex: () => {} };
+  const { pages, loading: pagesLoading, error: pagesError, refreshPages } = sheetId ? usePagesData(sheetId) : { pages: [], loading: true, error: null, refreshPages: () => {} };
 
   const [columnWidths, setColumnWidths] = useState({});
   const [activeFilters, setActiveFilters] = useState({});
@@ -216,6 +213,7 @@ export const AppContainer = () => {
   }, [fields, setFields, sheetId, ensureValidToken, token, setNeedsReAuth]);
 
   const handleCellSave = useCallback(async (shotId, fieldId, newValue) => {
+    console.log('[AppContainer] handleCellSave triggered.', { shotId, fieldId, newValue });
     const currentSheets = sheetsRef.current; // Use ref to get current sheets
     const originalRowIndex = currentSheets.findIndex(s => s.shot_id === shotId);
     if (originalRowIndex === -1) {
@@ -228,9 +226,7 @@ export const AppContainer = () => {
     // Optimistically update the UI
     const updatedShots = [...currentSheets];
     updatedShots[originalRowIndex] = { ...updatedShots[originalRowIndex], [fieldId]: newValue };
-    ReactDOM.flushSync(() => {
-      setShots(updatedShots);
-    });
+    setShots(updatedShots);
 
     const sheetRowIndex = originalRowIndex + 3;
     const sheetColumnIndex = idToColIndex[fieldId];
@@ -242,6 +238,7 @@ export const AppContainer = () => {
     }
     const columnLetter = String.fromCharCode('A'.charCodeAt(0) + sheetColumnIndex);
     const range = `Shots!${columnLetter}${sheetRowIndex}`;
+    console.log('[AppContainer] Attempting to update cell:', { sheetId, range, newValue });
 
     try {
       await updateCell(sheetId, token, setNeedsReAuth, range, newValue, ensureValidToken);
@@ -373,34 +370,16 @@ export const AppContainer = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       
-        <div className="App bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col" style={{ height: '100dvh', overflow: 'hidden' }}>
+        <div className="App bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex flex-col" style={{ height: '100dvh' }}>
           <GlobalNav sheetId={sheetId} />
-          {token && sheetId && ( // Only show project navigation and toolbar if token and sheetId exist
+          {token && sheetId && ( // Only show project navigation if token and sheetId exist
             <>
               <div className="sticky top-[48px] z-20 bg-gray-800">
-                <Toolbar
-                  fields={fields}
-                  pages={pages}
-                  activeFilters={activeFilters}
-                  onFilterChange={handleFilterChange}
-                  allShots={sheets}
-                  sortKey={sortKey}
-                  ascending={ascending}
-                  onSort={handleSort}
-                  visibleFieldIds={visibleFieldIds}
-                  onVisibilityChange={handleVisibilityChange}
-                  onAddField={handleAddField}
-                  onLoadView={handleLoadView}
-                  onSaveView={handleSaveView}
-                  onSaveViewAs={handleSaveViewAs}
-                  onDeleteView={handleDeleteView}
-                  loadedPageId={loadedPageId}
-                  onOpenUpdateNonUuidIdsDialog={() => setUpdateNonUuidIdsDialogOpen(true)}
-                />
+                {/* Toolbar is now rendered inside Home.jsx */}
               </div>
             </>
           )}
-          <main className="flex-grow bg-gray-800" style={{ flex: 1 }}>
+          <main className="flex-grow bg-gray-800" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             {(fieldsError || pagesError || authError) && (
               <p className="text-red-500 text-center">
                 Error: {fieldsError?.message || pagesError?.message || authError?.message}
@@ -426,6 +405,14 @@ export const AppContainer = () => {
                       handleColResizeMouseDown={handleColResizeMouseDown}
                       sheets={sheets} // Ensure sheets prop is passed and triggers re-render
                       fields={fields}
+                      pages={pages}
+                      pagesLoading={pagesLoading}
+                      pagesError={pagesError}
+                      loadPage={handleLoadView}
+                      savePage={handleSaveView}
+                      savePageAs={handleSaveViewAs}
+                      deletePage={handleDeleteView}
+                      loadedPageId={loadedPageId}
                       ref={tableRef}
                     /> : <ProjectSelectPage />} />
                   <Route path="/shot/:shotId" element={<ShotDetailPage shots={sheets} fields={orderedFields} idToColIndex={idToColIndex} />} />
@@ -434,9 +421,7 @@ export const AppContainer = () => {
               </SheetsDataContext.Provider>
             )}
           </main>
-          <footer className="sticky bottom-0 bg-gray-200 dark:bg-gray-700 z-10 flex-shrink-0" style={{ height: '24px' }}>
-            {/* Status Bar */}
-          </footer>
+          
           {isUpdateNonUuidIdsDialogOpen && (
             <UpdateNonUuidIdsDialog
               open={isUpdateNonUuidIdsDialogOpen}

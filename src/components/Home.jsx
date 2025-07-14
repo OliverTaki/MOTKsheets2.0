@@ -1,9 +1,10 @@
-import React, { memo, forwardRef } from 'react';
+import React, { forwardRef } from 'react';
 import ProjectSelectPage from '../pages/ProjectSelectPage';
 import ShotTable from './ShotTable';
+import Toolbar from './Toolbar';
 import { useLocation } from 'react-router-dom';
 
-const Home = memo(forwardRef(({
+const Home = forwardRef(({
   sheetId,
   setSheetId,
   processedShots,
@@ -16,7 +17,15 @@ const Home = memo(forwardRef(({
   onColumnOrderChange,
   handleColResizeMouseDown,
   sheets,
-  fields
+  fields,
+  pages,
+  pagesLoading,
+  pagesError,
+  loadPage,
+  savePage,
+  savePageAs,
+  deletePage,
+  loadedPageId
 }, ref) => {
   const location = useLocation();
 
@@ -26,6 +35,17 @@ const Home = memo(forwardRef(({
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }} ref={ref}>
+      <Toolbar
+        fields={fields}
+        pages={pages}
+        pagesLoading={pagesLoading}
+        pagesError={pagesError}
+        onLoadView={loadPage}
+        onSaveView={savePage}
+        onSaveViewAs={savePageAs}
+        onDeleteView={deletePage}
+        loadedPageId={loadedPageId}
+      />
       <ShotTable
         shots={sheets}
         fields={orderedFields}
@@ -40,16 +60,6 @@ const Home = memo(forwardRef(({
       />
     </div>
   );
-}, (prevProps, nextProps) => {
-  // Only re-render if processedShots or other critical props change
-  return (
-    prevProps.sheetId === nextProps.sheetId &&
-    prevProps.processedShots === nextProps.processedShots &&
-    prevProps.orderedFields === nextProps.orderedFields &&
-    prevProps.visibleFieldIds === nextProps.visibleFieldIds &&
-    prevProps.columnWidths === nextProps.columnWidths &&
-    prevProps.onCellSave === nextProps.onCellSave
-  );
-}));
+});
 
 export default Home;
