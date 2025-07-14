@@ -109,7 +109,6 @@ export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChan
     (window as any).dbgFields = fields;
   }, [shots, rows, fields]);
 
-  // Handle cell edit commits from the native editing API
   const handleCellEditCommit = (params: GridCellEditCommitParams) => {
     console.log('[ShotTable] handleCellEditCommit triggered for field type:', params.field);
     // For date objects, convert them to a standard format before saving
@@ -120,6 +119,19 @@ export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChan
     }
     // Force the row to re-evaluate its height
     apiRef.current.resetRowHeights([params.id]);
+  };
+
+  const processRowUpdate = (newRow, oldRow) => {
+    // Find the field that was changed
+    const fieldChanged = Object.keys(newRow).find(key => newRow[key] !== oldRow[key]);
+    if (fieldChanged) {
+      handleCellEditCommit({ id: newRow.id, field: fieldChanged, value: newRow[fieldChanged] });
+    }
+    return newRow;
+  };
+
+  const handleProcessRowUpdateError = (error) => {
+    console.error("Error processing row update:", error);
   };
 
   // Define columns using MUI's native editing features
@@ -211,7 +223,8 @@ export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChan
         getRowId={(r) => r.id}
         onColumnOrderChange={onColumnOrderChange}
         onColumnResize={onColumnResize}
-        onCellEditCommit={handleCellEditCommit}
+        processRowUpdate={processRowUpdate}
+        onProcessRowUpdateError={handleProcessRowUpdateError}
         experimentalFeatures={{ newEditingApi: true }}
         getRowHeight={() => 'auto'}
         checkboxSelection
