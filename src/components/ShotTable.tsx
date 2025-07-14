@@ -110,11 +110,19 @@ export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChan
   }, [shots, rows, fields]);
 
   const handleCellEditCommit = (params: GridCellEditCommitParams) => {
-    console.log('[ShotTable] handleCellEditCommit triggered for field type:', params.field);
+    console.log('[ShotTable] handleCellEditCommit received:', params);
     // For date objects, convert them to a standard format before saving
     if (params.value instanceof Date) {
-      onCellSave(String(params.id), params.field, params.value.toISOString().split('T')[0]);
-    } else {
+      const date = params.value;
+      // Adjust for timezone offset
+      const timezoneOffset = date.getTimezoneOffset() * 60000;
+      const adjustedDate = new Date(date.getTime() - timezoneOffset);
+      onCellSave(String(params.id), params.field, adjustedDate.toISOString().split('T')[0]);
+    } else if (params.value === null) {
+      // Handle clearing the date
+      onCellSave(String(params.id), params.field, '');
+    }
+    else {
       onCellSave(String(params.id), params.field, params.value);
     }
     // Force the row to re-evaluate its height
@@ -122,8 +130,10 @@ export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChan
   };
 
   const processRowUpdate = (newRow, oldRow) => {
+    console.log('[ShotTable] processRowUpdate triggered:', { newRow, oldRow });
     // Find the field that was changed
     const fieldChanged = Object.keys(newRow).find(key => newRow[key] !== oldRow[key]);
+    console.log('[ShotTable] fieldChanged:', fieldChanged);
     if (fieldChanged) {
       handleCellEditCommit({ id: newRow.id, field: fieldChanged, value: newRow[fieldChanged] });
     }
@@ -151,9 +161,10 @@ export default function ShotTable({ shots, fields, onCellSave, onColumnOrderChan
             return {
               ...base,
               type: 'date',
-              valueGetter: (params) => (params.value ? new Date(params.value) : null),
-              renderCell: (params) => {
-                return params.value ? new Date(params.value).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '';
+              valueFormatter: (value) => {
+                if (!value) return '';
+                const date = new Date(value);
+                return date.toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' });
               },
             };
           case 'select':
