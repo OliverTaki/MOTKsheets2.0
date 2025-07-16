@@ -55,9 +55,9 @@ const usePagesData = (sheetId) => {
                 title: row[titleCol],
                 columnWidths: safeJsonParse(row[columnWidthsCol], {}),
                 columnOrder: safeJsonParse(row[columnOrderCol], []),
-                filterSettings: safeJsonParse(row[filterSettingsCol], {}),
+                filterModel: safeJsonParse(row[filterSettingsCol], { items: [] }),
+                sortModel: safeJsonParse(row[sortOrderCol], []),
                 visibleFieldIds: safeJsonParse(row[visibleFieldIdsCol], []),
-                sortOrder: safeJsonParse(row[sortOrderCol], {}),
                 author: row[authorCol] || 'Unknown',
               };
               if (page.page_id) {
